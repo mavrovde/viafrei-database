@@ -17,6 +17,14 @@ updates:
     groups:
       dev-tooling:
         dependency-type: development
+    # TypeScript's next major is not proposed until typescript-eslint accepts it
+    # (its peer range is ">=4.8.4 <6.1.0"). Proposing it made npm re-resolve
+    # typescript-eslint under the cooldown's date limit, which cannot find the
+    # locked release when that is younger than seven days: ETARGET, and the
+    # whole npm update job failed. Minor and patch updates still come.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
     labels: [dependencies]
   - package-ecosystem: github-actions
