@@ -1,0 +1,47 @@
+{
+  "exitCode": 0,
+  "lastStderr": "",
+  "calls": [
+    {
+      "args": [
+        "-c",
+        "create table if not exists schema_migrations(version int primary key, name text not null, checksum text not null, applied_at timestamptz not null default now());"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-At",
+        "-c",
+        "select version||' '||checksum from schema_migrations order by version"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "YmVnaW47CmNyZWF0ZSB0YWJsZSBhKGlkIGludCk7CgppbnNlcnQgaW50byBzY2hlbWFfbWlncmF0aW9ucyh2ZXJzaW9uLG5hbWUsY2hlY2tzdW0pIHZhbHVlcyAoMSwnMDAwMV9hLnNxbCcsJzc4MGNkNjUzNjVjYmZlMzFjMTFmZGI0ZmM3YmI5MjVmMTJhOWU0NjdjNTc3ZDY1Yzg0MGNkMjVkNTE3ZTlkOTAnKTsKY29tbWl0Owo="
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "YmVnaW47CmNyZWF0ZSB0YWJsZSBhKGlkIGludCk7CgppbnNlcnQgaW50byBzY2hlbWFfbWlncmF0aW9ucyh2ZXJzaW9uLG5hbWUsY2hlY2tzdW0pIHZhbHVlcyAoMSwnMDAwMV9hLnNxbCcsJzc4MGNkNjUzNjVjYmZlMzFjMTFmZGI0ZmM3YmI5MjVmMTJhOWU0NjdjNTc3ZDY1Yzg0MGNkMjVkNTE3ZTlkOTAnKTsKY29tbWl0Owo="
+    },
+    {
+      "args": [
+        "-At",
+        "-c",
+        "select coalesce(max(version),0) from schema_migrations"
+      ],
+      "stdin": ""
+    }
+  ]
+}

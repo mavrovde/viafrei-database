@@ -1,0 +1,11 @@
+ViaFrei database
+Copyright 2026 ViaFrei
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It contains the schema of the ViaFrei database and the service that migrates
+and checks it; it contains no data. The tables are shaped for open data from
+German public sources (traffic, public transport, fuel, charging, parking,
+weather warnings, places). Each of those sources carries its own licence and
+attribution, and some are share-alike or purpose-limited. Those terms apply to
+the data you load, whatever this licence says about the code.

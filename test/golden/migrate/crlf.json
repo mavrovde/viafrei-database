@@ -1,0 +1,38 @@
+{
+  "exitCode": 0,
+  "lastStderr": "",
+  "calls": [
+    {
+      "args": [
+        "-c",
+        "create table if not exists schema_migrations(version int primary key, name text not null, checksum text not null, applied_at timestamptz not null default now());"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-At",
+        "-c",
+        "select version||' '||checksum from schema_migrations order by version"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "YmVnaW47CmNyZWF0ZSB0YWJsZSBkKGlkIGludCk7DQotLSByb2xsYmFjazogZHJvcCB0YWJsZSBkOw0KCmluc2VydCBpbnRvIHNjaGVtYV9taWdyYXRpb25zKHZlcnNpb24sbmFtZSxjaGVja3N1bSkgdmFsdWVzICgxLCcwMDAxX2Quc3FsJywnNzQyNzJjZTJmYWM0NGU4YWE2YjQwYTUwZDJlMWQ5Yzg1ZmI3OTZkNWU2ZmExZjhmOGEzY2ZkOTdjNzVmYjVhZicpOwpjb21taXQ7Cg=="
+    },
+    {
+      "args": [
+        "-At",
+        "-c",
+        "select coalesce(max(version),0) from schema_migrations"
+      ],
+      "stdin": ""
+    }
+  ]
+}

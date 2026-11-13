@@ -1,0 +1,313 @@
+# Publishes the image of a CONFIRMED release, and nothing else: there is no
+# image for a branch, a commit or a release candidate.
+#
+# A tag publishes only when every one of these holds, checked before anything
+# is built:
+#   - it is an annotated tag vX.Y.Z with no suffix (an rc or any other tag
+#     ends here, green, having published nothing);
+#   - X.Y.Z equals package.json's version;
+#   - the tagged commit is on main, and it is still the commit this run was
+#     started for: a tag moved after the push (it no longer names github.sha)
+#     is refused, and every later job checks out the gate's commit, never the
+#     tag;
+#   - CI and Security concluded success on that commit, from a push to main
+#     of this repository (scripts/ci-gate.ts);
+# Before the push: :X.Y.Z must not exist yet (a release is never rebuilt or
+# re-tagged; scripts/ghcr-not-released.sh), and the image built from the tag
+# must report the same version and a schema head equal to the newest version
+# in db/.
+#
+# Then, in this order, so a failure at any step leaves no tag behind:
+#   1. publish: linux/amd64 + linux/arm64 pushed BY DIGEST only (no tag),
+#      signed keyless with cosign, SLSA build provenance and an SPDX SBOM
+#      attested;
+#   2. verify: the digest is pulled, its signature verified against this
+#      workflow on a version tag AND on the gate's commit, and BOTH
+#      attestations verified — the SLSA provenance by gh attestation verify
+#      with --signer-workflow (this file) and --source-ref (refs/tags/vX.Y.Z),
+#      and the SPDX SBOM by cosign verify-attestation --type spdxjson, bound
+#      to the gate's commit (--certificate-github-workflow-sha) — then
+#      smoked (/healthz, /ready);
+#   3. tag: only now :X.Y.Z, :X.Y (newest patch of its minor only) and :latest
+#      (newest vX.Y.Z tag only) are pointed at that digest, each read back.
+#
+# One release at a time: every run shares the single concurrency group
+# `release`, whatever the tag, and a running release is never cancelled.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# One release at a time, whatever the tag; a running release is never cancelled.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/mavrovde/viafrei-database
+  TAG: ${{ github.ref_name }}
+  IDENTITY: ^https://github\.com/mavrovde/viafrei-database/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$
+  ISSUER: https://token.actions.githubusercontent.com
+
+jobs:
+  gate:
+    name: Release gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # the workflow runs on the tagged commit (scripts/ci-gate.ts)
+    outputs:
+      publish: ${{ steps.tag.outputs.publish }}
+      version: ${{ steps.tag.outputs.version }}
+      minor: ${{ steps.tag.outputs.minor }}
+      commit: ${{ steps.tag.outputs.commit }}
+      highest: ${{ steps.tag.outputs.highest }}
+      highest_in_minor: ${{ steps.tag.outputs.highest_in_minor }}
+      head: ${{ steps.head.outputs.head }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: The tag is an annotated vX.Y.Z equal to package.json, on main
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [[ ! $TAG =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::notice::$TAG is not a final vX.Y.Z tag; only a confirmed release publishes an image, so nothing is published"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]}
+          version=${TAG#v}
+          [[ $(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.type) == tag ]] || { echo "::error::$TAG is a lightweight tag; a release needs an annotated tag (git tag -a)"; exit 1; }
+          pkg=$(jq -r .version package.json)
+          [[ $pkg == "$version" ]] || { echo "::error::$TAG does not equal package.json's version ($pkg)"; exit 1; }
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$TAG^{commit}" origin/main || { echo "::error::$TAG points at a commit that is not on main"; exit 1; }
+          commit=$(git rev-parse "$TAG^{commit}")
+          # The tag must still name the commit this run was started for.
+          [[ $commit == "$GITHUB_SHA" ]] || { echo "::error::$TAG points at $commit, but this run was started for $GITHUB_SHA"; exit 1; }
+          {
+            echo "publish=true"
+            echo "version=$version"
+            echo "minor=$major.$minor"
+            echo "commit=$commit"
+            echo "highest=$([[ $(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1) == "$TAG" ]] && echo true || echo false)"
+            echo "highest_in_minor=$([[ $(git tag -l "v$major.$minor.*" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1) == "$TAG" ]] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.tag.outputs.publish == 'true'
+        with:
+          node-version: 26.12.1
+      - name: CI and Security passed on the tagged commit
+        if: steps.tag.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ steps.tag.outputs.commit }}
+        run: |
+          gh api --paginate --slurp "repos/$GH_REPO/actions/runs?head_sha=$SHA&per_page=100" > "$RUNNER_TEMP/runs.json"
+          node scripts/ci-gate.ts "$SHA" "$GH_REPO" < "$RUNNER_TEMP/runs.json"
+      - name: The schema head of the tree
+        id: head
+        if: steps.tag.outputs.publish == 'true'
+        run: |
+          head=0
+          if [[ -f db/baseline/ledger.tsv ]]; then head=$(tail -n 1 db/baseline/ledger.tsv | cut -f1); fi
+          shopt -s nullglob
+          for f in db/migrations/[0-9][0-9][0-9][0-9]_*.sql; do
+            n=${f#db/migrations/}
+            n=$((10#${n:0:4}))
+            if (( n > head )); then head=$n; fi
+          done
+          (( head > 0 )) || { echo "::error::the tree carries no schema version"; exit 1; }
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Build, check, sign, attest, publish
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.commit }}
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build for the check (linux/amd64, not pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: viafrei-database:release-check
+          build-args: |
+            VERSION=${{ needs.gate.outputs.version }}
+            GIT_SHA=${{ needs.gate.outputs.commit }}
+      - name: The image reports the tag's version and the tree's schema head
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+          HEAD: ${{ needs.gate.outputs.head }}
+        run: |
+          got=$(docker run --rm --read-only --tmpfs /tmp viafrei-database:release-check version)
+          want="viafrei-database $VERSION schema-head $HEAD"
+          [[ $got == "$want" ]] || { echo "::error::the image reports '$got', expected '$want'"; exit 1; }
+          echo "$got"
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Not released yet (a release is never rebuilt or re-tagged)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: scripts/ghcr-not-released.sh "$IMAGE" "$VERSION"
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          # By digest only: no tag exists until the verify job has passed (the tag job).
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            VERSION=${{ needs.gate.outputs.version }}
+            GIT_SHA=${{ needs.gate.outputs.commit }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.gate.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.gate.outputs.commit }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Sign the digest (keyless)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom.spdx.json
+          upload-artifact: false
+      - name: Attest the SBOM to the image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign attest --yes --type spdxjson --predicate "$RUNNER_TEMP/sbom.spdx.json" "$IMAGE@$DIGEST"
+      - name: Summary
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "Pushed \`$IMAGE@$DIGEST\` (untagged until verified)" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    name: Verify the published image
+    needs: [gate, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.commit }}
+          persist-credentials: false
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Pull by digest
+        env:
+          DIGEST: ${{ needs.publish.outputs.digest }}
+        run: docker pull "$IMAGE@$DIGEST"
+      - name: cosign verify (this workflow, on a release tag, built from the gate's commit on main)
+        env:
+          DIGEST: ${{ needs.publish.outputs.digest }}
+          COMMIT: ${{ needs.gate.outputs.commit }}
+        run: cosign verify "$IMAGE@$DIGEST" --certificate-identity-regexp "$IDENTITY" --certificate-oidc-issuer "$ISSUER" --certificate-github-workflow-sha "$COMMIT" > /dev/null
+      - name: gh attestation verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          DIGEST: ${{ needs.publish.outputs.digest }}
+        run: gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GH_REPO" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml --source-ref "refs/tags/$TAG"
+      - name: cosign verify-attestation (the SPDX SBOM, same identity)
+        env:
+          DIGEST: ${{ needs.publish.outputs.digest }}
+          COMMIT: ${{ needs.gate.outputs.commit }}
+        run: cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson --certificate-identity-regexp "$IDENTITY" --certificate-oidc-issuer "$ISSUER" --certificate-github-workflow-sha "$COMMIT" > /dev/null
+      - name: Smoke the published digest (/healthz, /ready, hardening)
+        env:
+          IMAGE_REF: ${{ env.IMAGE }}@${{ needs.publish.outputs.digest }}
+        run: IMAGE="$IMAGE_REF" scripts/image-smoke.sh
+
+  tag:
+    name: Tag the verified digest
+    needs: [gate, publish, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.commit }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Still not released (nothing tagged :X.Y.Z while this run built)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: scripts/ghcr-not-released.sh "$IMAGE" "$VERSION"
+      - name: Point the tags at the digest and read each one back
+        env:
+          DIGEST: ${{ needs.publish.outputs.digest }}
+          VERSION: ${{ needs.gate.outputs.version }}
+          MINOR: ${{ needs.gate.outputs.minor }}
+          HIGHEST: ${{ needs.gate.outputs.highest }}
+          HIGHEST_IN_MINOR: ${{ needs.gate.outputs.highest_in_minor }}
+        run: |
+          tags=("$IMAGE:$VERSION")
+          # :X.Y moves to the newest patch of its minor only; :latest to the newest vX.Y.Z tag only.
+          if [[ $HIGHEST_IN_MINOR == true ]]; then tags+=("$IMAGE:$MINOR"); fi
+          if [[ $HIGHEST == true ]]; then tags+=("$IMAGE:latest"); fi
+          args=()
+          for t in "${tags[@]}"; do args+=(-t "$t"); done
+          docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
+          for t in "${tags[@]}"; do
+            got=$(docker buildx imagetools inspect "$t" --format '{{json .Manifest}}' | jq -r .digest)
+            [[ $got == "$DIGEST" ]] || { echo "::error::$t points at $got, not the verified $DIGEST"; exit 1; }
+            echo "- \`$t\` → \`$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
+          done

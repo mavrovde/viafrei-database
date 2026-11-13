@@ -1,0 +1,160 @@
+# Build and test on every pull request and on main. Check names are stable:
+# branch protection requires them by name.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.12.1
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Shell syntax
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+      # Every workflow file, with shellcheck over each run: script (both are in
+      # the image). 1.7.7, pinned by digest.
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9 -no-color
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.12.1
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+
+  migration-lint:
+    name: Migration lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # rule 4 compares every file against origin/main
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.12.1
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # A lint over no files reports success; refuse that instead.
+      - name: There is a schema to lint (a baseline or migrations)
+        run: test -n "$(find db/baseline db/migrations -maxdepth 1 -name '[0-9][0-9][0-9][0-9]_*.sql' -print -quit 2>/dev/null)"
+      - run: npm run lint:migrations
+
+  integration:
+    name: Integration tests (PostGIS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.12.1
+          cache: npm
+      - name: psql 16
+        run: sudo apt-get install -y --no-install-recommends postgresql-client-16 && psql --version
+      # A plain create database (from template1): the image's POSTGRES_DB would
+      # carry its init's extras (tiger, topology), which no migration makes.
+      - name: An empty database
+        run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
+      - run: npm ci --ignore-scripts
+      # Unit and database tests in one coverage run (vitest.coverage.config.ts):
+      # the from-empty migration counts, and a figure below a threshold fails.
+      - name: Coverage (unit and from an empty database to head)
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
+          VF_REQUIRE_DB: "1"
+        run: npm run coverage
+      - name: Coverage summary
+        if: always() && hashFiles('coverage/coverage-summary.json') != ''
+        run: node scripts/coverage-summary.ts coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage badge matches the measurement
+        run: node scripts/coverage-summary.ts --check-badge README.md coverage/coverage-summary.json
+      - name: Upload the coverage report
+        if: always() && hashFiles('coverage/coverage-summary.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  image:
+    name: Image (build, scan, healthz)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # uploads the Trivy SARIF to code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: viafrei-database:ci
+          build-args: |
+            VERSION=ci
+            GIT_SHA=${{ github.sha }}
+      - name: Trivy (HIGH and CRITICAL fail)
+        run: |
+          mkdir -p sarif
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sarif:/out" \
+            aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222 \
+            image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress \
+            --db-repository mirror.gcr.io/aquasec/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2 \
+            --format sarif --output /out/trivy-image.sarif viafrei-database:ci
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('sarif/trivy-image.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: sarif/trivy-image.sarif
+          category: trivy-image
+      - name: Smoke (non-root, read-only root, migrate from empty, /healthz, /ready, allow-list)
+        env:
+          IMAGE: viafrei-database:ci
+        run: scripts/image-smoke.sh

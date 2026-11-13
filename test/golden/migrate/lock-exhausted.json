@@ -1,0 +1,57 @@
+{
+  "exitCode": 75,
+  "lastStderr": "✗ 0002_b.sql: lock timeout (SQLSTATE 55P03) on all 3 attempt(s) — a long transaction holds its table; nothing of this file is applied, every file before it is",
+  "calls": [
+    {
+      "args": [
+        "-c",
+        "create table if not exists schema_migrations(version int primary key, name text not null, checksum text not null, applied_at timestamptz not null default now());"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-At",
+        "-c",
+        "select version||' '||checksum from schema_migrations order by version"
+      ],
+      "stdin": ""
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "YmVnaW47CmNyZWF0ZSB0YWJsZSBhKGlkIGludCk7CgppbnNlcnQgaW50byBzY2hlbWFfbWlncmF0aW9ucyh2ZXJzaW9uLG5hbWUsY2hlY2tzdW0pIHZhbHVlcyAoMSwnMDAwMV9hLnNxbCcsJzc4MGNkNjUzNjVjYmZlMzFjMTFmZGI0ZmM3YmI5MjVmMTJhOWU0NjdjNTc3ZDY1Yzg0MGNkMjVkNTE3ZTlkOTAnKTsKY29tbWl0Owo="
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "LS0gbm8tdHJhbnNhY3Rpb246IGNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgY2Fubm90IHJ1biBpbiBhIHRyYW5zYWN0aW9uCmNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgaWYgbm90IGV4aXN0cyBhX2lkIG9uIGEoaWQpOwoK"
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "LS0gbm8tdHJhbnNhY3Rpb246IGNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgY2Fubm90IHJ1biBpbiBhIHRyYW5zYWN0aW9uCmNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgaWYgbm90IGV4aXN0cyBhX2lkIG9uIGEoaWQpOwoK"
+    },
+    {
+      "args": [
+        "-v",
+        "VERBOSITY=verbose",
+        "-f",
+        "-"
+      ],
+      "stdin": "LS0gbm8tdHJhbnNhY3Rpb246IGNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgY2Fubm90IHJ1biBpbiBhIHRyYW5zYWN0aW9uCmNyZWF0ZSBpbmRleCBjb25jdXJyZW50bHkgaWYgbm90IGV4aXN0cyBhX2lkIG9uIGEoaWQpOwoK"
+    }
+  ]
+}
