@@ -197,9 +197,9 @@ describe("pins", () => {
     "actions/setup-node": "949feb2413d6458794dcd2491c4babbbce0c15c1",
     "docker/setup-qemu-action": "99012661954931238ded8c8b007157a8430204e1",
     "docker/setup-buildx-action": "f87e5991a6d7451dcb8d9637bfbc97413f497069",
-    "docker/login-action": "81c6f93d4bc991e510b342a00b419b3bb4efc5c6",
+    "docker/login-action": "8aa5831fb8d48d8f76594c7ddde61ae58019f550",
     "docker/build-push-action": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
-    "sigstore/cosign-installer": "6f9f17788090df1f26f669e9d70d6ae9567deba6",
+    "sigstore/cosign-installer": "756fe2d284c7292c4e9b62c8a28f1e5629c59532",
     "actions/attest-build-provenance": "4d101475d8b20a2381f78447822ac1eab6504dd8",
     "anchore/sbom-action": "66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c",
   };
@@ -532,6 +532,54 @@ export function pinnedImages(sources: readonly string[]): Set<string> {
 export function listedImages(security: string): Set<string> {
   return new Set([...security.matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1] ?? ""));
 }
+
+/**
+ * Dependabot's TypeScript bound must be typescript-eslint's: the `versions`
+ * ignore for typescript is ">=<upper bound>" of the peer range every
+ * typescript-eslint package in the lock declares for typescript.
+ */
+export function typescriptBoundFaults(dependabot: string, lock: string): string[] {
+  const m = /- dependency-name: typescript\n\s+versions: \[">=([0-9.]+)"\]/.exec(dependabot);
+  if (m === null) return ['.github/dependabot.yml has no `versions: [">=X.Y.Z"]` ignore for typescript'];
+  const bound = m[1];
+  const packages = (JSON.parse(lock) as { packages: Record<string, { version?: string; peerDependencies?: Record<string, string> }> }).packages;
+  const faults: string[] = [];
+  let seen = 0;
+  for (const [path, p] of Object.entries(packages)) {
+    if (!/^node_modules\/(?:typescript-eslint|@typescript-eslint\/[^/]+)$/.test(path)) continue;
+    const range = p.peerDependencies?.["typescript"];
+    if (range === undefined) continue;
+    seen++;
+    const upper = /<([0-9.]+)\s*$/.exec(range)?.[1];
+    if (upper !== bound) faults.push(`${path} accepts typescript "${range}", but dependabot.yml ignores ">=${bound ?? ""}"`);
+  }
+  if (seen === 0) faults.push("no typescript-eslint package in package-lock.json declares a typescript peer range");
+  return faults;
+}
+
+describe("the TypeScript bound in dependabot.yml", () => {
+  const dependabot = readFileSync(join(REPO, ".github", "dependabot.yml"), "utf8");
+  const lock = readFileSync(join(REPO, "package-lock.json"), "utf8");
+  it("is the upper bound of typescript-eslint's peer range in the lock", () => {
+    expect(typescriptBoundFaults(dependabot, lock)).toEqual([]);
+  });
+  it("goes red when typescript-eslint widens its range and the bound stays", () => {
+    const wider = lock.replaceAll('"typescript": ">=4.8.4 <6.1.0"', '"typescript": ">=4.8.4 <7.1.0"');
+    expect(wider).not.toBe(lock);
+    expect(typescriptBoundFaults(dependabot, wider)).toContain('node_modules/typescript-eslint accepts typescript ">=4.8.4 <7.1.0", but dependabot.yml ignores ">=6.1.0"');
+  });
+  it("goes red when the bound moves alone, or the ignore is gone", () => {
+    expect(typescriptBoundFaults(dependabot.replace('[">=6.1.0"]', '[">=7.0.0"]'), lock)).toContain(
+      'node_modules/typescript-eslint accepts typescript ">=4.8.4 <6.1.0", but dependabot.yml ignores ">=7.0.0"',
+    );
+    expect(typescriptBoundFaults(dependabot.replace(/versions: \[[^\]]*\]/, 'update-types: ["version-update:semver-major"]'), lock)).toEqual([
+      '.github/dependabot.yml has no `versions: [">=X.Y.Z"]` ignore for typescript',
+    ]);
+  });
+  it("goes red when the lock carries no typescript-eslint peer range at all", () => {
+    expect(typescriptBoundFaults(dependabot, JSON.stringify({ packages: {} }))).toEqual(["no typescript-eslint package in package-lock.json declares a typescript peer range"]);
+  });
+});
 
 /** Every image pinned by digest in a workflow's run:/service lines or a script, against SECURITY.md's hand-bumped list. */
 export function pinnedImageFaults(security: string, sources: readonly string[]): string[] {

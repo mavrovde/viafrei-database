@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.12.1
+          node-version: 26.13.0
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
@@ -48,7 +48,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.12.1
+          node-version: 26.13.0
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
@@ -64,7 +64,7 @@ jobs:
           fetch-depth: 0 # rule 4 compares every file against origin/main
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.12.1
+          node-version: 26.13.0
           cache: npm
       - run: npm ci --ignore-scripts
       # A lint over no files reports success; refuse that instead.
@@ -90,7 +90,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.12.1
+          node-version: 26.13.0
           cache: npm
       - name: psql 16
         run: sudo apt-get install -y --no-install-recommends postgresql-client-16 && psql --version
@@ -150,7 +150,7 @@ jobs:
             --format sarif --output /out/trivy-image.sarif viafrei-database:ci
       - name: Upload SARIF to code scanning
         if: always() && hashFiles('sarif/trivy-image.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: sarif/trivy-image.sarif
           category: trivy-image
