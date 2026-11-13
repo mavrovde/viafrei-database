@@ -533,7 +533,6 @@ export function listedImages(security: string): Set<string> {
   return new Set([...security.matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1] ?? ""));
 }
 
-/** Every image pinned by digest in a workflow's run:/service lines or a script, against SECURITY.md's hand-bumped list. */
 /**
  * Dependabot's TypeScript bound must be typescript-eslint's: the `versions`
  * ignore for typescript is ">=<upper bound>" of the peer range every
@@ -570,7 +569,9 @@ describe("the TypeScript bound in dependabot.yml", () => {
     expect(typescriptBoundFaults(dependabot, wider)).toContain('node_modules/typescript-eslint accepts typescript ">=4.8.4 <7.1.0", but dependabot.yml ignores ">=6.1.0"');
   });
   it("goes red when the bound moves alone, or the ignore is gone", () => {
-    expect(typescriptBoundFaults(dependabot.replace('[">=6.1.0"]', '[">=7.0.0"]'), lock).length).toBeGreaterThan(0);
+    expect(typescriptBoundFaults(dependabot.replace('[">=6.1.0"]', '[">=7.0.0"]'), lock)).toContain(
+      'node_modules/typescript-eslint accepts typescript ">=4.8.4 <6.1.0", but dependabot.yml ignores ">=7.0.0"',
+    );
     expect(typescriptBoundFaults(dependabot.replace(/versions: \[[^\]]*\]/, 'update-types: ["version-update:semver-major"]'), lock)).toEqual([
       '.github/dependabot.yml has no `versions: [">=X.Y.Z"]` ignore for typescript',
     ]);
@@ -580,6 +581,7 @@ describe("the TypeScript bound in dependabot.yml", () => {
   });
 });
 
+/** Every image pinned by digest in a workflow's run:/service lines or a script, against SECURITY.md's hand-bumped list. */
 export function pinnedImageFaults(security: string, sources: readonly string[]): string[] {
   const images = pinnedImages(sources);
   const listed = listedImages(security);
