@@ -43,9 +43,7 @@ The first public version.
   scan and a hardened start (the image ships no npm or npx), CodeQL,
   dependency review, gitleaks, a DAST run with OWASP ZAP, and the OpenSSF
   Scorecard.
-
-### Changed
-
-- **Dependencies.** The image and CI run Node 26.13.0; the tests run on
-  vitest 5.1.0; docker/login-action 4.8.0, sigstore/cosign-installer 4.1.3
-  and the CodeQL actions 4.39.3.
+- **The toolchain.** The image and CI run Node 26.13.0, the tests run on
+  vitest 5.1.0, and the release and code-scanning steps use
+  docker/login-action 4.8.0, sigstore/cosign-installer 4.1.3 and the CodeQL
+  actions 4.39.3.

@@ -52,8 +52,9 @@ also be started by hand.
 
 Dependabot proposes dependency updates after a seven-day cooldown, for the
 npm packages, the actions (each pinned by commit SHA) and the Dockerfile's
-base image. A major TypeScript release is not proposed until typescript-eslint
-supports it; its minor and patch releases are.
+base image. A TypeScript release at or above the upper bound of
+typescript-eslint's supported range (today 6.1.0) is not proposed; the bound
+is kept equal to that range by a test and moves when typescript-eslint does.
 
 ### Images bumped by hand
 

@@ -534,6 +534,52 @@ export function listedImages(security: string): Set<string> {
 }
 
 /** Every image pinned by digest in a workflow's run:/service lines or a script, against SECURITY.md's hand-bumped list. */
+/**
+ * Dependabot's TypeScript bound must be typescript-eslint's: the `versions`
+ * ignore for typescript is ">=<upper bound>" of the peer range every
+ * typescript-eslint package in the lock declares for typescript.
+ */
+export function typescriptBoundFaults(dependabot: string, lock: string): string[] {
+  const m = /- dependency-name: typescript\n\s+versions: \[">=([0-9.]+)"\]/.exec(dependabot);
+  if (m === null) return ['.github/dependabot.yml has no `versions: [">=X.Y.Z"]` ignore for typescript'];
+  const bound = m[1];
+  const packages = (JSON.parse(lock) as { packages: Record<string, { version?: string; peerDependencies?: Record<string, string> }> }).packages;
+  const faults: string[] = [];
+  let seen = 0;
+  for (const [path, p] of Object.entries(packages)) {
+    if (!/^node_modules\/(?:typescript-eslint|@typescript-eslint\/[^/]+)$/.test(path)) continue;
+    const range = p.peerDependencies?.["typescript"];
+    if (range === undefined) continue;
+    seen++;
+    const upper = /<([0-9.]+)\s*$/.exec(range)?.[1];
+    if (upper !== bound) faults.push(`${path} accepts typescript "${range}", but dependabot.yml ignores ">=${bound ?? ""}"`);
+  }
+  if (seen === 0) faults.push("no typescript-eslint package in package-lock.json declares a typescript peer range");
+  return faults;
+}
+
+describe("the TypeScript bound in dependabot.yml", () => {
+  const dependabot = readFileSync(join(REPO, ".github", "dependabot.yml"), "utf8");
+  const lock = readFileSync(join(REPO, "package-lock.json"), "utf8");
+  it("is the upper bound of typescript-eslint's peer range in the lock", () => {
+    expect(typescriptBoundFaults(dependabot, lock)).toEqual([]);
+  });
+  it("goes red when typescript-eslint widens its range and the bound stays", () => {
+    const wider = lock.replaceAll('"typescript": ">=4.8.4 <6.1.0"', '"typescript": ">=4.8.4 <7.1.0"');
+    expect(wider).not.toBe(lock);
+    expect(typescriptBoundFaults(dependabot, wider)).toContain('node_modules/typescript-eslint accepts typescript ">=4.8.4 <7.1.0", but dependabot.yml ignores ">=6.1.0"');
+  });
+  it("goes red when the bound moves alone, or the ignore is gone", () => {
+    expect(typescriptBoundFaults(dependabot.replace('[">=6.1.0"]', '[">=7.0.0"]'), lock).length).toBeGreaterThan(0);
+    expect(typescriptBoundFaults(dependabot.replace(/versions: \[[^\]]*\]/, 'update-types: ["version-update:semver-major"]'), lock)).toEqual([
+      '.github/dependabot.yml has no `versions: [">=X.Y.Z"]` ignore for typescript',
+    ]);
+  });
+  it("goes red when the lock carries no typescript-eslint peer range at all", () => {
+    expect(typescriptBoundFaults(dependabot, JSON.stringify({ packages: {} }))).toEqual(["no typescript-eslint package in package-lock.json declares a typescript peer range"]);
+  });
+});
+
 export function pinnedImageFaults(security: string, sources: readonly string[]): string[] {
   const images = pinnedImages(sources);
   const listed = listedImages(security);

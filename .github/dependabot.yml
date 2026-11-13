@@ -17,14 +17,17 @@ updates:
     groups:
       dev-tooling:
         dependency-type: development
-    # TypeScript's next major is not proposed until typescript-eslint accepts it
-    # (its peer range is ">=4.8.4 <6.1.0"). Proposing it made npm re-resolve
-    # typescript-eslint under the cooldown's date limit, which cannot find the
-    # locked release when that is younger than seven days: ETARGET, and the
-    # whole npm update job failed. Minor and patch updates still come.
+    # No TypeScript release that typescript-eslint does not accept: the bound
+    # is the upper bound of typescript-eslint's peer range for typescript in
+    # package-lock.json (">=4.8.4 <6.1.0" today), and it moves with it —
+    # test/workflows.test.ts holds the two equal, so a typescript-eslint
+    # update that widens its range fails until this line follows. Proposing
+    # TypeScript 7 made npm re-resolve typescript-eslint under the cooldown's
+    # date limit, which cannot find the locked release when that is younger
+    # than seven days: ETARGET, and the whole npm update job failed.
     ignore:
       - dependency-name: typescript
-        update-types: ["version-update:semver-major"]
+        versions: [">=6.1.0"]
     open-pull-requests-limit: 5
     labels: [dependencies]
   - package-ecosystem: github-actions
