@@ -6,7 +6,7 @@ with green checks; `main` is squash-merged and linear.
 
 ## Running it
 
-Node 26 (CI and the image run 26.12.1). For the integration test, an empty database in a PostGIS
+Node 26 (CI and the image run 26.13.0). For the integration test, an empty database in a PostGIS
 16-3.4 cluster, made with a plain `create database` (not the image's `POSTGRES_DB`, which its init
 fills with extensions no migration makes), and `psql` 16.
 
