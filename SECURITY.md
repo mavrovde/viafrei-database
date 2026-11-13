@@ -84,18 +84,36 @@ commit is not on `main`, is not ours.
 
 ## Release tags
 
-A tag push runs the release workflow **as it is in the tagged commit**. The
-signing identity therefore proves "the release workflow on a version tag",
-not "the workflow on `main`". Two controls close that gap:
+The release workflow always runs **on a tag, as it is in the tagged
+commit**:
 
-- **A tag ruleset.** Only repository administrators may create, update or
-  delete a `v*` tag (a repository ruleset on `refs/tags/v*` with the
-  creation, update and deletion rules and an admin-only bypass). Nobody else
-  can start a release.
-- **The commit must be on `main`.** The workflow's gate refuses a tag whose
-  commit is not on `main`, the verify job checks the signature against that
-  commit (`--certificate-github-workflow-sha`), and the README shows users
-  how to check the signing commit against `main` themselves.
+- **Started by release-please**, the normal path. Once the release pull
+  request is merged and CI and Security have passed on its commit, the
+  release-please workflow creates the annotated `vX.Y.Z` tag on that commit
+  (through the API, with the workflow's built-in token; an existing tag is
+  refused, never moved) and starts the release workflow on that tag
+  (`workflow_dispatch` with `--ref vX.Y.Z`; a tag created with the built-in
+  token starts no push workflow).
+- **A tag a maintainer pushes**, or a release a maintainer starts again on its
+  tag the same way.
+
+Either way the certificate names `release.yml@refs/tags/vX.Y.Z`, and the
+identity proves "the release workflow on a version tag", not "the workflow
+on `main`". These controls close that gap:
+
+- **Tag rulesets.** No one may move or delete a `v*` tag but a repository
+  administrator (a ruleset on `refs/tags/v*` with the update, deletion and
+  non-fast-forward rules and an admin-only bypass), and no one may create a
+  `v*` tag with a suffix (`v*-*`, `v*+*`; no bypass). Creating a plain
+  `vX.Y.Z` tag takes write access to the repository; the tag alone publishes
+  nothing until the gate below has passed.
+- **The commit must be on `main`, and be the run's own.** The workflow's gate
+  refuses a run that is not on its tag, and a tag whose commit is not on
+  `main` or is not the commit the run was started for (the one the
+  certificate records). The verify job checks the signature and both
+  attestations against that commit (`--certificate-github-workflow-sha`,
+  `--source-digest`), and the README shows users how to check the signing
+  commit against `main` themselves.
 
 ## The first release and the registry
 

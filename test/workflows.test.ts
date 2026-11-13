@@ -13,6 +13,7 @@ import { REPO } from "./helpers.js";
 
 const WF = join(REPO, ".github", "workflows");
 const release = readFileSync(join(WF, "release.yml"), "utf8");
+const releasePlease = readFileSync(join(WF, "release-please.yml"), "utf8");
 const workflows = readdirSync(WF).filter((n) => n.endsWith(".yml") || n.endsWith(".yaml"));
 
 /** The text of one job: from `  <id>:` to the next job or the end. */
@@ -52,9 +53,12 @@ describe("an image only for a confirmed release", () => {
     }
   });
 
-  it("runs on a tag push and nothing else", () => {
-    expect(/\non:\n {2}push:\n {4}tags: \["v\*"\]\n\n/.test(release)).toBe(true);
-    expect(release).not.toMatch(/branches:|pull_request|workflow_dispatch|schedule:|workflow_run/);
+  it("runs on a tag push or started on a tag (workflow_dispatch, no inputs), and nothing else", () => {
+    const on = /\non:\n([^]*?)\n(?=[a-z])/.exec(release)?.[1] ?? "";
+    expect([...on.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1])).toEqual(["push", "workflow_dispatch"]);
+    expect(on.startsWith('  push:\n    tags: ["v*"]\n')).toBe(true);
+    expect(on).toMatch(/\n {2}workflow_dispatch:\n$/);
+    expect(release).not.toMatch(/branches:|pull_request|schedule:|workflow_run|workflow_call|inputs\./);
   });
 
   it("publishes only for vX.Y.Z with no suffix", () => {
@@ -86,7 +90,9 @@ describe("an image only for a confirmed release", () => {
   });
 
   it("a planted removal of the attestation check, the smoke or the wait goes red", () => {
-    expect(verifyFaults(release.replace(/ {6}- name: gh attestation verify\n[^]*?--source-ref "refs\/tags\/\$TAG"\n/, ""))).toEqual(["verify does not run gh attestation verify on the digest"]);
+    expect(verifyFaults(release.replace(/ {6}- name: gh attestation verify\n[^]*?--source-digest "\$COMMIT"\n/, ""))).toEqual(["verify does not run gh attestation verify on the digest"]);
+    expect(verifyFaults(release.replace(' --source-digest "$COMMIT"', ""))).toEqual(["verify does not run gh attestation verify on the digest"]);
+    expect(verifyFaults(release.replace('--source-ref "$GITHUB_REF"', '--source-ref "refs/heads/main"'))).toEqual(["verify does not run gh attestation verify on the digest"]);
     expect(verifyFaults(release.replace(" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml", ""))).toEqual(["verify does not run gh attestation verify on the digest"]);
     expect(verifyFaults(release.replace(/ {6}- name: cosign verify-attestation[^\n]*\n[^]*?> \/dev\/null\n/, ""))).toEqual(["verify does not check the SBOM attestation"]);
     expect(verifyFaults(release.replace(/ {6}- name: Smoke the published digest[^\n]*\n[^]*?scripts\/image-smoke\.sh\n/, ""))).toEqual(["verify does not smoke the published digest"]);
@@ -108,8 +114,9 @@ describe("an image only for a confirmed release", () => {
     expect(t).toContain("DIGEST: ${{ needs.publish.outputs.digest }}");
     expect(t).toContain('[[ $got == "$DIGEST" ]]');
     expect(t.indexOf('scripts/ghcr-not-released.sh "$IMAGE" "$VERSION"')).toBeLessThan(t.indexOf("imagetools create"));
-    // The workflow's last job is the tag job.
-    expect(release.slice(release.indexOf("\n  tag:\n") + 1)).toBe(job(release, "tag"));
+    // The workflow's last job publishes the release page, after the tag job.
+    expect(release.slice(release.indexOf("\n  release-page:\n") + 1)).toBe(job(release, "release-page"));
+    expect(job(release, "release-page")).toContain("\n    needs: [gate, publish, tag]\n");
   });
 
   it("checks the image's version and schema head, never re-tags, builds both platforms, signs and attests", () => {
@@ -132,6 +139,9 @@ describe("an image only for a confirmed release", () => {
     expect(re.test(`${base}release.yml@refs/tags/v1.2.3`)).toBe(true);
     for (const bad of [
       `${base}release.yml@refs/heads/main`,
+      `${base}release.yml@refs/heads/v1.2.3`,
+      `${base}release.yml@refs/pull/1/merge`,
+      `${base}release-please.yml@refs/tags/v1.2.3`,
       `${base}release.yml@refs/tags/v1.2.3-rc.1`,
       `${base}ci.yml@refs/tags/v1.2.3`,
       "https://github.com/someone/viafrei-database/.github/workflows/release.yml@refs/tags/v1.2.3",
@@ -156,18 +166,34 @@ describe("an image only for a confirmed release", () => {
   it("the README says which tag :latest follows, and SECURITY.md the tag ruleset and the first-release rule", () => {
     expect(readFileSync(join(REPO, "README.md"), "utf8")).toContain("A tag whose release failed still counts");
     const sec = readFileSync(join(REPO, "SECURITY.md"), "utf8");
-    expect(sec).toContain("Only repository administrators may create, update or\n  delete a `v*` tag");
+    expect(sec).toContain("No one may move or delete a `v*` tag but a repository\n  administrator");
     expect(sec).toContain("scripts/ghcr-not-released.sh");
+    const contributing = readFileSync(join(REPO, "CONTRIBUTING.md"), "utf8");
+    // The one repository setting the release-please path needs, with why it is safe, and the recoveries.
+    expect(contributing).toContain('"Allow GitHub Actions to\ncreate and approve pull requests")');
+    expect(contributing).toContain("`main` requires 0 approving reviews");
+    for (const r of ["`gh workflow run release.yml --ref vX.Y.Z`", "`gh run rerun <run-id> --failed`"]) expect(contributing).toContain(r);
   });
 });
 
 describe("permissions", () => {
-  it("are read-only for the workflow and every job but publish and tag", () => {
+  it("are read-only for the workflow and every job but publish, tag and release-page", () => {
     expect(release).toMatch(/\npermissions:\n {2}contents: read\n\n/);
     expect(permissions(job(release, "gate"))).toEqual(["contents: read", "actions: read"]);
     expect(permissions(job(release, "publish"))).toEqual(["contents: read", "packages: write", "id-token: write", "attestations: write"]);
     expect(permissions(job(release, "verify"))).toEqual(["contents: read", "packages: read", "attestations: read"]);
     expect(permissions(job(release, "tag"))).toEqual(["contents: read", "packages: write"]);
+    expect(permissions(job(release, "release-page"))).toEqual(["contents: write"]);
+  });
+
+  it("release-please.yml grants each job what it uses, and nothing can publish an image", () => {
+    expect(releasePlease).toMatch(/\npermissions:\n {2}contents: read\n\n/);
+    expect(jobNamesById(releasePlease)).toEqual(["ready", "release-please", "approve", "tag"]);
+    expect(permissions(job(releasePlease, "ready"))).toEqual(["contents: read", "actions: read"]);
+    expect(permissions(job(releasePlease, "release-please"))).toEqual(["contents: write", "pull-requests: write"]);
+    expect(permissions(job(releasePlease, "approve"))).toEqual(["contents: read", "actions: write"]);
+    expect(permissions(job(releasePlease, "tag"))).toEqual(["contents: write", "actions: write"]);
+    expect(releasePlease).not.toMatch(/packages: write|id-token: write|attestations: write/);
   });
 
   it("no expression is expanded inside a run script of any workflow (template injection)", () => {
@@ -212,6 +238,17 @@ describe("pins", () => {
     }
   });
 
+  it("release-please.yml uses exactly the reviewed pins", () => {
+    const RP_PINS: Record<string, string> = {
+      "actions/checkout": PINS["actions/checkout"] ?? "",
+      "actions/setup-node": PINS["actions/setup-node"] ?? "",
+      "googleapis/release-please-action": "45996ed1f6d02564a971a2fa1b5860e934307cf7", // v5.0.0
+    };
+    const used = [...releasePlease.matchAll(/uses: ([\w.-]+\/[\w.-]+)@([0-9a-f]{40})/g)].map((m) => [m[1] ?? "", m[2] ?? ""] as const);
+    expect(new Set(used.map(([a]) => a))).toEqual(new Set(Object.keys(RP_PINS)));
+    for (const [a, sha] of used) expect(sha, a).toBe(RP_PINS[a]);
+  });
+
   it("the release uses exactly the reviewed pins", () => {
     const used = [...release.matchAll(/uses: ([\w.-]+\/[\w.-]+)@([0-9a-f]{40})/g)].map((m) => [m[1] ?? "", m[2] ?? ""] as const);
     expect(new Set(used.map(([a]) => a))).toEqual(new Set(Object.keys(PINS)));
@@ -232,11 +269,17 @@ describe("pins", () => {
 export function verifyFaults(release: string): string[] {
   const faults: string[] = [];
   const v = job(release, "verify");
-  if (!v.includes('\n        run: gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GH_REPO" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml --source-ref "refs/tags/$TAG"\n')) faults.push("verify does not run gh attestation verify on the digest");
+  if (!v.includes('\n        run: gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GH_REPO" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml --source-ref "$GITHUB_REF" --source-digest "$COMMIT"\n')) faults.push("verify does not run gh attestation verify on the digest");
   if (!v.includes('\n        run: cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson --certificate-identity-regexp "$IDENTITY" --certificate-oidc-issuer "$ISSUER" --certificate-github-workflow-sha "$COMMIT" > /dev/null\n')) faults.push("verify does not check the SBOM attestation");
   if (!v.includes("\n          IMAGE_REF: ${{ env.IMAGE }}@${{ needs.publish.outputs.digest }}\n        run: IMAGE=\"$IMAGE_REF\" scripts/image-smoke.sh\n")) faults.push("verify does not smoke the published digest");
   if (!job(release, "tag").includes("\n    needs: [gate, publish, verify]\n")) faults.push("the tag job does not wait for verify");
   return faults;
+}
+
+/** The ids of a workflow's jobs, in order. */
+export function jobNamesById(text: string): string[] {
+  const jobs = text.slice(text.indexOf("\njobs:\n"));
+  return [...jobs.matchAll(/\n {2}([a-z][\w-]*):\n/g)].map((m) => m[1] ?? "");
 }
 
 /** Every job's `name:` in a workflow, in file order. */
@@ -279,6 +322,97 @@ export function checkoutFaults(release: string): string[] {
   }
   if (!job(release, "gate").includes('[[ $commit == "$GITHUB_SHA" ]] || {')) faults.push("the gate does not refuse a tag that has moved off github.sha");
   if (!release.includes("\nconcurrency:\n  group: release\n  cancel-in-progress: false\n")) faults.push("releases are not serialised in one group");
+  return faults;
+}
+
+/** The gate's own refusal of a run that is not on a tag, word for word. */
+export const GATE_REF_ERROR = "::error::release gate: this run is on $GITHUB_REF, not on a tag; start a release on its tag (gh workflow run release.yml --ref vX.Y.Z)";
+
+/**
+ * How release.yml binds every run to its tag, whatever started it: the run is
+ * on refs/tags/<tag> (so github.sha, which the certificate records, is the
+ * tag's commit), the tag still names github.sha, a non-vX.Y.Z tag is a quiet
+ * no-op on a tag push only, and a page already published is refused.
+ */
+export function bindingFaults(release: string): string[] {
+  const faults: string[] = [];
+  const gate = job(release, "gate");
+  if (!release.includes("\n  TAG: ${{ github.ref_name }}\n")) faults.push("the tag is not the ref the run is on");
+  const steps = gate.slice(gate.indexOf("\n    steps:\n"));
+  const first = steps.slice(steps.indexOf("\n      - "), steps.indexOf("\n      - ", steps.indexOf("\n      - ") + 1));
+  if (!first.startsWith("\n      - name: The run is on its tag\n") || !first.includes(`[[ $GITHUB_REF == "refs/tags/$TAG" ]] || { echo "${GATE_REF_ERROR}"; exit 1; }`)) faults.push("the gate's first step does not refuse a run that is not on its tag");
+  if (!gate.includes("[[ $GITHUB_EVENT_NAME == push ]] || {")) faults.push("a non-vX.Y.Z tag is a quiet no-op however the run started");
+  if (!gate.includes('if page=$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq .html_url 2>&1); then\n')) faults.push("a published release page is not refused");
+  const at = gate.indexOf('[[ $commit == "$GITHUB_SHA" ]] || {');
+  if (at < 0 || gate.indexOf("echo \"publish=true\"") < at) faults.push("the gate says publish before it has bound the commit");
+  return faults;
+}
+
+/**
+ * What release-please.yml must do between the release commit and release.yml:
+ * run only after CI and Security passed on main, then refuse a tag that is
+ * not a plain vX.Y.Z or exists already, check CI on the release commit FIRST,
+ * create an annotated tag on exactly that commit, and call release.yml with
+ * release-please's tag and sha, never github.sha.
+ */
+export function releasePleaseFaults(rp: string, wf: (name: string) => string): string[] {
+  const faults: string[] = [];
+  const names = (/\n {4}workflows: \[(.*)\]\n/.exec(rp)?.[1] ?? "").split(", ");
+  const actual = ["ci.yml", "security.yml"].map((n) => /\nname: (.+)\n/.exec(wf(n))?.[1] ?? "");
+  if (names.join() !== actual.join() || !rp.includes("\n    types: [completed]\n    branches: [main]\n")) faults.push("it does not follow CI and Security on main");
+  const ready = job(rp, "ready");
+  if (!ready.includes("github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository")) faults.push("a run that did not succeed on a push to this repository is followed");
+  if (!ready.includes('node scripts/ci-gate.ts "$sha" "$GH_REPO" < "$RUNNER_TEMP/runs.json" || rc=$?')) faults.push("ready does not ask scripts/ci-gate.ts");
+  if (!job(rp, "release-please").includes("\n    needs: ready\n    if: needs.ready.outputs.ready == 'true'\n")) faults.push("release-please runs before CI and Security both passed");
+  const t = job(rp, "tag");
+  if (!t.includes("\n    if: needs.release-please.outputs.created == 'true'\n")) faults.push("the tag job runs without a release");
+  if (!t.includes("[[ $TAG =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+$ ]] || {")) faults.push("a tag that is not vX.Y.Z is not refused");
+  if (!t.includes("[[ $SHA =~ ^[0-9a-f]{40}$ ]] || {")) faults.push("a commit that is not a 40-hex sha is not refused");
+  const gate = t.indexOf('node scripts/ci-gate.ts "$SHA" "$GH_REPO" < "$RUNNER_TEMP/runs.json"\n');
+  const exists = t.indexOf('if out=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha 2>&1); then\n');
+  const create = t.indexOf('gh api -X POST "repos/$GH_REPO/git/tags"');
+  if (gate < 0 || create < 0 || gate > create) faults.push("the tag is created before CI is checked on the release commit");
+  if (exists < 0 || exists > create || !t.includes("*\"HTTP 404\"*")) faults.push("an existing tag is not refused");
+  if (!t.includes('-f object="$SHA" -f type=commit') || !t.includes('-f ref="refs/tags/$TAG" -f sha="$obj"')) faults.push("the tag is not an annotated tag on the release commit");
+  if (!t.includes('--jq .object.type) == tag ]]') || !t.includes('--jq .object.sha) == "$SHA" ]]')) faults.push("the tag is not read back");
+  for (const id of jobNamesById(rp)) {
+    const j = job(rp, id);
+    const checkouts = j.split("uses: actions/checkout@").length - 1;
+    if (checkouts > j.split("persist-credentials: false").length - 1) faults.push(`${id} keeps the checkout's credentials`);
+  }
+  const needsLine = /\n {4}needs: (?:\[(.*)\]|(\S+))\n/.exec(t);
+  const needs = (needsLine?.[1] ?? needsLine?.[2] ?? "").split(", ").filter((x) => x !== "");
+  if (needs.join() !== "release-please") faults.push("the tag job does not depend on the release-please action alone");
+  const ids = jobNamesById(rp);
+  for (const id of needs) if (ids.includes(id) && job(rp, id).includes("approve-release-runs.sh")) faults.push(`the tag job waits for the approval (in ${id})`);
+  const approve = ids.includes("approve") ? job(rp, "approve") : "";
+  if (!approve.includes("\n    needs: release-please\n    if: needs.release-please.outputs.pr != ''\n") || !approve.includes('scripts/approve-release-runs.sh "$branch"')) faults.push("the approval is not its own job after release-please");
+  const dispatch = t.indexOf('\n          gh workflow run release.yml --ref "$TAG"\n');
+  const readBack = t.indexOf('--jq .object.sha) == "$SHA" ]]');
+  if (dispatch < 0) faults.push("release.yml is not started on the tag");
+  else if (readBack < 0 || dispatch < readBack) faults.push("release.yml is started before the tag is read back");
+  if (!t.includes('runs?event=workflow_dispatch&head_sha=$SHA') || !t.includes('select(.head_branch == \\"$TAG\\")') || !t.includes("(( SECONDS < deadline )) || {")) faults.push("the release run is not found within a bounded wait");
+  if (!t.includes("              in_progress) break ;;\n") || !t.includes("[[ $conclusion != cancelled ]] || {")) faults.push("a release run that never started, or was cancelled, is accepted");
+  if (!t.includes('\\"\\")\\"") || found=""\n')) faults.push("a failed read of the release runs ends the wait instead of being retried");
+  if (/\n {4}uses: |workflow_call/.test(rp)) faults.push("release.yml is called rather than started on the tag");
+  const out = job(rp, "release-please");
+  if (!out.includes("\n      tag: ${{ steps.rp.outputs.tag_name }}\n      sha: ${{ steps.rp.outputs.sha }}\n")) faults.push("the tag and sha are not release-please's outputs");
+  if (!rp.includes("\nconcurrency:\n  group: release-please\n  cancel-in-progress: false\n")) faults.push("release-please runs are not serialised");
+  return faults;
+}
+
+/** The last job: the draft gets the digest and the verify commands, and only then is published. */
+export function releasePageFaults(release: string): string[] {
+  const faults: string[] = [];
+  const j = job(release, "release-page");
+  if (!j.includes("[[ $draft == true ]] || {")) faults.push("a published release is edited");
+  if (!j.includes('[[ $body != *"## Container image"* ]] || {')) faults.push("a draft is given a second image section");
+  const notes = j.indexOf("} > \"$notes\"");
+  const patch = j.indexOf('-F "body=@$notes" -F draft=false');
+  if (notes < 0 || patch < notes) faults.push("the draft is published without the notes");
+  if (!j.includes('-F draft=false -f make_latest="$HIGHEST"')) faults.push("the page is published without saying whether it is the latest");
+  for (const want of ['"$IMAGE" "$DIGEST" "$IDENTITY" "$ISSUER" "$COMMIT"', '--source-ref %s --source-digest %s', "--type spdxjson"]) if (!j.includes(want)) faults.push(`the notes lack ${want}`);
+  if (!j.includes('[[ $got == "$id false" ]] || {') || !j.includes('grep -qF "$DIGEST"')) faults.push("the published page is not read back");
   return faults;
 }
 
@@ -347,6 +481,77 @@ describe("the release's checkouts and concurrency", () => {
     expect(checkoutFaults(tagRef)).toEqual(["publish does not check out the gate's commit", "publish checks out the tag ref"]);
     expect(checkoutFaults(release.replace(/ {10}\[\[ \$commit == "\$GITHUB_SHA" \]\][^\n]*\n/, ""))).toEqual(["the gate does not refuse a tag that has moved off github.sha"]);
     expect(checkoutFaults(release.replace("  group: release\n", "  group: release-${{ github.ref_name }}\n"))).toEqual(["releases are not serialised in one group"]);
+  });
+});
+
+describe("the release-please path", () => {
+  const wf = (n: string): string => readFileSync(join(WF, n), "utf8");
+  it("release.yml binds every run to its tag and the tag to github.sha", () => {
+    expect(bindingFaults(release)).toEqual([]);
+  });
+  it("release-please.yml gates, tags and starts the release on the tag as it says", () => {
+    expect(releasePleaseFaults(releasePlease, wf)).toEqual([]);
+  });
+  it("the release page is published last, with the digest and the verify commands", () => {
+    expect(releasePageFaults(release)).toEqual([]);
+  });
+  it("a planted break of a binding goes red", () => {
+    const cut = (re: RegExp): string => release.replace(re, "");
+    expect(bindingFaults(release.replace("TAG: ${{ github.ref_name }}", "TAG: ${{ inputs.tag || github.ref_name }}"))).toEqual(["the tag is not the ref the run is on"]);
+    const refStep = /( {6}# First, before anything[^]*?)( {6}- name: The run is on its tag\n[^]*?--ref vX\.Y\.Z\)"; exit 1; }\n)/;
+    expect(refStep.test(release)).toBe(true);
+    expect(bindingFaults(release.replace(refStep, "$1"))).toEqual(["the gate's first step does not refuse a run that is not on its tag"]);
+    expect(bindingFaults(release.replace(GATE_REF_ERROR, "::error::not on a tag"))).toEqual(["the gate's first step does not refuse a run that is not on its tag"]);
+    // After the checkout, a branch run would fail on a missing tag ref first, with checkout's message instead of the gate's.
+    const checkout = /( {6}- uses: actions\/checkout@\S+ # v[\d.]+\n {8}with:\n {10}ref: refs\/tags\/\$\{\{ env\.TAG \}\}\n(?: {10}.*\n)+)/;
+    const moved = release.replace(refStep, "$1").replace(checkout, (c) => c + (refStep.exec(release)?.[2] ?? ""));
+    expect(moved).not.toBe(release);
+    expect(bindingFaults(moved)).toEqual(["the gate's first step does not refuse a run that is not on its tag"]);
+    expect(bindingFaults(release.replace("[[ $GITHUB_EVENT_NAME == push ]] || {", "true || {"))).toEqual(["a non-vX.Y.Z tag is a quiet no-op however the run started"]);
+    expect(bindingFaults(cut(/ {10}if page=\$\(gh api[^]*? {10}fi\n/))).toEqual(["a published release page is not refused"]);
+    expect(bindingFaults(cut(/ {10}\[\[ \$commit == "\$GITHUB_SHA" \]\][^\n]*\n/))).toEqual(["the gate says publish before it has bound the commit"]);
+  });
+  it("a planted break of release-please.yml goes red", () => {
+    const rp = releasePlease;
+    expect(releasePleaseFaults(rp.replace("workflows: [CI, Security]", "workflows: [CI]"), wf)).toEqual(["it does not follow CI and Security on main"]);
+    expect(releasePleaseFaults(rp, (n) => (n === "security.yml" ? wf(n).replace("\nname: Security\n", "\nname: Security scans\n") : wf(n)))).toEqual(["it does not follow CI and Security on main"]);
+    expect(releasePleaseFaults(rp.replace(" && github.event.workflow_run.event == 'push'", ""), wf)).toEqual(["a run that did not succeed on a push to this repository is followed"]);
+    expect(releasePleaseFaults(rp.replace("    if: needs.ready.outputs.ready == 'true'\n", ""), wf)).toEqual(["release-please runs before CI and Security both passed"]);
+    expect(releasePleaseFaults(rp.replace(/ {10}\[\[ \$TAG =~[^\n]*\n/, ""), wf)).toEqual(["a tag that is not vX.Y.Z is not refused"]);
+    expect(releasePleaseFaults(rp.replace(/ {6}- name: CI and Security passed on the release commit\n[^]*?< "\$RUNNER_TEMP\/runs\.json"\n/, ""), wf)).toEqual(["the tag is created before CI is checked on the release commit"]);
+    expect(releasePleaseFaults(rp.replace(/ {10}if out=\$\(gh api[^]*? {10}fi\n/, ""), wf)).toEqual(["an existing tag is not refused"]);
+    expect(releasePleaseFaults(rp.replace('-f object="$SHA"', '-f object="$GITHUB_SHA"'), wf)).toEqual(["the tag is not an annotated tag on the release commit"]);
+    expect(releasePleaseFaults(rp.replace('gh workflow run release.yml --ref "$TAG"', "gh workflow run release.yml"), wf)).toEqual(["release.yml is not started on the tag"]);
+    expect(releasePleaseFaults(rp.replace('gh workflow run release.yml --ref "$TAG"', 'gh workflow run release.yml --ref main'), wf)).toEqual(["release.yml is not started on the tag"]);
+    const dispatchLine = '          gh workflow run release.yml --ref "$TAG"\n';
+    const early = rp.replace(dispatchLine, "").replace('          if out=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG"', `${dispatchLine}          if out=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG"`);
+    expect(releasePleaseFaults(early, wf)).toEqual(["release.yml is started before the tag is read back"]);
+    expect(releasePleaseFaults(rp.replace(/ {12}\(\( SECONDS < deadline \)\)[^\n]*\n/, ""), wf)).toEqual(["the release run is not found within a bounded wait"]);
+    expect(releasePleaseFaults(rp.replace("              in_progress) break ;;\n", "              in_progress|queued|pending) break ;;\n"), wf)).toEqual(["a release run that never started, or was cancelled, is accepted"]);
+    expect(releasePleaseFaults(rp.replace("[[ $conclusion != cancelled ]] || {", "true || {"), wf)).toEqual(["a release run that never started, or was cancelled, is accepted"]);
+    expect(releasePleaseFaults(rp.replace(' || found=""\n', "\n"), wf)).toEqual(["a failed read of the release runs ends the wait instead of being retried"]);
+    const tagNeeds = "\n  tag:\n    name: Annotated tag\n    needs: release-please\n";
+    expect(rp).toContain(tagNeeds);
+    expect(releasePleaseFaults(rp.replace(tagNeeds, "\n  tag:\n    name: Annotated tag\n    needs: [release-please, approve]\n"), wf)).toEqual(["the tag job does not depend on the release-please action alone", "the tag job waits for the approval (in approve)"]);
+    // The approval folded back into the release-please job: the tag job then waits for it.
+    const approveSteps = job(rp, "approve").slice(job(rp, "approve").indexOf("    steps:\n") + "    steps:\n".length);
+    const folded = rp.replace(job(rp, "approve"), "").replace("          manifest-file: .release-please-manifest.json\n", `          manifest-file: .release-please-manifest.json\n${approveSteps}`);
+    expect(releasePleaseFaults(folded, wf)).toEqual(["the tag job waits for the approval (in release-please)", "the approval is not its own job after release-please"]);
+    const appr = job(rp, "approve");
+    expect(releasePleaseFaults(rp.replace(appr, appr.replace("persist-credentials: false", "persist-credentials: true")), wf)).toEqual(["approve keeps the checkout's credentials"]);
+    expect(releasePleaseFaults(rp.replace(appr, appr.replace("    if: needs.release-please.outputs.pr != ''\n", "")), wf)).toEqual(["the approval is not its own job after release-please"]);
+    expect(releasePleaseFaults(rp.replace("&head_sha=$SHA&", "&"), wf)).toEqual(["the release run is not found within a bounded wait"]);
+    expect(releasePleaseFaults(`${rp}\n  release:\n    needs: tag\n    uses: ./.github/workflows/release.yml\n`, wf)).toEqual(["release.yml is called rather than started on the tag"]);
+    expect(releasePleaseFaults(rp.replace("  group: release-please\n", "  group: release-please-${{ github.run_id }}\n"), wf)).toEqual(["release-please runs are not serialised"]);
+    const tagJob = job(rp, "tag");
+    expect(releasePleaseFaults(rp.replace(tagJob, tagJob.replace("persist-credentials: false", "persist-credentials: true")), wf)).toEqual(["tag keeps the checkout's credentials"]);
+  });
+  it("a planted break of the release page goes red", () => {
+    expect(releasePageFaults(release.replace("[[ $draft == true ]] || {", "true || {"))).toEqual(["a published release is edited"]);
+    expect(releasePageFaults(release.replace(' -F "body=@$notes"', ""))).toEqual(["the draft is published without the notes"]);
+    expect(releasePageFaults(release.replace(" --source-ref %s --source-digest %s", " --source-ref %s"))).toEqual(["the notes lack --source-ref %s --source-digest %s"]);
+    expect(releasePageFaults(release.replace('grep -qF "$DIGEST"', "true"))).toEqual(["the published page is not read back"]);
+    expect(releasePageFaults(release.replace(' -f make_latest="$HIGHEST"', ""))).toEqual(["the page is published without saying whether it is the latest"]);
   });
 });
 

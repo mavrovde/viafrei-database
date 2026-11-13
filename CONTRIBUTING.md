@@ -67,13 +67,59 @@ them ahead, and `check` and `/ready` require today and tomorrow covered.
 ## Pull requests
 
 - Use one topic per pull request, and a Conventional Commit title (`feat:`,
-  `fix:`, `docs:`, `deps:`, `ci:`…).
+  `fix:`, `docs:`, `deps:`, `ci:`…). Pull requests are squashed, so the title
+  becomes the commit on `main`, and the commits on `main` decide the next
+  version: release-please reads them and keeps a release pull request open
+  with the version bump and the `CHANGELOG.md` section. While the version is
+  `0.x`, `feat:` raises the minor and `fix:` the patch; `feat!:` or a
+  `BREAKING CHANGE:` footer raises the minor too. `docs:`, `deps:`, `ci:`,
+  `build:`, `perf:`, `refactor:` and `revert:` are listed in the changelog
+  and raise the patch; `test:`, `chore:` and `style:` are left out and
+  release nothing on their own.
+- Do not edit a released section of `CHANGELOG.md` or the version in
+  `package.json` by hand; the release pull request writes both.
 - For a migration that adds a query path, include the `EXPLAIN (ANALYZE,
   BUFFERS)` of the query it serves.
 - Issues and pull requests use four labels: `type:bug`, `type:feature`,
-  `dependencies` and `documentation`.
+  `dependencies` and `documentation`. release-please adds its own
+  `autorelease: pending` and `autorelease: tagged` to the release pull request.
 - Never put a real credential, host, address or production figure in a commit,
   a comment or a test fixture. The secret scan reads the whole history.
+
+## Releases
+
+A merged release pull request releases by itself (README,
+[Images and versions](README.md#images-and-versions)). One setting is made
+once, and when a release stops on the way one of the cases below applies.
+
+**Setup.** The repository allows GitHub Actions to create pull requests
+(Settings, Actions, General, Workflow permissions: "Allow GitHub Actions to
+create and approve pull requests"), because release-please opens the release
+pull request with the workflow's built-in token; this is low risk here because
+`main` requires 0 approving reviews, so an approval by the token unlocks
+nothing, and `release-please.yml` is the only workflow granted
+`pull-requests: write`. Releases are serialised in one concurrency group: a
+running release is never cancelled, but a release still pending behind it is
+replaced by a newer pending one, so start one release at a time.
+
+**When a release stops.** A version tag is never reused, moved or deleted, so
+which recovery applies depends on how far the release got:
+
+- **Nothing published yet** (no `:X.Y.Z` image tag; the gate, the build, the
+  push or the verification failed for a reason outside the tagged commit,
+  such as a registry or runner outage): start the release again on its tag,
+  `gh workflow run release.yml --ref vX.Y.Z`. The gate runs again in full.
+- **The image is tagged but the release page is not published** (the
+  `release-page` job failed): re-run only the failed job of that run,
+  `gh run rerun <run-id> --failed`. A new run would be refused, because
+  `:X.Y.Z` exists and a release is never re-tagged.
+- **The release-please run could not find the release run** (its tag job
+  failed waiting, or the release run was cancelled while it was pending): if
+  no release run on the tag ran to the end, start it on the tag as in the
+  first case.
+- **The fault is in the tagged commit itself** (the version, the schema head
+  or a check of the image is wrong): none of the above; fix it on `main` and
+  release a new patch. The failed tag still counts for `:latest` and `:X.Y`.
 
 ## Code of conduct
 

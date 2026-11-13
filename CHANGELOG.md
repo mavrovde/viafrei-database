@@ -5,7 +5,13 @@ All notable changes to this project are written here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) for the database
 service (`package.json`).
 
-## [Unreleased]
+From the release after 0.1.0 on, each section is written by release-please
+from the Conventional Commits on `main`, in the release pull request, in its
+own format (a version heading linking the comparison, entries linking their
+commits) under the Keep a Changelog section names; a released section is not
+edited by hand.
+
+## [0.1.0] - 2026-11-13
 
 The first public version.
 

@@ -1,0 +1,211 @@
+# Keeps the release pull request up to date from the Conventional Commits on
+# main, and turns a merged one into a release:
+#
+#   push to main ─▶ CI ✓ and Security ✓ on that commit (ready)
+#     ─▶ release-please: opens or updates the release pull request (version in
+#        package.json and package-lock.json, a CHANGELOG section); once that
+#        pull request is merged, writes a DRAFT release (a draft makes no tag)
+#     ─▶ tag: CI and Security passed on the release commit, then the annotated
+#        tag vX.Y.Z is created on it (never moved: an existing tag is refused),
+#        and release.yml is started ON that tag (gh workflow run --ref vX.Y.Z);
+#        the job waits until that run has started (not cancelled) and links it
+#     ─▶ release.yml, on the tag: it gates, builds, signs, attests, verifies,
+#        tags the image and publishes the draft with the digest and how to
+#        verify it.
+#
+# A tag created with GITHUB_TOKEN starts no push workflow, but GITHUB_TOKEN may
+# start a workflow_dispatch. Started on the tag, release.yml runs with
+# github.ref = refs/tags/vX.Y.Z and github.sha = the tag's commit, exactly as
+# for a tag pushed by hand, so its gate and its signing identity are the same.
+#
+# CI and Security both complete on a push to main, in either order, and each
+# completion starts this workflow; the ready job lets only a run that finds
+# BOTH succeeded go on (scripts/ci-gate.ts), so the first of the two ends
+# green having done nothing. release-please is idempotent: a second run after
+# the release finds it tagged and does nothing.
+#
+# The release pull request is opened with the built-in GITHUB_TOKEN (the
+# repository must allow GitHub Actions to create pull requests). GitHub holds
+# that pull request's CI and Security runs as "action_required", and branch
+# protection reads those runs, so the approve job approves them
+# (scripts/approve-release-runs.sh). It is a job of its own, so the tag job
+# never waits for it.
+name: Release Please
+
+on:
+  workflow_run:
+    workflows: [CI, Security]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  ready:
+    name: CI and Security passed on main
+    # A run on a push to this repository's main that succeeded, or a
+    # maintainer by hand on main. The event and repository checks keep out a
+    # fork's pull request from a branch named main.
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # the workflow runs on the commit (scripts/ci-gate.ts)
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+      - name: Both workflows concluded success on the commit
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          sha=${RUN_SHA:-$GITHUB_SHA}
+          gh api --paginate --slurp "repos/$GH_REPO/actions/runs?head_sha=$sha&per_page=100" > "$RUNNER_TEMP/runs.json"
+          rc=0
+          node scripts/ci-gate.ts "$sha" "$GH_REPO" < "$RUNNER_TEMP/runs.json" || rc=$?
+          case $rc in
+            0) echo "ready=true" >> "$GITHUB_OUTPUT" ;;
+            1) echo "::notice::not both of CI and Security have succeeded on $sha yet; the other completion runs this again"
+               echo "ready=false" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$rc" ;;
+          esac
+
+  release-please:
+    name: Release pull request
+    needs: ready
+    if: needs.ready.outputs.ready == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.rp.outputs.release_created }}
+      tag: ${{ steps.rp.outputs.tag_name }}
+      sha: ${{ steps.rp.outputs.sha }}
+      pr: ${{ steps.rp.outputs.pr }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  approve:
+    name: Approve CI and Security on the release pull request
+    needs: release-please
+    if: needs.release-please.outputs.pr != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write # approves CI and Security on the release pull request
+    steps:
+      # The approval script is read from main's checkout, not the release branch.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Approve CI and Security on the release pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ needs.release-please.outputs.pr }}
+        run: |
+          branch=$(jq -r '.headBranchName // empty' <<<"$PR")
+          scripts/approve-release-runs.sh "$branch"
+
+  tag:
+    name: Annotated tag
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # creates the tag object and its ref
+      actions: write # reads the workflow runs (scripts/ci-gate.ts) and starts release.yml on the tag
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+      - name: The tag is a plain vX.Y.Z on a 40-hex release commit
+        env:
+          TAG: ${{ needs.release-please.outputs.tag }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::release-please produced tag '$TAG', not vX.Y.Z"; exit 1; }
+          [[ $SHA =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release-please produced commit '$SHA', not a 40-hex sha"; exit 1; }
+      - name: CI and Security passed on the release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          gh api --paginate --slurp "repos/$GH_REPO/actions/runs?head_sha=$SHA&per_page=100" > "$RUNNER_TEMP/runs.json"
+          node scripts/ci-gate.ts "$SHA" "$GH_REPO" < "$RUNNER_TEMP/runs.json"
+      - name: Create the annotated tag (an existing tag is refused, never moved)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          if out=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha 2>&1); then
+            echo "::error::tag $TAG exists already ($out); a tag is never moved or reused"; exit 1
+          elif [[ $out != *"HTTP 404"* ]]; then
+            echo "::error::cannot tell whether $TAG exists: $out"; exit 1
+          fi
+          obj=$(gh api -X POST "repos/$GH_REPO/git/tags" -f tag="$TAG" -f message="Release $TAG" -f object="$SHA" -f type=commit \
+            -f 'tagger[name]=github-actions[bot]' -f 'tagger[email]=41898282+github-actions[bot]@users.noreply.github.com' \
+            -f "tagger[date]=$(date -u +%Y-%m-%dT%H:%M:%SZ)" --jq .sha)
+          # Creating the ref fails when the tag appeared meanwhile: refused, not moved.
+          gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$TAG" -f sha="$obj" > /dev/null
+          [[ $(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.type) == tag ]] || { echo "::error::$TAG is not an annotated tag"; exit 1; }
+          [[ $(gh api "repos/$GH_REPO/git/tags/$obj" --jq .object.sha) == "$SHA" ]] || { echo "::error::$TAG does not name $SHA"; exit 1; }
+          echo "created the annotated tag $TAG on $SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Start release.yml on the tag, and see its run start
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          gh workflow run release.yml --ref "$TAG"
+          # The dispatch answers with no run id: the run is the dispatch of release.yml on this tag and
+          # commit. It must start (in_progress) or finish uncancelled: a run still pending in the release
+          # group can be replaced by a newer one, and is then cancelled without having run.
+          deadline=$((SECONDS + 300))
+          while :; do
+            found=$(gh api "repos/$GH_REPO/actions/workflows/release.yml/runs?event=workflow_dispatch&head_sha=$SHA&per_page=20" \
+              --jq "[.workflow_runs[] | select(.head_branch == \"$TAG\")][0] // empty | \"\(.html_url) \(.status) \(.conclusion // \"\")\"") || found=""
+            # A failed read is retried until the deadline, like an empty one.
+            read -r url status conclusion <<<"$found"
+            case $status in
+              in_progress) break ;;
+              completed)
+                [[ $conclusion != cancelled ]] || { echo "::error::the release run on $TAG was cancelled: $url"; exit 1; }
+                break ;;
+            esac
+            (( SECONDS < deadline )) || { echo "::error::release.yml was started on $TAG, but no run of it on $SHA started within 300 s${url:+ ($status: $url; another release may hold the group)}"; exit 1; }
+            sleep 5
+          done
+          echo "release run on $TAG ($status${conclusion:+, $conclusion}): $url"
+          echo "release run on $TAG ($status${conclusion:+, $conclusion}): $url" >> "$GITHUB_STEP_SUMMARY"

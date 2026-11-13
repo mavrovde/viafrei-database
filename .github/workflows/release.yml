@@ -1,17 +1,31 @@
 # Publishes the image of a CONFIRMED release, and nothing else: there is no
 # image for a branch, a commit or a release candidate.
 #
+# It always runs ON a tag, started in one of three ways, each held to the
+# same gate:
+#   - release-please.yml, after creating the tag, starts it on that tag
+#     (gh workflow run release.yml --ref vX.Y.Z): the normal path. A tag
+#     created with GITHUB_TOKEN starts no push workflow, but GITHUB_TOKEN may
+#     start a workflow_dispatch;
+#   - a push of a tag made by hand (a maintainer's annotated vX.Y.Z);
+#   - a maintainer starting it on the tag the same way, to retry a release.
+# On a tag github.ref is refs/tags/vX.Y.Z and github.sha is the tag's commit,
+# so the signing identity is release.yml on a version tag whatever started it.
+#
 # A tag publishes only when every one of these holds, checked before anything
 # is built:
-#   - it is an annotated tag vX.Y.Z with no suffix (an rc or any other tag
-#     ends here, green, having published nothing);
+#   - the run is on refs/tags/<the tag> (a dispatch on a branch is refused);
+#   - it is an annotated tag vX.Y.Z with no suffix (on a tag push an rc or any
+#     other tag ends here, green, having published nothing; a dispatch on one
+#     is an error);
 #   - X.Y.Z equals package.json's version;
-#   - the tagged commit is on main, and it is still the commit this run was
-#     started for: a tag moved after the push (it no longer names github.sha)
-#     is refused, and every later job checks out the gate's commit, never the
-#     tag;
+#   - the tagged commit is on main, and it is the commit this run was started
+#     for (github.sha, which the signing certificate records): a tag moved
+#     after the push is refused, and every later job checks out the gate's
+#     commit, never the tag;
 #   - CI and Security concluded success on that commit, from a push to main
 #     of this repository (scripts/ci-gate.ts);
+#   - the tag has no published release page yet (a draft is expected).
 # Before the push: :X.Y.Z must not exist yet (a release is never rebuilt or
 # re-tagged; scripts/ghcr-not-released.sh), and the image built from the tag
 # must report the same version and a schema head equal to the newest version
@@ -24,25 +38,34 @@
 #   2. verify: the digest is pulled, its signature verified against this
 #      workflow on a version tag AND on the gate's commit, and BOTH
 #      attestations verified — the SLSA provenance by gh attestation verify
-#      with --signer-workflow (this file) and --source-ref (refs/tags/vX.Y.Z),
-#      and the SPDX SBOM by cosign verify-attestation --type spdxjson, bound
-#      to the gate's commit (--certificate-github-workflow-sha) — then
-#      smoked (/healthz, /ready);
+#      with --signer-workflow (this file), --source-ref (the ref of this run)
+#      and --source-digest (the gate's commit), and the SPDX SBOM by cosign
+#      verify-attestation --type spdxjson, bound to the gate's commit
+#      (--certificate-github-workflow-sha) — then smoked (/healthz, /ready);
 #   3. tag: only now :X.Y.Z, :X.Y (newest patch of its minor only) and :latest
-#      (newest vX.Y.Z tag only) are pointed at that digest, each read back.
+#      (newest vX.Y.Z tag only) are pointed at that digest, each read back;
+#   4. release-page: the tag's draft release (release-please's, or a new one
+#      for a hand-made tag) gets the image digest and the verify commands in
+#      its notes and is published.
 #
 # One release at a time: every run shares the single concurrency group
-# `release`, whatever the tag, and a running release is never cancelled.
+# `release`, whatever the tag. A running release is never cancelled; a run
+# still pending behind it is replaced by a newer pending one (GitHub keeps one
+# pending run per group), which cancels it before it has done anything.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  # Started ON the tag (gh workflow run release.yml --ref vX.Y.Z): by
+  # release-please.yml once it has created the tag, or by a maintainer to retry.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# One release at a time, whatever the tag; a running release is never cancelled.
+# One release at a time, whatever the tag; a running release is never
+# cancelled, a pending one can be replaced by a newer pending one.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -70,6 +93,11 @@ jobs:
       highest_in_minor: ${{ steps.tag.outputs.highest_in_minor }}
       head: ${{ steps.head.outputs.head }}
     steps:
+      # First, before anything is checked out: whatever started it, a release
+      # runs on its tag, so github.sha is the tag's commit.
+      - name: The run is on its tag
+        run: |
+          [[ $GITHUB_REF == "refs/tags/$TAG" ]] || { echo "::error::release gate: this run is on $GITHUB_REF, not on a tag; start a release on its tag (gh workflow run release.yml --ref vX.Y.Z)"; exit 1; }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ env.TAG }}
@@ -82,6 +110,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if [[ ! $TAG =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            [[ $GITHUB_EVENT_NAME == push ]] || { echo "::error::$TAG is not a final vX.Y.Z tag"; exit 1; }
             echo "::notice::$TAG is not a final vX.Y.Z tag; only a confirmed release publishes an image, so nothing is published"
             echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -94,8 +123,15 @@ jobs:
           git fetch --no-tags origin main
           git merge-base --is-ancestor "$TAG^{commit}" origin/main || { echo "::error::$TAG points at a commit that is not on main"; exit 1; }
           commit=$(git rev-parse "$TAG^{commit}")
-          # The tag must still name the commit this run was started for.
+          # The tag must still name the commit this run was started for; the
+          # certificate records github.sha, so they are one commit or nothing is built.
           [[ $commit == "$GITHUB_SHA" ]] || { echo "::error::$TAG points at $commit, but this run was started for $GITHUB_SHA"; exit 1; }
+          # A published page is a release already made; release-please's draft is expected (drafts answer 404 here).
+          if page=$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq .html_url 2>&1); then
+            echo "::error::$TAG has a published release page already ($page)"; exit 1
+          elif [[ $page != *"HTTP 404"* ]]; then
+            echo "::error::cannot tell whether $TAG has a published release page: $page"; exit 1
+          fi
           {
             echo "publish=true"
             echo "version=$version"
@@ -256,7 +292,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           DIGEST: ${{ needs.publish.outputs.digest }}
-        run: gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GH_REPO" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml --source-ref "refs/tags/$TAG"
+          COMMIT: ${{ needs.gate.outputs.commit }}
+        run: gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GH_REPO" --signer-workflow mavrovde/viafrei-database/.github/workflows/release.yml --source-ref "$GITHUB_REF" --source-digest "$COMMIT"
       - name: cosign verify-attestation (the SPDX SBOM, same identity)
         env:
           DIGEST: ${{ needs.publish.outputs.digest }}
@@ -311,3 +348,55 @@ jobs:
             [[ $got == "$DIGEST" ]] || { echo "::error::$t points at $got, not the verified $DIGEST"; exit 1; }
             echo "- \`$t\` → \`$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
           done
+
+  release-page:
+    name: Publish the release page
+    needs: [gate, publish, tag]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # edits and publishes the draft release
+    steps:
+      - name: The draft gets the digest and the verify commands, then is published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          DIGEST: ${{ needs.publish.outputs.digest }}
+          VERSION: ${{ needs.gate.outputs.version }}
+          MINOR: ${{ needs.gate.outputs.minor }}
+          COMMIT: ${{ needs.gate.outputs.commit }}
+          HIGHEST: ${{ needs.gate.outputs.highest }}
+          HIGHEST_IN_MINOR: ${{ needs.gate.outputs.highest_in_minor }}
+        run: |
+          find_releases() { gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | \"\(.id) \(.draft)\""; }
+          found=$(find_releases)
+          if [[ -z $found ]]; then
+            # A hand-made tag has no draft: one is made here, from the tag that exists.
+            gh release create "$TAG" --draft --verify-tag --title "viafrei-database $VERSION" --generate-notes > /dev/null
+            found=$(find_releases)
+            [[ -n $found ]] || { echo "::error::a draft release for $TAG was created, but the release listing does not show it"; exit 1; }
+          fi
+          [[ $(wc -l <<<"$found") -eq 1 ]] || { echo "::error::expected one release for $TAG, found: $found"; exit 1; }
+          read -r id draft <<<"$found"
+          [[ $draft == true ]] || { echo "::error::the release of $TAG is published already"; exit 1; }
+          body=$(gh api "repos/$GH_REPO/releases/$id" --jq '.body // ""')
+          [[ $body != *"## Container image"* ]] || { echo "::error::the draft of $TAG carries an image section already"; exit 1; }
+          tags=":$VERSION"
+          if [[ $HIGHEST_IN_MINOR == true ]]; then tags+=", :$MINOR"; fi
+          if [[ $HIGHEST == true ]]; then tags+=", :latest"; fi
+          notes=$RUNNER_TEMP/notes.md
+          {
+            printf '%s\n\n## Container image\n\n' "$body"
+            printf '\x60%s@%s\x60\n\n' "$IMAGE" "$DIGEST" # \x60 is a backquote
+            printf 'Tags %s, for linux/amd64 and linux/arm64, built from %s.\n\n' "$tags" "$COMMIT"
+            printf '## Verify\n\n```sh\n'
+            printf "cosign verify %s@%s \\\\\n  --certificate-identity-regexp '%s' \\\\\n  --certificate-oidc-issuer %s \\\\\n  --certificate-github-workflow-sha %s\n" "$IMAGE" "$DIGEST" "$IDENTITY" "$ISSUER" "$COMMIT"
+            printf "gh attestation verify oci://%s@%s --repo %s \\\\\n  --signer-workflow %s/.github/workflows/release.yml \\\\\n  --source-ref %s --source-digest %s\n" "$IMAGE" "$DIGEST" "$GH_REPO" "$GH_REPO" "$GITHUB_REF" "$COMMIT"
+            printf "cosign verify-attestation %s@%s --type spdxjson \\\\\n  --certificate-identity-regexp '%s' \\\\\n  --certificate-oidc-issuer %s \\\\\n  --certificate-github-workflow-sha %s\n" "$IMAGE" "$DIGEST" "$IDENTITY" "$ISSUER" "$COMMIT"
+            printf '```\n'
+          } > "$notes"
+          gh api -X PATCH "repos/$GH_REPO/releases/$id" -F "body=@$notes" -F draft=false -f make_latest="$HIGHEST" > /dev/null
+          got=$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq '"\(.id) \(.draft)"')
+          [[ $got == "$id false" ]] || { echo "::error::the release of $TAG reads back as '$got', not published"; exit 1; }
+          gh api "repos/$GH_REPO/releases/$id" --jq .body | grep -qF "$DIGEST" || { echo "::error::the release notes of $TAG do not carry $DIGEST"; exit 1; }
+          echo "published the release page of $TAG with $DIGEST" >> "$GITHUB_STEP_SUMMARY"

@@ -5,7 +5,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mavrovde/viafrei-database/badge)](https://scorecard.dev/viewer/?uri=github.com/mavrovde/viafrei-database)
 ![coverage](https://img.shields.io/badge/coverage-lines%20100%25-brightgreen)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
-![release](https://img.shields.io/badge/release-none%20yet-lightgrey)
+![release](https://img.shields.io/github/v/release/mavrovde/viafrei-database?sort=semver)
 
 *The German Real-Time Mobility Context Platform for AI*
 
@@ -186,8 +186,30 @@ reader sees is said in the release notes.
 
 `X.Y` and `latest` follow the highest `vX.Y.Z` **tag**, counted when a
 release runs. A tag whose release failed still counts: a later, lower patch
-does not move `latest` past it. A failed release is fixed forward with a new
-patch tag; a version tag is never reused, moved or deleted.
+does not move `latest` past it. A version tag is never reused, moved or
+deleted: a release that stopped for an outside reason is started again on
+the same tag, and a fault in the tagged commit is fixed forward with a new
+patch ([CONTRIBUTING](CONTRIBUTING.md#releases) says which applies when).
+
+Versions come from the commit messages on `main`
+([Conventional Commits](CONTRIBUTING.md#pull-requests)). release-please keeps
+a release pull request open that bumps `package.json` and writes the
+`CHANGELOG.md` section; merging it releases:
+
+```text
+merge of the release pull request into main
+  -> CI and Security succeed on that commit
+  -> a draft GitHub release, then the annotated tag vX.Y.Z on that commit
+     (CI and Security checked again first; an existing tag is refused)
+  -> the release workflow, started on that tag:
+     gate, build, push by digest, sign, attest, verify, tag the image
+  -> the draft release is published with the image digest and how to verify it
+```
+
+The release workflow always runs on a tag, so whatever started it (the
+release pull request, a maintainer pushing an annotated `vX.Y.Z` tag by hand,
+or a retry with `gh workflow run release.yml --ref vX.Y.Z`) it passes the same
+gate and signs with the same identity.
 
 A release is published only from an annotated `vX.Y.Z` tag (no pre-release
 suffix: an `rc` tag publishes nothing) whose version equals `package.json`,
@@ -200,7 +222,8 @@ release checks that `docker run IMAGE version` reports the tag's version and
 that the image's schema head is the newest version in the tree. It is pushed
 by digest only, signed and attested, then pulled, verified and probed
 (`/healthz`, `/ready`). Only then are the tags above pointed at that digest,
-so a release that fails on the way leaves no tag behind.
+so a release that fails on the way leaves no tag behind. The release page
+is published last and carries the digest and the commands below.
 
 Pin by digest, and verify the signature before you run it:
 
@@ -246,7 +269,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Security | Secrets in history (gitleaks) | no secret anywhere in the history |
 | Security | DAST (OWASP ZAP against the container) | the running interface, attacked from outside; any alert, at any risk level, fails unless `scripts/zap-rules.tsv` marks its rule IGNORE with a reason |
 | Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository |
-| Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, and its CI and Security workflows concluded successfully on that commit |
+| Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
 
