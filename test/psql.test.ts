@@ -75,4 +75,22 @@ describe("psqlRunner", () => {
     const r = await psqlRunner({ databaseUrl: "postgresql://u@h/db", bin: "/usr/bin/true", env: {} })(Buffer.alloc(4 << 20, 0x20));
     expect(r).toEqual({ code: 0, stdout: "", stderr: "" });
   });
+
+  // The test above cannot promise a broken pipe: Node destroys a child's stdin
+  // when the child exits, so whether the write fails with EPIPE first or the
+  // stream is simply closed depends on timing (on a loaded runner the second
+  // won, and the stdin error handler went uncovered). Here the child closes its
+  // stdin and stays alive, so the write breaks while it runs, every time.
+  it("a broken pipe while the binary still runs is swallowed, and the exit code decides", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vfdb-psql-"));
+    try {
+      const bin = join(dir, "psql");
+      writeFileSync(bin, `#!/bin/sh\nexec 0<&-\nsleep 0.5\necho done\nexit 4\n`);
+      chmodSync(bin, 0o755);
+      const r = await psqlRunner({ databaseUrl: "postgresql://u@h/db", bin, env: {} })(Buffer.alloc(4 << 20, 0x20));
+      expect(r).toEqual({ code: 4, stdout: "done\n", stderr: "" });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
