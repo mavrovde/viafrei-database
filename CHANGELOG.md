@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.1.2](https://github.com/mavrovde/viafrei-database/compare/v0.1.1...v0.1.2) (2026-11-14)
+
+
+### Build and CI
+
+* build the release pull request only once the released version is tagged ([#13](https://github.com/mavrovde/viafrei-database/issues/13)) ([a92153a](https://github.com/mavrovde/viafrei-database/commit/a92153ab94e714ab1a4f49918914335d610d84a4))
+
 ## [0.1.1](https://github.com/mavrovde/viafrei-database/compare/v0.1.0...v0.1.1) (2026-11-13)
 
 
