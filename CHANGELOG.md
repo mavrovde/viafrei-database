@@ -11,6 +11,18 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.1.2](https://github.com/mavrovde/viafrei-database/compare/v0.1.1...v0.1.2) (2026-11-14)
+
+
+### Dependencies
+
+* Bump typescript from 5.9.3 to 6.0.3 in the dev-tooling group ([#9](https://github.com/mavrovde/viafrei-database/issues/9)) ([3c099ff](https://github.com/mavrovde/viafrei-database/commit/3c099ff8eedf9011955c929cb6cdf5c1bdd40177))
+
+
+### Build and CI
+
+* release with release-please; the release workflow is started on the tag ([#10](https://github.com/mavrovde/viafrei-database/issues/10)) ([bafa043](https://github.com/mavrovde/viafrei-database/commit/bafa043997148061970cca404a89700ffcb5c6d3))
+
 ## [0.1.1](https://github.com/mavrovde/viafrei-database/compare/v0.1.0...v0.1.1) (2026-11-13)
 
 

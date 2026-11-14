@@ -1,6 +1,6 @@
 {
   "name": "viafrei-database",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "The ViaFrei schema and its changes: migrations, partitions, roles, a disposable database for tests, and the small service that applies them and reports on the database.",
   "type": "module",
