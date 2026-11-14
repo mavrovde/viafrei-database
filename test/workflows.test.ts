@@ -397,6 +397,19 @@ export function releasePleaseFaults(rp: string, wf: (name: string) => string): s
   if (/\n {4}uses: |workflow_call/.test(rp)) faults.push("release.yml is called rather than started on the tag");
   const out = job(rp, "release-please");
   if (!out.includes("\n      tag: ${{ steps.rp.outputs.tag_name }}\n      sha: ${{ steps.rp.outputs.sha }}\n")) faults.push("the tag and sha are not release-please's outputs");
+  // A draft release has no tag, and release-please then counts from bootstrap-sha: the pull request
+  // is built in a run of its own, only once the manifest's version has its tag.
+  const rpStep = out.slice(out.indexOf("      - id: rp\n"), out.indexOf("\n      - ", out.indexOf("      - id: rp\n") + 1));
+  if (!rpStep.includes("\n          skip-github-pull-request: true") || rpStep.includes("skip-github-release")) faults.push("the release pull request is built in the run that drafts a release");
+  const prAt = out.indexOf("      - id: pr\n");
+  const prStep = prAt < 0 ? "" : out.slice(prAt);
+  if (!prStep.startsWith("      - id: pr\n        if: steps.tagged.outputs.tagged == 'true'\n        uses: googleapis/release-please-action@") || !prStep.includes("\n          skip-github-release: true\n") || !out.includes("\n      pr: ${{ steps.pr.outputs.pr }}\n")) faults.push("the release pull request is built before the released version is tagged");
+  const tagged = out.indexOf("        id: tagged\n");
+  if (tagged < 0 || tagged > prAt || !out.includes('"repos/$GH_REPO/contents/.release-please-manifest.json?ref=main"') || !out.includes('if out=$(gh api "repos/$GH_REPO/git/ref/tags/v$v" --jq .object.sha 2>&1); then\n            echo "tagged=true"')) faults.push("the released version's tag is not checked before the pull request");
+  const refresh = t.indexOf("\n        run: gh workflow run release-please.yml --ref main");
+  if (refresh < 0 || readBack < 0 || refresh < readBack) faults.push("the release pull request is not rebuilt once the tag exists");
+  else if (dispatch >= 0 && refresh < dispatch) faults.push("release-please is started again before release.yml is started on the tag");
+  if (refresh >= 0 && !t.includes('\n        run: gh workflow run release-please.yml --ref main || echo "::warning::could not start release-please again; the next push to main builds the release pull request"\n')) faults.push("a failed start of release-please fails the tag job after the release has started");
   if (!rp.includes("\nconcurrency:\n  group: release-please\n  cancel-in-progress: false\n")) faults.push("release-please runs are not serialised");
   return faults;
 }
@@ -519,7 +532,7 @@ describe("the release-please path", () => {
     expect(releasePleaseFaults(rp.replace("    if: needs.ready.outputs.ready == 'true'\n", ""), wf)).toEqual(["release-please runs before CI and Security both passed"]);
     expect(releasePleaseFaults(rp.replace(/ {10}\[\[ \$TAG =~[^\n]*\n/, ""), wf)).toEqual(["a tag that is not vX.Y.Z is not refused"]);
     expect(releasePleaseFaults(rp.replace(/ {6}- name: CI and Security passed on the release commit\n[^]*?< "\$RUNNER_TEMP\/runs\.json"\n/, ""), wf)).toEqual(["the tag is created before CI is checked on the release commit"]);
-    expect(releasePleaseFaults(rp.replace(/ {10}if out=\$\(gh api[^]*? {10}fi\n/, ""), wf)).toEqual(["an existing tag is not refused"]);
+    expect(releasePleaseFaults(rp.replace(/ {10}if out=\$\(gh api "repos\/\$GH_REPO\/git\/ref\/tags\/\$TAG"[^]*? {10}fi\n/, ""), wf)).toEqual(["an existing tag is not refused"]);
     expect(releasePleaseFaults(rp.replace('-f object="$SHA"', '-f object="$GITHUB_SHA"'), wf)).toEqual(["the tag is not an annotated tag on the release commit"]);
     expect(releasePleaseFaults(rp.replace('gh workflow run release.yml --ref "$TAG"', "gh workflow run release.yml"), wf)).toEqual(["release.yml is not started on the tag"]);
     expect(releasePleaseFaults(rp.replace('gh workflow run release.yml --ref "$TAG"', 'gh workflow run release.yml --ref main'), wf)).toEqual(["release.yml is not started on the tag"]);
@@ -530,12 +543,25 @@ describe("the release-please path", () => {
     expect(releasePleaseFaults(rp.replace("              in_progress) break ;;\n", "              in_progress|queued|pending) break ;;\n"), wf)).toEqual(["a release run that never started, or was cancelled, is accepted"]);
     expect(releasePleaseFaults(rp.replace("[[ $conclusion != cancelled ]] || {", "true || {"), wf)).toEqual(["a release run that never started, or was cancelled, is accepted"]);
     expect(releasePleaseFaults(rp.replace(' || found=""\n', "\n"), wf)).toEqual(["a failed read of the release runs ends the wait instead of being retried"]);
+    // The v0.1.1 defect: one action call both drafted the release and built the next pull request from bootstrap-sha.
+    expect(releasePleaseFaults(rp.replace("          skip-github-pull-request: true\n", ""), wf)).toEqual(["the release pull request is built in the run that drafts a release"]);
+    expect(releasePleaseFaults(rp.replace("        if: steps.tagged.outputs.tagged == 'true'\n", ""), wf)).toEqual(["the release pull request is built before the released version is tagged"]);
+    expect(releasePleaseFaults(rp.replace("          skip-github-release: true\n", ""), wf)).toEqual(["the release pull request is built before the released version is tagged"]);
+    expect(releasePleaseFaults(rp.replace("pr: ${{ steps.pr.outputs.pr }}", "pr: ${{ steps.rp.outputs.pr }}"), wf)).toEqual(["the release pull request is built before the released version is tagged"]);
+    expect(releasePleaseFaults(rp.replace('/git/ref/tags/v$v"', '/git/ref/tags/v0.1.0"'), wf)).toEqual(["the released version's tag is not checked before the pull request"]);
+    const refreshStep = /\n {6}- name: Build the next release pull request[^\n]*\n[^]*?--ref main[^\n]*\n/.exec(rp)?.[0] ?? "";
+    expect(refreshStep).toContain("release-please.yml --ref main ||");
+    expect(releasePleaseFaults(rp.replace(refreshStep, "\n"), wf)).toEqual(["the release pull request is not rebuilt once the tag exists"]);
+    // Started before release.yml, a failed refresh would stop the tag job after the tag exists and before the release started.
+    const startRelease = "\n      - name: Start release.yml on the tag, and see its run start\n";
+    expect(releasePleaseFaults(rp.replace(refreshStep, "\n").replace(startRelease, refreshStep + startRelease.slice(1)), wf)).toEqual(["release-please is started again before release.yml is started on the tag"]);
+    expect(releasePleaseFaults(rp.replace(' || echo "::warning::could not start release-please again; the next push to main builds the release pull request"', ""), wf)).toEqual(["a failed start of release-please fails the tag job after the release has started"]);
     const tagNeeds = "\n  tag:\n    name: Annotated tag\n    needs: release-please\n";
     expect(rp).toContain(tagNeeds);
     expect(releasePleaseFaults(rp.replace(tagNeeds, "\n  tag:\n    name: Annotated tag\n    needs: [release-please, approve]\n"), wf)).toEqual(["the tag job does not depend on the release-please action alone", "the tag job waits for the approval (in approve)"]);
     // The approval folded back into the release-please job: the tag job then waits for it.
     const approveSteps = job(rp, "approve").slice(job(rp, "approve").indexOf("    steps:\n") + "    steps:\n".length);
-    const folded = rp.replace(job(rp, "approve"), "").replace("          manifest-file: .release-please-manifest.json\n", `          manifest-file: .release-please-manifest.json\n${approveSteps}`);
+    const folded = rp.replace(job(rp, "approve"), "").replace("          skip-github-pull-request: true\n", `          skip-github-pull-request: true\n${approveSteps}`);
     expect(releasePleaseFaults(folded, wf)).toEqual(["the tag job waits for the approval (in release-please)", "the approval is not its own job after release-please"]);
     const appr = job(rp, "approve");
     expect(releasePleaseFaults(rp.replace(appr, appr.replace("persist-credentials: false", "persist-credentials: true")), wf)).toEqual(["approve keeps the checkout's credentials"]);

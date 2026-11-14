@@ -2,13 +2,17 @@
 # main, and turns a merged one into a release:
 #
 #   push to main ─▶ CI ✓ and Security ✓ on that commit (ready)
-#     ─▶ release-please: opens or updates the release pull request (version in
-#        package.json and package-lock.json, a CHANGELOG section); once that
-#        pull request is merged, writes a DRAFT release (a draft makes no tag)
+#     ─▶ release-please: once the release pull request is merged, writes a
+#        DRAFT release (a draft makes no tag); otherwise opens or updates the
+#        release pull request (version in package.json and package-lock.json,
+#        a CHANGELOG section), but only while the released version has its tag
 #     ─▶ tag: CI and Security passed on the release commit, then the annotated
 #        tag vX.Y.Z is created on it (never moved: an existing tag is refused),
-#        and release.yml is started ON that tag (gh workflow run --ref vX.Y.Z);
-#        the job waits until that run has started (not cancelled) and links it
+#        release.yml is started ON the tag (gh workflow run --ref vX.Y.Z), the
+#        job waits until that run has started (not cancelled) and links it,
+#        and then this workflow is started again, so the next release pull
+#        request is built now that the tag exists (if that dispatch fails, the
+#        next push to main builds it)
 #     ─▶ release.yml, on the tag: it gates, builds, signs, attests, verifies,
 #        tags the image and publishes the draft with the digest and how to
 #        verify it.
@@ -23,6 +27,16 @@
 # BOTH succeeded go on (scripts/ci-gate.ts), so the first of the two ends
 # green having done nothing. release-please is idempotent: a second run after
 # the release finds it tagged and does nothing.
+#
+# release-please finds the last release by its published GitHub release or,
+# failing that, by its tag. A draft has neither (the tag comes later, from the
+# tag job), so a release pull request built before the tag exists counts the
+# commits from bootstrap-sha and lists everything again under the next
+# version. The action therefore runs twice: first to release only, then to
+# build the pull request only, and the second runs only when the version in
+# .release-please-manifest.json on main has its vX.Y.Z tag. That holds in
+# the run that drafts a release, and in every run after a tag job that
+# failed, until the tag exists.
 #
 # The release pull request is opened with the built-in GITHUB_TOKEN (the
 # repository must allow GitHub Actions to create pull requests). GitHub holds
@@ -98,14 +112,43 @@ jobs:
       created: ${{ steps.rp.outputs.release_created }}
       tag: ${{ steps.rp.outputs.tag_name }}
       sha: ${{ steps.rp.outputs.sha }}
-      pr: ${{ steps.rp.outputs.pr }}
+      pr: ${{ steps.pr.outputs.pr }}
     steps:
+      # Releases only: a merged release pull request becomes a draft release.
       - id: rp
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true
+      - name: The released version has its tag
+        id: tagged
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # The version release-please counts from is the manifest's on main; until its tag exists,
+          # a release pull request would count from bootstrap-sha and list released commits again.
+          v=$(gh api -H "Accept: application/vnd.github.raw+json" "repos/$GH_REPO/contents/.release-please-manifest.json?ref=main" | jq -r '."."')
+          [[ $v =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::the manifest on main names version '$v', not X.Y.Z"; exit 1; }
+          if out=$(gh api "repos/$GH_REPO/git/ref/tags/v$v" --jq .object.sha 2>&1); then
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          elif [[ $out == *"HTTP 404"* ]]; then
+            echo "::notice::v$v has no tag yet; the release pull request is built once it has one"
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::cannot tell whether v$v is tagged: $out"; exit 1
+          fi
+      # Pull request only, and only from a tagged release.
+      - id: pr
+        if: steps.tagged.outputs.tagged == 'true'
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
   approve:
     name: Approve CI and Security on the release pull request
@@ -209,3 +252,8 @@ jobs:
           done
           echo "release run on $TAG ($status${conclusion:+, $conclusion}): $url"
           echo "release run on $TAG ($status${conclusion:+, $conclusion}): $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Build the next release pull request, now that the tag exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run release-please.yml --ref main || echo "::warning::could not start release-please again; the next push to main builds the release pull request"
