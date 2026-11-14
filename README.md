@@ -206,6 +206,11 @@ merge of the release pull request into main
   -> the draft release is published with the image digest and how to verify it
 ```
 
+The next release pull request is built only once the released version has its
+tag: the tag job starts release-please again for that, after it has started
+the release. Until the tag exists, release-please would count from
+bootstrap-sha (the 0.1.0 commit) and list released changes again.
+
 The release workflow always runs on a tag, so whatever started it (the
 release pull request, a maintainer pushing an annotated `vX.Y.Z` tag by hand,
 or a retry with `gh workflow run release.yml --ref vX.Y.Z`) it passes the same

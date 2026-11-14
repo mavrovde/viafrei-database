@@ -117,6 +117,18 @@ which recovery applies depends on how far the release got:
   failed waiting, or the release run was cancelled while it was pending): if
   no release run on the tag ran to the end, start it on the tag as in the
   first case.
+- **The tag job failed before the tag existed** (a check of the release
+  commit, or creating the tag): no release pull request is built until the
+  tag exists, because release-please would otherwise count from bootstrap-sha
+  (the 0.1.0 commit) and list released changes again. Fix the cause and re-run
+  the failed job, `gh run rerun <run-id> --failed`; it creates the tag, starts
+  the release on it and builds the next release pull request.
+- **The tag job failed after the tag existed, before release.yml started**
+  (reading the tag back, or the dispatch): a re-run of the tag job is refused,
+  because the tag exists. Start the release on the tag,
+  `gh workflow run release.yml --ref vX.Y.Z`. The next push to main builds the
+  release pull request, or start it now with
+  `gh workflow run release-please.yml --ref main`.
 - **The fault is in the tagged commit itself** (the version, the schema head
   or a check of the image is wrong): none of the above; fix it on `main` and
   release a new patch. The failed tag still counts for `:latest` and `:X.Y`.
