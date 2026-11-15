@@ -2,8 +2,6 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-function	public.growth_weekly_refresh(p_weeks integer)
-function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
 view	public.city_traffic_now_live
 view	public.fuel_feed_health
 view	public.fuel_station_board_live
