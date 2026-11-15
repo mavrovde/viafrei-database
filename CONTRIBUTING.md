@@ -150,6 +150,12 @@ which recovery applies depends on how far the release got:
   `gh workflow run release.yml --ref vX.Y.Z`. The next push to main builds the
   release pull request, or start it now with
   `gh workflow run release-please.yml --ref main`.
+- **Snyk stopped the release** (the Snyk (dependencies) job failed, nothing is
+  built): a Snyk outage (the CLI download, the API, a timeout) means start the
+  release again on its tag, as in the first case; an advisory (high or
+  critical) means fix it on `main` and release a new patch; an exhausted
+  free-plan monthly test quota fails like an advisory, and is not forced
+  through.
 - **The fault is in the tagged commit itself** (the version, the schema head
   or a check of the image is wrong): none of the above; fix it on `main` and
   release a new patch. The failed tag still counts for `:latest` and `:X.Y`.

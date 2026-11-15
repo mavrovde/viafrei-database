@@ -38,6 +38,8 @@
 #      mutant is planted (its control) fails the release before anything is
 #      built. This is the only run of the full set: no pull request, push or
 #      schedule runs it;
+#      snyk: Snyk over the dependencies of the same commit (snyk.yml, called);
+#      a high or critical advisory stops the release before anything is built;
 #   1. publish: linux/amd64 + linux/arm64 pushed BY DIGEST only (no tag),
 #      signed keyless with cosign, SLSA build provenance and an SPDX SBOM
 #      attested;
@@ -218,9 +220,25 @@ jobs:
           TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
         run: npm run mutate
 
+  # Snyk once per release, on the commit about to be published (snyk.yml; it
+  # also runs weekly on main). A high or critical advisory stops the release
+  # before anything is built, as a surviving mutant does.
+  snyk:
+    name: Snyk (dependencies)
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/snyk.yml
+    with:
+      ref: ${{ needs.gate.outputs.commit }}
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
   publish:
     name: Build, check, sign, attest, publish
-    needs: [gate, mutants]
+    needs: [gate, mutants, snyk]
     if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 40

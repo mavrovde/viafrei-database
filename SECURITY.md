@@ -46,9 +46,14 @@ Each check, and what starts it:
 | gitleaks over the full history | Security | every pull request, every push to `main`, and weekly |
 | an OWASP ZAP baseline scan against the built container (DAST) | Security | every pull request, every push to `main`, and weekly |
 | OpenSSF Scorecard | Scorecard | weekly and on a branch-protection change |
+| Snyk over the dependencies | Snyk | weekly on `main`, and every release before the image is published |
 
-The CI workflow has no schedule. The CI, Security and Scorecard workflows can
-also be started by hand.
+The CI workflow has no schedule. Snyk never runs on a pull request or a push:
+its weekly run on `main` finds a new advisory against an unchanged tree, and
+the release workflow calls it on the commit it is about to publish, so a high
+or critical advisory stops the release before anything is built. The CI,
+Security and Scorecard workflows can also be started by hand, and Snyk can on
+`main`.
 
 Dependabot proposes dependency updates after a seven-day cooldown, for the
 npm packages, the actions (each pinned by commit SHA) and the Dockerfile's
