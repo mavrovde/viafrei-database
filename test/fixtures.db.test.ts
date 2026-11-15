@@ -119,11 +119,14 @@ describe("test-fixtures install refuses", () => {
   it("the file itself refuses a server whose database is not test_*, and creates nothing there", async () => {
     const other = new URL(base);
     other.pathname = "/postgres";
+    // Compared before and after, not with 0: a mutant run (the refusal removed) installs on postgres and nothing drops it there.
+    const count = async (): Promise<string> =>
+      (await psqlRunner({ databaseUrl: other.toString() })("select count(*) || ':' || coalesce(string_agg(p.oid::text, ',' order by p.oid), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname like 'vf\\_test%';", ["-At"])).stdout.trim();
+    const before = await count();
     const r = await psqlRunner({ databaseUrl: other.toString() })(readFileSync(FIXTURES_FILE, "utf8"), ["-1", "-f", "-"]);
     expect(r.code).not.toBe(0);
     expect(r.stderr).toMatch(/vf_test fixtures are for a test_ database only, not postgres/);
-    const q = await psqlRunner({ databaseUrl: other.toString() })("select count(*) from pg_namespace where nspname like 'vf\\_test%';", ["-At"]);
-    expect(q.stdout.trim()).toBe("0");
+    expect(await count()).toBe(before);
   });
 });
 

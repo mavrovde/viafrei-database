@@ -93,7 +93,8 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | `head` | Prints `READY <head>` (exit 0) or `NOT READY: <why>` (exit 1) |
 | `status` | All the diagnostics below, as JSON |
 | `analyze <table>` | `ANALYZE` on one table, found by name in the catalogue |
-| `lint [--root DIR]` | The migration lint: naming, contiguous numbering, a carried file equal to its `ledger.tsv` row, a rollback note that names its own ledger row, `concurrently` only where marked, and no edit to a file already on `origin/main` |
+| `lint [--root DIR]` | The migration lint: naming, contiguous numbering, a carried file equal to its `ledger.tsv` row, a rollback note that names its own ledger row, `concurrently` only where marked, no edit to a file already on `origin/main`, and (rule 6, from 0305) a `set local lock_timeout` before the first `create index` or `alter table` on a table the file did not create, so a migration gives up on a writer's lock instead of queueing behind it; `migrate` retries a lock timeout (SQLSTATE 55P03) `DB_MIGRATE_LOCK_ATTEMPTS` times and stops with 75 after the last |
+| `test-fixtures install` | Test databases only: installs the fixture functions of `db/test-fixtures/vf_test.sql` (see [Test fixtures](#test-fixtures)). Refused with exit 2, before any connection, unless `VF_TEST_FIXTURES=1` is set and the database `DATABASE_URL` names starts with `test_`; the file refuses again on the server's own database name. Never run by `migrate` or `serve` |
 | `export-migrations` | Writes the baseline and the migrations this image carries to stdout as a tar, so another project's tests can build a throwaway database from the exact same files |
 | `version` | Prints `viafrei-database <version> schema-head <N>` |
 | `ledger-compare <file\|->` | Read-only, needs no database: compares an exported ledger (`version`, `name`, `checksum`, tab- or `\|`-separated, e.g. `psql -At -c "select version, name, checksum from schema_migrations order by version"`) with the baseline's `ledger.tsv` and names every version that differs. Exit 0 when all are equal |
@@ -317,6 +318,43 @@ holds. It refuses (exit 2) a catalogue read with no object of a kind the schema
 always holds, a database that was never migrated or is not at the checkout's
 head, an empty manifest, and a test tree it cannot list. Without `--url` it
 migrates a throwaway database next to `TEST_DATABASE_URL` and drops it.
+
+The `fixture` kind is the test-only functions of `db/test-fixtures/vf_test.sql`,
+read from the file because no served catalogue holds them: the gate refuses a
+catalogue that does (the fixtures were installed on it), and a file that
+defines none.
+
+## Test fixtures
+
+A test that must plant a row a guard refuses (a frozen slug, a value outside a
+licence floor, a postcode as a feed wrote it, a row from before a CHECK
+existed) lifts that one guard through a fixture function, inside its own
+transaction, and rolls back. `viafrei-db test-fixtures install` (with
+`VF_TEST_FIXTURES=1`, on a `test_` database) puts them in the schemas
+`vf_test`, `vf_test_clock` and `vf_test_shadow`; no other verb does.
+
+```sql
+begin;
+set local vf_test.armed = 'on';
+select vf_test.unfreeze_station_slugs();
+-- the plant and the test
+rollback;
+```
+
+Every function first calls `vf_test.armed()`, which refuses outside a `test_`
+database (42501), without `vf_test.armed = 'on'` (55000) and in autocommit
+(25P01), so a lift cannot outlive the test that asked for it.
+
+| Function | Lifts |
+|---|---|
+| `vf_test.unfreeze_station_slugs()` | the trigger `station_slugs_frozen` |
+| `vf_test.lift_runtime_config_source_bounds()` | the trigger `runtime_config_source_bounds` |
+| `vf_test.lift_postcode_trigger(relation)` | that table's `vf_postcode_normalise` trigger |
+| `vf_test.drop_check(relation, name)` | one CHECK constraint (a key or a foreign key is refused) |
+| `vf_test.set_n_distinct(relation, column, n)` | one column's `n_distinct` (applied by the next `ANALYZE`) |
+| `vf_test.set_clock(at)` | `now()` in an unqualified query reads `at` (`vf_test_clock.now()` first on the search path) |
+| `vf_test.shadow_rows(relation, rows)` / `shadow_slow(relation, seconds)` / `shadow_put(relation, body)` | an unqualified read of the relation sees the given rows, waits first, or reads the given query (a view in `vf_test_shadow`, granted to the original's readers) |
+| `vf_test.revoke_select(relation, role)` | one role's SELECT on one relation |
 
 ## Development
 

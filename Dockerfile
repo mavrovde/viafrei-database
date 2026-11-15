@@ -35,7 +35,7 @@ WORKDIR /app
 COPY --from=build /src/node_modules ./node_modules
 COPY --from=build /src/dist ./dist
 COPY package.json ./
-# db/ holds the baseline, the migrations after it and the role SQL (.dockerignore lets only those in).
+# db/ holds the baseline, the migrations after it, the role SQL and the test fixtures `test-fixtures install` reads on a test_ database only (.dockerignore lets only those in).
 COPY db ./db
 ARG VERSION=dev
 ARG GIT_SHA=unknown
