@@ -164,7 +164,7 @@ export class DomainDb {
     const lines = block.split("\n").map((l) => l.trim().replace(/,$/, ""));
     const columns = lines.filter((l) => !l.startsWith("CONSTRAINT ")).map((l) => l.split(" ")[0] ?? "");
     const inline = lines.filter((l) => l.startsWith("CONSTRAINT ")).map((l) => l.replace(/^CONSTRAINT /, ""));
-    const added = [...baseline.matchAll(new RegExp(`\\nALTER TABLE ONLY public\\.${table}\\n    ADD CONSTRAINT ([^;]+);`, "g"))].map((m) => m[1] ?? "");
+    const added = [...baseline.matchAll(new RegExp(`\\nALTER TABLE (?:ONLY )?public\\.${table}\\n    ADD CONSTRAINT ([^;]+);`, "g"))].map((m) => m[1] ?? "");
     const cols = await this.pool.query<{ a: string }>(
       "select attname as a from pg_attribute where attrelid = ('public.' || $1)::regclass and attnum > 0 and not attisdropped order by attnum",
       [table],

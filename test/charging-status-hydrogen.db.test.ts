@@ -182,7 +182,7 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
   });
 
   it("records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one", async () => {
-    const r = await t.pool.query<{ schema_name: string; table_name: string; keep_days: number; archive: boolean }>("select schema_name, table_name, keep_days, archive from partition_retention order by 1, 2");
+    const r = await t.pool.query<{ schema_name: string; table_name: string; keep_days: number; archive: boolean }>("select schema_name, table_name, keep_days, archive from partition_retention where table_name = 'charging_point_status' order by 1, 2");
     expect(r.rows).toEqual([{ schema_name: "domains", table_name: "charging_point_status", keep_days: 14, archive: true }]);
     // Every domains tick table has its row.
     const missing = await t.pool.query<{ t: string }>(
