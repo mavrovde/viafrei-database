@@ -23,7 +23,11 @@
 -- keeps every version. Its owner key includes observed_at: a feature whose
 -- content returns to an earlier state is a new row, where the old table kept
 -- one row per hash. A writer appends a version only when the hash differs from
--- the state row's, stamped with that run's observed_at.
+-- the state row's, stamped with that run's observed_at. It has no source of
+-- its own: a source has one domain, and the writer of road_context_features
+-- appends the versions in the same transaction, under the same
+-- viafrei.source_id, so the insert policy admits the source registered for
+-- road_context_features.
 --
 -- webcams: external_id is the old camera_id. No image or image URL is stored;
 -- link_url, optional and https only, is the publisher's page for the camera.
@@ -161,7 +165,7 @@ alter table domains.road_context_feature_versions force row level security;
 create policy road_context_feature_versions_read on domains.road_context_feature_versions for select using (true);
 create policy road_context_feature_versions_own_insert on domains.road_context_feature_versions for insert to viafrei_ingestor
   with check (source_id = current_setting('viafrei.source_id', true)
-              and exists (select 1 from ingestor.sources s where s.id = source_id and s.domain = 'road_context_feature_versions'));
+              and exists (select 1 from ingestor.sources s where s.id = source_id and s.domain = 'road_context_features'));
 grant select, insert on domains.road_context_feature_versions to viafrei_ingestor;
 
 create table domains.webcams (

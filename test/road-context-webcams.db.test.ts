@@ -109,7 +109,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
   const src = (table: string): string => `${table.replaceAll("_", "-")}-a`;
 
   beforeAll(async () => {
-    await t.make([...TABLES.map((x) => [src(x.name), x.name, 60] as const), ["cameras-only", "speed_cameras", 50]]);
+    await t.make([...STATES.map((x) => [src(x.name), x.name, 60] as const), ["cameras-only", "speed_cameras", 50]]);
   }, 900_000);
 
   afterAll(async () => {
@@ -119,7 +119,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
   const upsert = (c: pg.PoolClient, table: Table, rows: Row[]): Promise<pg.QueryResult<{ inserted: boolean }>> =>
     c.query<{ inserted: boolean }>(upsertSql(`domains.${table.name}`, table.cols), [JSON.stringify(rows), src(table.name), "default"]);
   const append = (c: pg.PoolClient, rows: Row[]): Promise<pg.QueryResult<{ inserted: boolean }>> =>
-    c.query<{ inserted: boolean }>(appendSql("domains.road_context_feature_versions", VERSIONS), [JSON.stringify(rows), src("road_context_feature_versions"), "default"]);
+    c.query<{ inserted: boolean }>(appendSql("domains.road_context_feature_versions", VERSIONS), [JSON.stringify(rows), src("road_context_features"), "default"]);
 
   const SIGNAL: Row = {
     external_id: "sig-1",
@@ -210,7 +210,9 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
     const cameras = await t.policies("speed_cameras");
     for (const table of TABLES) {
       expect(await t.rls(table.name), table.name).toEqual({ e: true, f: true });
-      expect(await t.policies(table.name), table.name).toEqual(table.kind === "state" ? cameras : cameras.filter((p) => p.cmd !== "UPDATE"));
+      // The version history admits the features' source: a source has one domain.
+      const want = table.kind === "state" ? cameras : cameras.filter((p) => p.cmd !== "UPDATE").map((p) => ({ ...p, with_check: p.with_check?.replace("s.domain = 'T'::text", "s.domain = 'road_context_features'::text") ?? null }));
+      expect(await t.policies(table.name), table.name).toEqual(want);
     }
     for (const table of STATES) {
       expect((await t.columnsOf(`${table.name}_merged`)).map((x) => x.column_name), table.name).toEqual([...SYSTEM, ...Object.keys(table.cols), ...(table.generated ?? []), ...MERGE_COLUMNS]);
@@ -255,7 +257,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
   });
 
   it("appends versions: a repeat is a no-op, a change is a new row, and a feature's history is read newest first", async () => {
-    await t.asSource(src("road_context_feature_versions"), async (c) => {
+    await t.asSource(src("road_context_features"), async (c) => {
       const v1: Row = { external_id: "det-1", observed_at: "2026-11-01T00:00:00Z", geom_wkt: "LINESTRING(10 53.54, 10.01 53.54)", content_hash: "h1", props: { valid_to: "2026-11-20" }, source_run_id: 1 };
       expect((await append(c, [v1])).rows).toEqual([{ inserted: true }]);
       expect((await append(c, [v1])).rows).toEqual([]);
@@ -265,6 +267,20 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
       await c.query("savepoint s");
       expect((await refusal(c.query("update domains.road_context_feature_versions set content_hash = 'x'")))?.code).toBe("42501");
       await c.query("rollback to savepoint s");
+    });
+  });
+
+  it("one source writes a feature and its version in one transaction, and a source of another domain may append no version", async () => {
+    await t.asSource(src("road_context_features"), async (c) => {
+      expect((await upsert(c, byName("road_context_features"), [DETOUR])).rows).toEqual([{ inserted: true }]);
+      expect((await append(c, [{ external_id: DETOUR.external_id, observed_at: "2026-11-01T00:00:00Z", geom_wkt: DETOUR.geom_wkt ?? null, content_hash: DETOUR["content_hash"], props: DETOUR["props"] }])).rows).toEqual([{ inserted: true }]);
+      const both = await c.query<{ s: string; v: string }>(
+        "select (select source_id from domains.road_context_features where external_id = 'det-1') as s, (select source_id from domains.road_context_feature_versions where external_id = 'det-1') as v",
+      );
+      expect(both.rows).toEqual([{ s: src("road_context_features"), v: src("road_context_features") }]);
+    });
+    await t.asSource("cameras-only", async (c) => {
+      expect((await refusal(c.query(appendSql("domains.road_context_feature_versions", VERSIONS), [JSON.stringify([{ external_id: "x", content_hash: "h", props: {} }]), "cameras-only", "default"])))?.code).toBe("42501");
     });
   });
 
@@ -317,7 +333,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
       [{ external_id: "x", content_hash: "", props: {} }, "23514", "road_context_feature_versions_content_hash"],
       [{ external_id: "x", content_hash: "h", props: [] }, "23514", "road_context_feature_versions_props_object"],
     ] as const) {
-      await t.asSource(src("road_context_feature_versions"), async (c) => {
+      await t.asSource(src("road_context_features"), async (c) => {
         const e = await refusal(append(c, [row]));
         expect(e?.code, word).toBe(code);
         expect(e?.message, word).toContain(word);
