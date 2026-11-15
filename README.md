@@ -223,7 +223,8 @@ merge of the release pull request into main
   -> a draft GitHub release, then the annotated tag vX.Y.Z on that commit
      (CI and Security checked again first; an existing tag is refused)
   -> the release workflow, started on that tag:
-     gate, build, push by digest, sign, attest, verify, tag the image
+     gate, every mutant (npm run mutate), build, push by digest, sign,
+     attest, verify, tag the image
   -> the draft release is published with the image digest and how to verify it
 ```
 
@@ -241,6 +242,8 @@ A release is published only from an annotated `vX.Y.Z` tag (no pre-release
 suffix: an `rc` tag publishes nothing) whose version equals `package.json`,
 whose commit is on `main` and whose CI and Security workflows concluded
 successfully on that commit (the newest run of each, a push to `main`).
+Every mutant of `npm run mutate` must then be killed on that commit (the
+Mutation check job); a survivor stops the release before anything is built.
 Each image is built for `linux/amd64` and `linux/arm64`, carries the OCI
 `version`, `revision` and `source` labels, and is signed with cosign (keyless)
 with a build-provenance attestation and an SPDX SBOM. Before it is pushed, the
@@ -296,6 +299,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Security | DAST (OWASP ZAP against the container) | the running interface, attacked from outside; any alert, at any risk level, fails unless `scripts/zap-rules.tsv` marks its rule IGNORE with a reason |
 | Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository; the exception to the sentence above, it runs weekly and on a branch-protection change only |
 | Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
+| Release | Mutation check | every mutant of `npm run mutate` on that commit, against an empty PostGIS, before anything is built: one surviving mutant, a mutant whose pattern no longer matches, or a unit or database run that fails before any mutant is planted stops the release. This is the only run of the full set; no pull request or push runs it |
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
 
@@ -364,10 +368,15 @@ npm run typecheck && npm run lint && npm test        # each unit test < 2 s
 TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
-TEST_DATABASE_URL=postgresql://… npm run mutate      # every mutant: readiness, gate, consumer verbs, lint, and the schema behaviour (functions, triggers, views)
+TEST_DATABASE_URL=postgresql://… npm run mutate -- --only <text>   # the mutants whose name contains <text>; the full set is run by the release (below)
 TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
 npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
+
+The mutation tally is proved by the release workflow: its Mutation check job
+runs every mutant on the tagged commit before the image is built, and the
+release stops on a survivor. There is no separate local run of the full set to
+record; `--only` is for working on one mutant.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) has the migration rules.
 

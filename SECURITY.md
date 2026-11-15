@@ -68,7 +68,7 @@ tag and its digest, in every place listed.
 | `aquasec/trivy` | the image scan | `.github/workflows/ci.yml` |
 | `zricethezav/gitleaks` | the history scan | `.github/workflows/security.yml` |
 | `zaproxy/zap-stable` | the DAST scan | `scripts/zap-scan.sh` |
-| `postgis/postgis` | the integration test's service container, the smoke, the DAST scan and the baseline proof | `.github/workflows/ci.yml`, `scripts/image-smoke.sh`, `scripts/zap-scan.sh`, `scripts/baseline.sh` |
+| `postgis/postgis` | the service container of the integration test and of the release's mutation check, the smoke, the DAST scan and the baseline proof | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/image-smoke.sh`, `scripts/zap-scan.sh`, `scripts/baseline.sh` |
 | `curlimages/curl` | the smoke's requests from outside the allow-list | `scripts/image-smoke.sh` |
 
 Known advisory: GHSA-g3hv-75wg-m249 (minimatch, moderate) is reached only
