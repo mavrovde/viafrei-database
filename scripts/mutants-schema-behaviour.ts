@@ -313,4 +313,26 @@ const derived: SchemaMutant[] = [
   { name: "derived: gaps across products", from: "partition by p.station_id, p.product order by p.observed_at)) as gap_s", to: "partition by p.station_id order by p.observed_at)) as gap_s" },
 ].map((m) => ({ ...m, file: BASELINE, tests: DERIVED }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived];
+const LOADS = ["test/rollup-loads.db.test.ts"];
+
+const loads: SchemaMutant[] = [
+  { name: "loads: the fold takes an inverted range", from: "  if b_from is null or b_to is null or b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:", to: "  if b_from is null or b_to is null then\n    raise exception 'ops_rollup_usage_fold:" },
+  { name: "loads: the fold takes no range", from: "  if b_from is null or b_to is null or b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:", to: "  if b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:" },
+  { name: "loads: the fold's days are UTC", from: "  select (m.period_start at time zone 'Europe/Berlin')::date,\n         case when m.tool ~", to: "  select (m.period_start at time zone 'UTC')::date,\n         case when m.tool ~" },
+  { name: "loads: the fold keeps any tool name", from: "         case when m.tool ~ '^[a-z][a-z0-9_]{0,63}$' then m.tool else 'other' end,", to: "         m.tool," },
+  { name: "loads: the fold counts the caller's own errors", from: "         sum(greatest(coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage), 0)", to: "         sum(coalesce(m.tool_errors, 0)" },
+  { name: "loads: the fold's errors go below zero", from: "         sum(greatest(coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage), 0)", to: "         sum((coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage))" },
+  { name: "loads: the fold misses the server errors", from: "             + coalesce(m.server_errors, 0)),\n         sum(m.ms_le_100)", to: "             + 0),\n         sum(m.ms_le_100)" },
+  { name: "loads: the fold reads the day rows", from: "   where m.period = 'hour'\n     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from", to: "   where true\n     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from" },
+  { name: "loads: the fold reads every rpc", from: "     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from", to: "     and m.period_start >= (b_from" },
+  { name: "loads: the fold reads the day before", from: "     and m.period_start >= (b_from::timestamp at time zone 'Europe/Berlin')", to: "     and m.period_start >= ((b_from - 1)::timestamp at time zone 'Europe/Berlin')" },
+  { name: "loads: the fold reads the day after", from: "     and m.period_start < ((b_to + 1)::timestamp at time zone 'Europe/Berlin')", to: "     and m.period_start < ((b_to + 2)::timestamp at time zone 'Europe/Berlin')" },
+  { name: "loads: a refold adds", from: "  on conflict (day, tool, class) do update set\n    calls = excluded.calls,", to: "  on conflict (day, tool, class) do update set\n    calls = t.calls + excluded.calls," },
+  { name: "loads: a week needs no state", from: "  if w is null or s is null then\n    raise exception 'search_console_weekly_load:", to: "  if w is null then\n    raise exception 'search_console_weekly_load:" },
+  { name: "loads: an unread week overwrites a read one", from: "  if s <> 'read' and exists (select 1 from search_console_weekly where week = w and state = 'read') then", to: "  if false then" },
+  { name: "loads: a kept week notes no try", from: "    update search_console_weekly set tried_at = now() where week = w;\n    return s || ' parts=0 kept=read';", to: "    return s || ' parts=0 kept=read';" },
+  { name: "loads: a read week keeps its old parts", from: "  delete from search_console_weekly where week = w;\n  insert into search_console_weekly (week", to: "  delete from search_console_weekly_parts where false;\n  insert into search_console_weekly (week" },
+  { name: "loads: an unread week stores its parts", from: "  if s = 'read' then\n    insert into search_console_weekly_parts", to: "  if true then\n    insert into search_console_weekly_parts" },
+].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads];

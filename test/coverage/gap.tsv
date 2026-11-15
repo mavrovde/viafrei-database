@@ -4,8 +4,6 @@
 # kind	object
 function	public.growth_weekly_refresh(p_weeks integer)
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
-function	public.ops_rollup_usage_fold(b_from date, b_to date)
-function	public.search_console_weekly_load(doc jsonb)
 view	domains.route_recommendations_merged
 view	domains.speed_cameras_merged
 view	domains.transit_agencies_odbl_merged
