@@ -343,6 +343,30 @@ const derived: SchemaMutant[] = [
   { name: "derived: gaps across products", from: "partition by p.station_id, p.product order by p.observed_at)) as gap_s", to: "partition by p.station_id order by p.observed_at)) as gap_s" },
 ].map((m) => ({ ...m, file: BASELINE, tests: DERIVED }));
 
+const MERGED = ["test/views-merged.db.test.ts"];
+
+/** Per `_merged` view: each rule of its ranking and its filter, broken alone. */
+const merged: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  const views = ["route_recommendations", "speed_cameras", "transit_agencies_odbl", "transit_routes_odbl", "transit_service_dates_odbl", "transit_stop_times_odbl", "transit_stops_odbl", "transit_trip_updates_odbl", "transit_trips_odbl"];
+  const rules: readonly [string, string, string][] = [
+    ["the least trusted wins", "ORDER BY l.trust DESC NULLS LAST,", "ORDER BY l.trust ASC NULLS LAST,"],
+    ["an unknown source wins", "ORDER BY l.trust DESC NULLS LAST,", "ORDER BY l.trust DESC NULLS FIRST,"],
+    ["the oldest wins", " l.observed_at DESC,", " l.observed_at ASC,"],
+    ["the last id wins", " l.source_id, l.external_id) AS rn,", " l.source_id, l.external_id DESC) AS rn,"],
+    ["a closed row counts", "WHERE (r.closed_at IS NULL)", "WHERE true"],
+    ["the match key is ignored", "COALESCE(r.match_key, ", "COALESCE(NULL::text, "],
+  ];
+  return views.flatMap((v) => {
+    const block = viewBlock(sql, `domains.${v}_merged`);
+    const own: [string, string, string][] = v === "route_recommendations" ? [["the emptier wins", "l.published_at)) DESC,", "l.published_at)) ASC,"]] : [];
+    return [...rules, ...own].map(([what, from, to]) => {
+      if (block.split(from).length !== 2) throw new Error(`domains.${v}_merged: ${from} is not once in its block`);
+      return { name: `merged: ${v}: ${what}`, from: block, to: block.replace(from, to) };
+    });
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: MERGED }));
+
 const LOADS = ["test/rollup-loads.db.test.ts"];
 
 const loads: SchemaMutant[] = [
@@ -365,4 +389,4 @@ const loads: SchemaMutant[] = [
   { name: "loads: an unread week stores its parts", from: "  if s = 'read' then\n    insert into search_console_weekly_parts", to: "  if true then\n    insert into search_console_weekly_parts" },
 ].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...views];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views];

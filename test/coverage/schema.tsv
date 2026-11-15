@@ -752,6 +752,15 @@ view	public.gbfs_vehicles_live	test/views-filter.db.test.ts > public.gbfs_vehicl
 view	public.transit_delays_live	test/views-filter.db.test.ts > public.transit_delays_live: returns the row it is for and none it leaves out
 view	public.connect_transit_delays_live	test/views-filter.db.test.ts > public.connect_transit_delays_live: returns the row it is for and none it leaves out
 view	public.vbn_transit_delays	test/views-filter.db.test.ts > public.vbn_transit_delays: returns the row it is for and none it leaves out
+view	domains.route_recommendations_merged	test/views-merged.db.test.ts > domains.route_recommendations_merged: the most trusted open row per entity, then the newest, then the fuller, then the first id
+view	domains.speed_cameras_merged	test/views-merged.db.test.ts > domains.speed_cameras_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_agencies_odbl_merged	test/views-merged.db.test.ts > domains.transit_agencies_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_routes_odbl_merged	test/views-merged.db.test.ts > domains.transit_routes_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_service_dates_odbl_merged	test/views-merged.db.test.ts > domains.transit_service_dates_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_stop_times_odbl_merged	test/views-merged.db.test.ts > domains.transit_stop_times_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_stops_odbl_merged	test/views-merged.db.test.ts > domains.transit_stops_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_trip_updates_odbl_merged	test/views-merged.db.test.ts > domains.transit_trip_updates_odbl_merged: the most trusted open row per entity, then the newest, then the first id
+view	domains.transit_trips_odbl_merged	test/views-merged.db.test.ts > domains.transit_trips_odbl_merged: the most trusted open row per entity, then the newest, then the first id
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted

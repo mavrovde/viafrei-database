@@ -4,15 +4,6 @@
 # kind	object
 function	public.growth_weekly_refresh(p_weeks integer)
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
-view	domains.route_recommendations_merged
-view	domains.speed_cameras_merged
-view	domains.transit_agencies_odbl_merged
-view	domains.transit_routes_odbl_merged
-view	domains.transit_service_dates_odbl_merged
-view	domains.transit_stop_times_odbl_merged
-view	domains.transit_stops_odbl_merged
-view	domains.transit_trip_updates_odbl_merged
-view	domains.transit_trips_odbl_merged
 view	public.city_traffic_now_live
 view	public.fuel_feed_health
 view	public.fuel_station_board_live
