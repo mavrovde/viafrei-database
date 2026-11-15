@@ -195,7 +195,17 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
       const con = await db().query<{ d: string }>("select contype::text || ' ' || conname || ' ' || pg_get_constraintdef(oid) as d from pg_constraint where conrelid = ('domains.' || $1)::regclass", [table]);
       return [...idx.rows, ...con.rows].map((x) => x.d.replaceAll(table, "T")).sort();
     };
-    const mine = await shape("charging_points");
+    const all = await shape("charging_points");
+    // The domain's own checks, beyond the convention: what a point's data is.
+    const own = all.filter((d) => / T_(geom_point|connector_types_array|plugs_array|max_power_kw|current_type) /.test(d));
+    expect(own).toEqual([
+      "c T_connector_types_array CHECK (((connector_types IS NULL) OR (jsonb_typeof(connector_types) = 'array'::text)))",
+      "c T_current_type CHECK (((current_type IS NULL) OR (current_type = ANY (ARRAY['ac'::text, 'dc'::text, 'both'::text]))))",
+      "c T_geom_point CHECK (((geom IS NULL) OR (geometrytype(geom) = 'POINT'::text)))",
+      "c T_max_power_kw CHECK (((max_power_kw IS NULL) OR (max_power_kw >= (0)::double precision)))",
+      "c T_plugs_array CHECK (((plugs IS NULL) OR (jsonb_typeof(plugs) = 'array'::text)))",
+    ]);
+    const mine = all.filter((d) => !own.includes(d));
     expect(mine).toEqual(await shape("speed_cameras"));
     expect(mine.filter((d) => d.startsWith("CREATE"))).toEqual([
       "CREATE INDEX T_geom ON domains.T USING gist (geom)",
@@ -267,13 +277,18 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
     });
   });
 
-  it("refuses a point without its device, its number or its site, and an empty key", async () => {
+  it("refuses a point without its device, its number or its site, an empty key, and what is not a point's data", async () => {
     await asSource("charging-high", async (c) => {
       const cases: [Point, string, string][] = [
         [{ ...POINT, device_id: null }, "23502", "device_id"],
         [{ ...POINT, point_no: null }, "23502", "point_no"],
         [{ ...POINT, site_key: null }, "23502", "site_key"],
         [{ ...POINT, external_id: "" }, "23514", "charging_points_external_id_check"],
+        [{ ...POINT, geom_wkt: "LINESTRING(13 52, 13.1 52.1)" }, "23514", "charging_points_geom_point"],
+        [{ ...POINT, connector_types: "iec62196T2" }, "23514", "charging_points_connector_types_array"],
+        [{ ...POINT, plugs: { plug: "Typ 2" } }, "23514", "charging_points_plugs_array"],
+        [{ ...POINT, max_power_kw: -0.5 }, "23514", "charging_points_max_power_kw"],
+        [{ ...POINT, current_type: "AC" }, "23514", "charging_points_current_type"],
       ];
       for (const [row, code, word] of cases) {
         await c.query("savepoint s");

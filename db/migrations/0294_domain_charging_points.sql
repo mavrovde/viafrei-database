@@ -10,6 +10,11 @@
 -- public.charging_points.point_key; site_key is the old
 -- public.charging_sites.site_id of the same publisher.
 --
+-- The shape is the national register's, its one writer so far; the other
+-- static point publishers come with a migration of their own, which adds their
+-- columns (prices, the publisher's point id, the DATEX II marking) and relaxes
+-- the not-null columns they do not have.
+--
 -- Nothing reads this table yet and no reader is granted it. The old tables and
 -- their data are not touched.
 --
@@ -48,7 +53,12 @@ create table domains.charging_points (
   commissioned_on date,
   published_on date,
   primary key (id),
-  constraint charging_points_owner_key unique (source_id, feed, external_id)
+  constraint charging_points_owner_key unique (source_id, feed, external_id),
+  constraint charging_points_geom_point check (geom is null or GeometryType(geom) = 'POINT'),
+  constraint charging_points_connector_types_array check (connector_types is null or jsonb_typeof(connector_types) = 'array'),
+  constraint charging_points_plugs_array check (plugs is null or jsonb_typeof(plugs) = 'array'),
+  constraint charging_points_max_power_kw check (max_power_kw is null or max_power_kw >= 0),
+  constraint charging_points_current_type check (current_type is null or current_type in ('ac', 'dc', 'both'))
 );
 
 comment on table domains.charging_points is 'Static charge points for electric vehicles, one row per point and source: where it is, who operates it, its plugs and its rated power. No live status and no price.';
