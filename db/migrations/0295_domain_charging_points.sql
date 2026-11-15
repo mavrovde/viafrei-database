@@ -23,7 +23,7 @@
 -- their data are not touched.
 --
 -- rollback: drop view domains.charging_points_merged; drop table domains.charging_points;
---   delete from schema_migrations where version = 294;
+--   delete from schema_migrations where version = 295;
 
 create table domains.charging_points (
   id bigint generated always as identity,

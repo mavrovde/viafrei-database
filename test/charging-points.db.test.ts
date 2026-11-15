@@ -175,7 +175,7 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
   it("is at head with the migration applied", async () => {
     const r = await db().query<{ version: number }>("select max(version)::int as version from schema_migrations");
     expect(r.rows[0]?.version).toBe(svc?.files.at(-1)?.version);
-    const own = await db().query("select 1 from schema_migrations where version = 294 and name = '0294_domain_charging_points.sql'");
+    const own = await db().query("select 1 from schema_migrations where version = 295 and name = '0295_domain_charging_points.sql'");
     expect(own.rowCount).toBe(1);
   });
 
