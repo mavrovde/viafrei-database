@@ -887,8 +887,13 @@ describe("the images bumped by hand", () => {
 
 /** snyk.yml's whole trigger block: the dispatch takes no input and is followed directly by the call. */
 export const SNYK_TRIGGERS = '\non:\n  schedule:\n    - cron: "17 5 * * 1" # Mondays 05:17 UTC\n  workflow_dispatch:\n  workflow_call:\n    inputs:\n      ref:\n';
-/** The scan step's run block, exactly: no `|| true`, no lower threshold. */
-export const SNYK_SCAN = "        run: |\n          mkdir -p sarif\n          ./snyk test --severity-threshold=high --sarif-file-output=sarif/snyk.sarif\n";
+/** The scan step whole (name, env and run, nothing between) and the upload's head after it: no `|| true`, no lower threshold, the SARIF uploaded only for the run's own commit. */
+export const SNYK_SCAN =
+  "\n      - name: Snyk test\n        env:\n          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        run: |\n          mkdir -p sarif\n          ./snyk test --severity-threshold=high --sarif-file-output=sarif/snyk.sarif\n" +
+  "      - name: Upload SARIF to code scanning\n        # A called run scans another commit than the caller's github.sha; its findings are\n        # uploaded only when they belong to the commit code scanning files them under.\n" +
+  "        if: always() && hashFiles('sarif/snyk.sarif') != '' && (inputs.ref == '' || inputs.ref == github.sha)\n";
+/** The scan checks out the commit it was handed, or the run's own. */
+export const SNYK_CHECKOUT = "\n        with:\n          ref: ${{ inputs.ref || github.sha }}\n          persist-credentials: false\n";
 const SNYK_SECRETS = "\n    secrets:\n      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n";
 
 /** The guard step's run block, dedented, as the runner hands it to bash. */
@@ -926,7 +931,9 @@ export function snykFaults(files: Record<string, string>): string[] {
   const triggers = [...on.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]);
   if (triggers.join() !== "schedule,workflow_dispatch,workflow_call") faults.push(`snyk.yml runs on ${triggers.join(", ")}, not the weekly schedule, a dispatch and the release call alone`);
   if (!sn.includes(SNYK_TRIGGERS)) faults.push("snyk.yml's trigger block is not the weekly schedule, a dispatch with no input and the release call");
-  if (!sn.includes(`\n      - name: Snyk test\n        env:\n          SNYK_TOKEN: \${{ secrets.SNYK_TOKEN }}\n${SNYK_SCAN}`)) faults.push("snyk.yml's scan step is not exactly the high-threshold scan");
+  if (!sn.includes(SNYK_SCAN)) faults.push("snyk.yml's scan step and SARIF upload are not exactly the high-threshold scan and the own-commit upload");
+  if (!sn.includes(SNYK_CHECKOUT)) faults.push("snyk.yml does not check out ${{ inputs.ref || github.sha }}");
+  if (sn.includes("continue-on-error")) faults.push("snyk.yml carries continue-on-error");
   const guard = snykGuard(sn);
   if (guard === "") faults.push("snyk.yml has no guard step");
   else
@@ -936,6 +943,7 @@ export function snykFaults(files: Record<string, string>): string[] {
     }
   for (const [n, t] of Object.entries(files)) {
     if (n !== "snyk.yml" && t.includes("snyk test")) faults.push(`${n} runs the Snyk CLI; only snyk.yml does`);
+    if (n !== "release.yml" && t.includes("workflows/snyk.yml")) faults.push(`${n} references workflows/snyk.yml; only release.yml calls it`);
     if (t.includes("secrets: inherit")) faults.push(`${n} passes secrets: inherit`);
   }
   const rel = files["release.yml"] ?? "";
@@ -969,6 +977,11 @@ describe("Snyk: weekly on main and once per release, never on a pull request or 
       ["the weekly schedule, a dispatch and the release call alone", plant("snyk.yml", "  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n")],
       ["the weekly schedule, a dispatch and the release call alone", plant("snyk.yml", "  workflow_dispatch:\n", "  push:\n    branches: [main]\n  workflow_dispatch:\n")],
       ["the high-threshold scan", plant("snyk.yml", "--sarif-file-output=sarif/snyk.sarif\n", "--sarif-file-output=sarif/snyk.sarif || true\n")],
+      ["the high-threshold scan", plant("snyk.yml", "          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        run: |\n          mkdir", "          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        continue-on-error: true\n        run: |\n          mkdir")],
+      ["the own-commit upload", plant("snyk.yml", " && (inputs.ref == '' || inputs.ref == github.sha)", "")],
+      ["snyk.yml does not check out", plant("snyk.yml", "ref: ${{ inputs.ref || github.sha }}", "ref: ${{ github.sha }}")],
+      ["snyk.yml carries continue-on-error", plant("snyk.yml", "    timeout-minutes: 10\n", "    timeout-minutes: 10\n    continue-on-error: true\n")],
+      ["ci.yml references workflows/snyk.yml", plant("ci.yml", "\njobs:\n", "\njobs:\n  s:\n    uses: ./.github/workflows/snyk.yml\n")],
       ["release.yml passes secrets: inherit", plant("release.yml", SNYK_SECRETS, "\n    secrets: inherit\n")],
       ["release.yml's publish does not need snyk", plant("release.yml", "    needs: [gate, mutants, snyk]\n", "    needs: [gate, mutants]\n")],
       ["security.yml runs the Snyk CLI", plant("security.yml", "\njobs:\n", "\njobs:\n  x:\n    steps:\n      - run: ./snyk test\n")],

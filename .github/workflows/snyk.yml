@@ -1,9 +1,10 @@
 # Snyk Open Source over the npm dependency graph (package-lock.json): once a
-# week on main, and once per release, called by release.yml on the gate's commit before anything is built
-# or published (owner 2026-11-15). Never on a pull request or a push: a new
-# advisory against an unchanged tree is what the weekly run is for, and a
-# release cannot ship past one. A dispatch is allowed on main only and takes
-# no input, so a dispatch cannot name a commit and pass the guard as a call.
+# week on main, and once per release, called by release.yml on the gate's
+# commit before anything is built or published (owner 2026-11-15). Never on a
+# pull request or a push: a new advisory against an unchanged tree is what the
+# weekly run is for, and a release cannot ship past one. A dispatch is allowed
+# on main only and takes no input, so a dispatch cannot name a commit and pass
+# the guard as a call. It needs SNYK_TOKEN, an Actions repository secret.
 name: Snyk
 
 on:
@@ -76,7 +77,9 @@ jobs:
           mkdir -p sarif
           ./snyk test --severity-threshold=high --sarif-file-output=sarif/snyk.sarif
       - name: Upload SARIF to code scanning
-        if: always() && hashFiles('sarif/snyk.sarif') != ''
+        # A called run scans another commit than the caller's github.sha; its findings are
+        # uploaded only when they belong to the commit code scanning files them under.
+        if: always() && hashFiles('sarif/snyk.sarif') != '' && (inputs.ref == '' || inputs.ref == github.sha)
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: sarif/snyk.sarif

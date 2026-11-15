@@ -51,7 +51,9 @@ Each check, and what starts it:
 The CI workflow has no schedule. Snyk never runs on a pull request or a push:
 its weekly run on `main` finds a new advisory against an unchanged tree, and
 the release workflow calls it on the commit it is about to publish, so a high
-or critical advisory stops the release before anything is built. The CI,
+or critical advisory stops the release before anything is built. Snyk needs
+`SNYK_TOKEN`, an Actions repository secret (Settings > Secrets and variables >
+Actions); without it the job fails and names the secret. The CI,
 Security and Scorecard workflows can also be started by hand, and Snyk can on
 `main`.
 
