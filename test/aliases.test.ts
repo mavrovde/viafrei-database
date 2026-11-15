@@ -159,6 +159,20 @@ describe("the lint and aliases.tsv", () => {
     const r = lint(planted({ "ledger.tsv": tsv(3), "0003_baseline.sql": DUMP, "aliases.tsv": aliases(alias(2, sum(2))) }));
     expect(r.lines.filter((l) => l.startsWith("  ✗ "))).toEqual(["  ✗ db/baseline/aliases.tsv line 2: version 2 already stands for that checksum"]);
   });
+
+  it("judges aliases.tsv only against a readable ledger, and lets an unreadable file's error through", () => {
+    const r = lint(planted({ "ledger.tsv": "not a ledger\n", "0003_baseline.sql": DUMP, "aliases.tsv": aliases(alias(2)) }));
+    expect(r.lines.filter((l) => l.startsWith("  ✗ db/baseline/aliases"))).toEqual([]);
+    const io = planted({ "ledger.tsv": tsv(3), "0003_baseline.sql": DUMP, "aliases.tsv": "" });
+    const broken: LintIo = {
+      ...io,
+      read: (d, n) => {
+        if (n === "aliases.tsv") throw new Error("EIO");
+        return io.read(d, n);
+      },
+    };
+    expect(() => lint(broken)).toThrow("EIO");
+  });
 });
 
 describe("the shipped aliases.tsv", () => {
