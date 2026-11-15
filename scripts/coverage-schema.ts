@@ -23,7 +23,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import pg from "pg";
 
-export const KINDS = ["table", "view", "function", "trigger", "check", "policy", "grant", "role", "partitioned"] as const;
+export const KINDS = ["table", "view", "function", "trigger", "check", "policy", "grant", "role", "partitioned", "fixture"] as const;
 export type Kind = (typeof KINDS)[number];
 /** Kinds the migrated schema always holds: a catalogue read with none of one of them read the wrong database. */
 export const REQUIRED_KINDS: readonly Kind[] = ["table", "view", "function", "trigger", "check", "policy", "grant", "role", "partitioned"];
@@ -186,6 +186,24 @@ union all
 select 'role', rolname from pg_roles where rolname like 'viafrei\\_%'
 order by 1, 2`;
 
+/**
+ * The test-only fixture functions (db/test-fixtures/vf_test.sql, #31 item 9):
+ * not in a migrated catalogue by design, so they are read from their file, one
+ * object per `CREATE OR REPLACE FUNCTION <schema>.<name>(`.
+ */
+export function fixtureObjects(sql: string): Obj[] {
+  return [...sql.matchAll(/^CREATE OR REPLACE FUNCTION (vf_test[a-z_]*\.[a-z_]+)\(/gm)].map((m) => ({ kind: "fixture" as const, name: m[1] ?? "" }));
+}
+
+/** Refuses a catalogue that holds a fixture schema: migrate and serve never install it, so such a database is not a migrated one. */
+export function withFixtures(objects: readonly Obj[], fixtureSql: string): Obj[] {
+  const leaked = objects.filter((o) => /^vf_test/.test(o.name));
+  if (leaked.length > 0) throw new Refusal(`the catalogue holds ${String(leaked.length)} vf_test object(s) (${leaked[0]?.name ?? ""} …): the fixtures were installed on it, so it is not a database migrate made`);
+  const fixtures = fixtureObjects(fixtureSql);
+  if (fixtures.length === 0) throw new Refusal("db/test-fixtures/vf_test.sql defines no fixture function: a gate over nothing proves nothing");
+  return [...objects, ...fixtures];
+}
+
 export async function readCatalogue(client: pg.ClientBase): Promise<{ objects: Obj[]; head: number | null }> {
   const ledger = await client.query<{ t: string | null }>("select to_regclass('public.schema_migrations')::text as t");
   if (ledger.rows[0]?.t == null) throw new Refusal("the database has no schema_migrations: it was never migrated");
@@ -264,6 +282,7 @@ async function main(argv: readonly string[]): Promise<number> {
       await pool.end();
     }
   }
+  objects = withFixtures(objects, readFileSync(join(root, "db", "test-fixtures", "vf_test.sql"), "utf8"));
   if (dbHead !== head) throw new Refusal(`the database is at ${String(dbHead)}, the checkout's head is ${String(head)}: its catalogue is not this schema's`);
   const manifest = parseManifest(readFileSync(join(root, "test", "coverage", "schema.tsv"), "utf8"));
   const gap = parseGap(readFileSync(join(root, "test", "coverage", "gap.tsv"), "utf8"));

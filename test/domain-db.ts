@@ -46,6 +46,11 @@ export class DomainDb {
     this.own.pathname = `/${this.name}`;
   }
 
+  /** The test database's own URL. */
+  get url(): string {
+    return this.own.toString();
+  }
+
   get pool(): pg.Pool {
     if (this.p === undefined) throw new Error("the test database was not made");
     return this.p;

@@ -2926,3 +2926,16 @@ table	public.weather_warnings_en	test/tables.db.test.ts > every table of schema 
 table	public.worker_boots	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
 table	public.worker_boots	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
 table	public.worker_boots	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+fixture	vf_test.armed	test/fixtures.db.test.ts > every function refuses outside a transaction block and without the armed setting
+fixture	vf_test.unfreeze_station_slugs	test/fixtures.db.test.ts > %s disables exactly that trigger, and the rollback enables it again
+fixture	vf_test.unfreeze_station_slugs	test/fixtures.db.test.ts > the unfrozen slugs take a delete the trigger refuses
+fixture	vf_test.lift_runtime_config_source_bounds	test/fixtures.db.test.ts > %s disables exactly that trigger, and the rollback enables it again
+fixture	vf_test.lift_postcode_trigger	test/fixtures.db.test.ts > %s disables exactly that trigger, and the rollback enables it again
+fixture	vf_test.drop_check	test/fixtures.db.test.ts > drop_check drops exactly that CHECK, and refuses a name that is not a CHECK
+fixture	vf_test.set_n_distinct	test/fixtures.db.test.ts > set_n_distinct sets exactly that column's option
+fixture	vf_test_clock.now	test/fixtures.db.test.ts > set_clock: an unqualified now() is the test's instant for this transaction, and nothing in the catalogue moves
+fixture	vf_test.set_clock	test/fixtures.db.test.ts > set_clock: an unqualified now() is the test's instant for this transaction, and nothing in the catalogue moves
+fixture	vf_test.shadow_put	test/fixtures.db.test.ts > shadow_slow: an unqualified read of the relation waits first, rows unchanged; shadow_rows: the role reads the test's rows
+fixture	vf_test.shadow_slow	test/fixtures.db.test.ts > shadow_slow: an unqualified read of the relation waits first, rows unchanged; shadow_rows: the role reads the test's rows
+fixture	vf_test.shadow_rows	test/fixtures.db.test.ts > shadow_slow: an unqualified read of the relation waits first, rows unchanged; shadow_rows: the role reads the test's rows
+fixture	vf_test.revoke_select	test/fixtures.db.test.ts > revoke_select takes exactly one role's SELECT on one relation, and the rollback gives it back

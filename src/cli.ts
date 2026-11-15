@@ -13,6 +13,7 @@
  *   check                      read-only verdict: head, checksums, partition window
  *   status                     read-only diagnostics as JSON
  *   head                       image head against the ledger; exit 0 only when READY
+ *   test-fixtures install      the test-only vf_test functions; a test_ database and VF_TEST_FIXTURES=1 only
  *   lint [--root DIR]          the migration lint over a checkout
  *   export-migrations          a tar of db/ (baseline, migrations, roles) on stdout
  *   version                    the package version and the image's schema head
@@ -28,6 +29,7 @@ import http from "node:http";
 import { fileURLToPath } from "node:url";
 import { APP_ROOT, ConfigError, loadConfig, schemaDirs } from "./config.js";
 import { BaselineError, compareLedgerExport, loadSchema } from "./migrations/baseline.js";
+import { installFixtures } from "./fixtures.js";
 import { jsonLogger } from "./log.js";
 import { DatabaseService } from "./service.js";
 import { partitionDays, parseFromDate, DEFAULT_CLI_DAYS, type Back } from "./partitions.js";
@@ -36,7 +38,7 @@ import { fsIo, lint } from "./lint/check-migrations.js";
 import { AllowListError, createAccessPolicy } from "./server/access.js";
 import { interfaceHandler, readinessHandler } from "./server/http.js";
 
-export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD] | roles settings | roles passwords | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|->]`;
+export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD] | roles settings | roles passwords | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|-> | test-fixtures install]`;
 
 const print = (l: string): void => void process.stdout.write(`${l}\n`);
 const printErr = (l: string): void => void process.stderr.write(`${l}\n`);
@@ -94,6 +96,12 @@ export async function main(argv: readonly string[]): Promise<number> {
           return 2;
         }
         const r = compareLedgerExport(b, text);
+        for (const l of r.lines) (r.exitCode === 0 ? print : printErr)(l);
+        return r.exitCode;
+      }
+      case "test-fixtures": {
+        if (rest.length !== 1 || rest[0] !== "install") return usage("test-fixtures takes one sub-verb: install");
+        const r = await installFixtures(process.env);
         for (const l of r.lines) (r.exitCode === 0 ? print : printErr)(l);
         return r.exitCode;
       }

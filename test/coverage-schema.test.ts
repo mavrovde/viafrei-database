@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkoutHead, judge, KINDS, listTests, listTitles, parseGap, parseManifest, Refusal, report, type Obj } from "../scripts/coverage-schema.js";
+import { checkoutHead, fixtureObjects, judge, KINDS, listTests, listTitles, parseGap, parseManifest, Refusal, report, withFixtures, type Obj } from "../scripts/coverage-schema.js";
 import { plantTree, REPO } from "./helpers.js";
 
 const ALL: Obj[] = KINDS.map((kind) => ({ kind, name: `x.${kind}` }));
@@ -13,7 +13,7 @@ describe("the schema coverage gate", () => {
   it("passes when every object has a manifest row naming a test that exists", () => {
     const v = judge(ALL, fullManifest, [], TESTS);
     expect(v.ok).toBe(true);
-    expect(report(v)).toMatch(/^✓ schema coverage: 9 of 9 catalogue object\(s\) proved, 0 in the gap, 0 missing/m);
+    expect(report(v)).toMatch(/^✓ schema coverage: 10 of 10 catalogue object\(s\) proved, 0 in the gap, 0 missing/m);
   });
 
   it("fails on an object with no row, a row for no object, a row naming no test, and a test file it cannot list", () => {
@@ -117,5 +117,30 @@ describe("the schema coverage gate", () => {
   it("every manifest and gap row of this repository parses", () => {
     expect(parseManifest(readFileSync(join(REPO, "test", "coverage", "schema.tsv"), "utf8")).length).toBeGreaterThan(0);
     parseGap(readFileSync(join(REPO, "test", "coverage", "gap.tsv"), "utf8"));
+  });
+});
+
+describe("the fixture kind", () => {
+  const sql = readFileSync(join(REPO, "db", "test-fixtures", "vf_test.sql"), "utf8");
+  it("reads every vf_test function of the fixture file as one object", () => {
+    expect(fixtureObjects(sql).map((o) => o.name)).toEqual([
+      "vf_test.armed",
+      "vf_test.unfreeze_station_slugs",
+      "vf_test.lift_runtime_config_source_bounds",
+      "vf_test.lift_postcode_trigger",
+      "vf_test.drop_check",
+      "vf_test.set_n_distinct",
+      "vf_test_clock.now",
+      "vf_test.set_clock",
+      "vf_test.shadow_put",
+      "vf_test.shadow_slow",
+      "vf_test.shadow_rows",
+      "vf_test.revoke_select",
+    ]);
+  });
+  it("refuses a catalogue that holds a vf_test object, and a fixture file that defines none", () => {
+    expect(() => withFixtures([{ kind: "function", name: "vf_test.armed()" }], sql)).toThrow(/the fixtures were installed on it/);
+    expect(() => withFixtures([], "select 1;\n")).toThrow(/defines no fixture function/);
+    expect(withFixtures([{ kind: "table", name: "public.t" }], sql)).toHaveLength(13);
   });
 });
