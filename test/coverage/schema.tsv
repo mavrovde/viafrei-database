@@ -633,6 +633,31 @@ function	public.road_events_note_suspended()	test/road-functions.db.test.ts > th
 trigger	public.road_events.road_events_suspended	test/road-functions.db.test.ts > the suspended flag is derived from the payload on insert and on a payload update, whatever the writer sets
 view	public.road_events_current	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 view	public.road_event_locations_live	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
+function	public.ops_audit_append_only()	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
+trigger	public.ops_audit.ops_audit_append_only	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
+function	public.ops_audit_forget_ips()	test/ops-functions.db.test.ts > ops_audit_forget_ips clears the addresses older than twelve months, keeps the newer, and records one run a day — every run that cleared one
+function	public.ops_passkeys_cap()	test/ops-functions.db.test.ts > holds at most ten; the sign counter never goes back
+trigger	public.ops_passkeys.ops_passkeys_cap	test/ops-functions.db.test.ts > holds at most ten; the sign counter never goes back
+function	public.ops_passkeys_counter()	test/ops-functions.db.test.ts > holds at most ten; the sign counter never goes back
+trigger	public.ops_passkeys.ops_passkeys_counter	test/ops-functions.db.test.ts > holds at most ten; the sign counter never goes back
+function	public.ops_requests_rate_limit()	test/ops-functions.db.test.ts > one restart per worker per five minutes; a refused one does not count; another worker is free
+trigger	public.ops_requests.ops_requests_rate_limit	test/ops-functions.db.test.ts > one restart per worker per five minutes; a refused one does not count; another worker is free
+function	public.ops_requests_source_guard()	test/ops-functions.db.test.ts > a run-now names a scheduled source, waits out its floor (the catalogue's licence floor if higher) and is one pending at a time
+trigger	public.ops_requests.ops_requests_source_guard	test/ops-functions.db.test.ts > a run-now names a scheduled source, waits out its floor (the catalogue's licence floor if higher) and is one pending at a time
+function	public.place_slugs_frozen()	test/ops-functions.db.test.ts > a place slug is never changed, re-pointed or freed; its name may change
+trigger	public.place_slugs.place_slugs_frozen	test/ops-functions.db.test.ts > a place slug is never changed, re-pointed or freed; its name may change
+function	public.station_slugs_frozen()	test/ops-functions.db.test.ts > a station slug likewise
+trigger	public.station_slugs.station_slugs_frozen	test/ops-functions.db.test.ts > a station slug likewise
+function	public.watches_enforce_session_limit()	test/ops-functions.db.test.ts > ten open watches per session; a stopped one frees its place; another session is free
+trigger	public.watches.watches_limit_per_session	test/ops-functions.db.test.ts > ten open watches per session; a stopped one frees its place; another session is free
+function	public.watch_events_notify()	test/ops-functions.db.test.ts > an event notifies viafrei_watch with its watch and its id, once committed
+trigger	public.watch_events.watch_events_notify_insert	test/ops-functions.db.test.ts > an event notifies viafrei_watch with its watch and its id, once committed
+function	public.vf_ledger_mask(t text)	test/ops-functions.db.test.ts > vf_ledger_mask masks IPv4 and IPv6 addresses and leaves versions, times, ids and words alone
+function	public.vf_page_key(identity text)	test/ops-functions.db.test.ts > vf_page_key: ten lower-case letters from the identity's sha256, the same for the same identity
+function	public.mcp_usage_traffic_class(client text)	test/ops-functions.db.test.ts > mcp_usage_traffic_class: our own probes are own, unknown and stateless are scanners, the rest real
+function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)	test/ops-functions.db.test.ts > transit_odbl_departs_at counts GTFS seconds from noon minus twelve hours, across the clock change
+function	public.weather_warning_english(german_id bigint)	test/ops-functions.db.test.ts > weather_warning_english: the English twin of a live German warning by its sending time, validity, cell and event; none when one differs
+function	public.tick_brin_autosummarize(part regclass)	test/ops-functions.db.test.ts > tick_brin_autosummarize turns autosummarize on for a partition's BRIN indexes once, and counts them
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted

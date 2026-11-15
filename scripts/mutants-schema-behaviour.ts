@@ -188,4 +188,49 @@ const road: SchemaMutant[] = [
   { name: "road: road_event_locations_live shows a deleted event's location", from: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));", to: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id)))));" },
 ].map((m) => ({ ...m, file: BASELINE, tests: ROAD }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road];
+const OPS = ["test/ops-functions.db.test.ts"];
+
+const ops: SchemaMutant[] = [
+  { name: "ops: ops_audit clears an address younger than twelve months", from: "     and old.at < now() - interval '12 months'\n     and old.client_ip is not null", to: "     and old.client_ip is not null" },
+  { name: "ops: ops_audit lets another column change with the address", from: "     and (to_jsonb(new) - 'client_ip') = (to_jsonb(old) - 'client_ip')\n", to: "\n" },
+  { name: "ops: ops_audit lets an address be rewritten", from: "     and new.client_ip is null\n     and (to_jsonb(new)", to: "     and (to_jsonb(new)" },
+  { name: "ops: ops_audit may be deleted", from: "CREATE TRIGGER ops_audit_append_only BEFORE DELETE OR UPDATE ON public.ops_audit", to: "CREATE TRIGGER ops_audit_append_only BEFORE UPDATE ON public.ops_audit" },
+  { name: "ops: forget_ips clears the newer addresses too", from: "   where client_ip is not null\n     and at < now() - interval '12 months';", to: "   where client_ip is not null;" },
+  { name: "ops: forget_ips records a run on every call", from: "  if n > 0 or not exists (\n       select 1 from ingest_runs\n        where provider = 'ops_audit_retention'", to: "  if true or not exists (\n       select 1 from ingest_runs\n        where provider = 'ops_audit_retention'" },
+  { name: "ops: forget_ips records no run when it cleared one", from: "  if n > 0 or not exists (\n", to: "  if not exists (\n" },
+  { name: "ops: passkeys hold eleven", from: "  if (select count(*) from ops_passkeys) >= 10 then", to: "  if (select count(*) from ops_passkeys) >= 11 then" },
+  { name: "ops: the sign counter may go back", from: "  if new.sign_count < old.sign_count then", to: "  if new.sign_count < old.sign_count - 1 then" },
+  { name: "ops: a restart within four minutes", from: "       and r.requested_at > new.requested_at - interval '5 minutes'", to: "       and r.requested_at > new.requested_at - interval '3 minutes'" },
+  { name: "ops: a refused restart counts", from: "       and r.state <> 'refused'\n       and r.requested_at > new.requested_at - interval '5 minutes'", to: "       and r.requested_at > new.requested_at - interval '5 minutes'" },
+  { name: "ops: a restart limits every worker", from: "       and r.target = new.target\n       and r.state <> 'refused'", to: "       and r.state <> 'refused'" },
+  { name: "ops: a run-now of an unknown source goes", from: "  if not found then\n    raise exception 'ops_requests: no engine runs a source named %'", to: "  if false then\n    raise exception 'ops_requests: no engine runs a source named %'" },
+  { name: "ops: a run-now ignores the licence floor", from: "  floor_s := greatest(coalesce(s.min_interval_s, 0), s.floor_s);", to: "  floor_s := s.floor_s;" },
+  { name: "ops: a run-now reads a closed catalogue row", from: "    left join feed_catalog fc on fc.feed_key = ss.source_key and fc.closed_at is null", to: "    left join feed_catalog fc on fc.feed_key = ss.source_key" },
+  { name: "ops: two run-nows wait", from: "     where r.action = 'run-now' and r.target = new.target and r.state = 'pending'", to: "     where false" },
+  { name: "ops: a place slug may be freed", from: "    raise exception 'place_slugs: a slug is assigned once and never freed", to: "    return old; raise exception 'place_slugs: a slug is assigned once and never freed" },
+  { name: "ops: a place slug may be re-pointed", from: "  if new.slug is distinct from old.slug or new.ags is distinct from old.ags then", to: "  if new.slug is distinct from old.slug then" },
+  { name: "ops: a place slug may be renamed", from: "CREATE TRIGGER place_slugs_frozen BEFORE DELETE OR UPDATE ON public.place_slugs", to: "CREATE TRIGGER place_slugs_frozen BEFORE DELETE ON public.place_slugs" },
+  { name: "ops: a station slug may be freed", from: "CREATE TRIGGER station_slugs_frozen BEFORE DELETE OR UPDATE ON public.station_slugs", to: "CREATE TRIGGER station_slugs_frozen BEFORE UPDATE ON public.station_slugs" },
+  { name: "ops: a station slug may be re-pointed", from: "  if new.slug is distinct from old.slug or new.station_no is distinct from old.station_no then", to: "  if new.slug is distinct from old.slug then" },
+  { name: "ops: eleven watches a session", from: "  limit_per_session constant integer := 10;", to: "  limit_per_session constant integer := 11;" },
+  { name: "ops: a stopped watch still counts", from: "   where session_id = new.session_id and stopped_at is null;", to: "   where session_id = new.session_id;" },
+  { name: "ops: watches count across sessions", from: "   where session_id = new.session_id and stopped_at is null;", to: "   where stopped_at is null;" },
+  { name: "ops: the watch event names no event", from: "    format('{\"v\":1,\"watch_id\":%s,\"event_id\":%s}', new.watch_id, new.id)", to: "    format('{\"v\":1,\"watch_id\":%s,\"event_id\":%s}', new.watch_id, new.watch_id)" },
+  { name: "ops: the watch event notifies no channel", from: "CREATE TRIGGER watch_events_notify_insert AFTER INSERT ON public.watch_events", to: "CREATE TRIGGER watch_events_notify_insert AFTER UPDATE ON public.watch_events" },
+  { name: "ops: the mask misses IPv6", from: "(?:[0-9A-Fa-f:]*::[0-9A-Fa-f:]*|[0-9A-Fa-f]{1,4}(?::[0-9A-Fa-f]{1,4}){2,7}:[0-9A-Fa-f]{1,5})(?![0-9A-Za-z_:])'::text, '<ip>'::text", to: "(?:x)(?![0-9A-Za-z_:])'::text, '<ip>'::text" },
+  { name: "ops: the mask takes a version for an address", from: "(?<![0-9A-Za-z_])[0-9]{1,3}(?:\\.[0-9]{1,3}){3}(?![0-9A-Za-z_])'::text", to: "[0-9]{1,3}(?:\\.[0-9]{1,3}){3}'::text" },
+  { name: "ops: the mask takes a six-digit hex run for an address", from: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:", to: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?:" },
+  { name: "ops: the mask takes a five-digit hex group for an address", from: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:", to: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:" },
+  { name: "ops: the page key skips a byte", from: "|| chr(97 + get_byte(h, 9) % 26);", to: "|| chr(97 + get_byte(h, 10) % 26);" },
+  { name: "ops: the traffic class misses a probe", from: "'viafrei-test-round', 'viafrei-own') then 'own'", to: "'viafrei-test-round') then 'own'" },
+  { name: "ops: the traffic class calls a stateless client real", from: "              when client in ('unknown', 'stateless') then 'scanners'", to: "              when client in ('unknown') then 'scanners'" },
+  { name: "ops: departs_at counts from midnight local", from: "    RETURN ((((service_date + '12:00:00'::time without time zone) AT TIME ZONE tz) - '12:00:00'::interval) + make_interval", to: "    RETURN (((service_date AT TIME ZONE tz)) + make_interval" },
+  { name: "ops: the English twin ignores the event", from: "     and e.event_ii = w.raw->'properties'->>'EC_II'\n", to: "\n" },
+  { name: "ops: the English twin ignores the cell", from: "     and w.warncell_id = any (e.warncell_ids)\n", to: "\n" },
+  { name: "ops: the English twin ignores the sending time", from: "      on e.sent_at = w.published_at\n", to: "      on true\n" },
+  { name: "ops: the English twin of a deleted warning", from: "    from weather_warnings_live w\n    join weather_warnings_en_live e", to: "    from weather_warnings w\n    join weather_warnings_en_live e" },
+  { name: "ops: autosummarize reaches a btree", from: "       and am.amname = 'brin'\n", to: "\n" },
+  { name: "ops: autosummarize is set twice", from: "       and array_position(coalesce(ic.reloptions, '{}'), 'autosummarize=on') is null\n", to: "\n" },
+].map((m) => ({ ...m, file: BASELINE, tests: OPS }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops];

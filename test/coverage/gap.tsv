@@ -20,26 +20,11 @@ function	public.fuel_warm_cadence(p_city_population_min integer, p_city_radius_m
 function	public.growth_weekly_refresh(p_weeks integer)
 function	public.lez_zone_overlaps_refresh(p_feed text, p_zone text)
 function	public.lez_zones_overlaps_trigger()
-function	public.mcp_usage_traffic_class(client text)
-function	public.ops_audit_append_only()
-function	public.ops_audit_forget_ips()
-function	public.ops_passkeys_cap()
-function	public.ops_passkeys_counter()
-function	public.ops_requests_rate_limit()
-function	public.ops_requests_source_guard()
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
 function	public.ops_rollup_usage_fold(b_from date, b_to date)
-function	public.place_slugs_frozen()
 function	public.search_console_weekly_load(doc jsonb)
-function	public.station_slugs_frozen()
-function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)
-function	public.vf_ledger_mask(t text)
-function	public.vf_page_key(identity text)
 function	public.vf_postcode(raw text)
 function	public.vf_postcode_normalise()
-function	public.watch_events_notify()
-function	public.watches_enforce_session_limit()
-function	public.weather_warning_english(german_id bigint)
 trigger	public.charging_point_status.charging_status_runs_forget
 trigger	public.charging_point_status.charging_status_runs_note
 trigger	public.charging_point_status.charging_status_runs_restate
@@ -48,16 +33,7 @@ trigger	public.fuel_stations.fuel_stations_land
 trigger	public.fuel_stations.fuel_stations_postcode
 trigger	public.lez_zones.lez_zones_overlaps_insert
 trigger	public.lez_zones.lez_zones_overlaps_update
-trigger	public.ops_audit.ops_audit_append_only
-trigger	public.ops_passkeys.ops_passkeys_cap
-trigger	public.ops_passkeys.ops_passkeys_counter
-trigger	public.ops_requests.ops_requests_rate_limit
-trigger	public.ops_requests.ops_requests_source_guard
-trigger	public.place_slugs.place_slugs_frozen
-trigger	public.station_slugs.station_slugs_frozen
 trigger	public.street_bays.street_bays_postcode
-trigger	public.watch_events.watch_events_notify_insert
-trigger	public.watches.watches_limit_per_session
 view	domains.route_recommendations_merged
 view	domains.speed_cameras_merged
 view	domains.transit_agencies_odbl_merged
