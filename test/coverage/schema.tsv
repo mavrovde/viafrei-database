@@ -688,6 +688,70 @@ trigger	public.lez_zones.lez_zones_overlaps_update	test/derived-tables.db.test.t
 function	public.fuel_warm_cadence(p_city_population_min integer, p_city_radius_min_m double precision, p_city_radius_max_m double precision, p_city_radius_per_sqrt_thousand_m double precision, p_motorway_corridor_m double precision, p_failure_threshold integer, p_days integer)	test/derived-tables.db.test.ts > fuel_warm_cadence: the median gap between a warm station's prices of one product within the days asked; warm is near a big enough city or a motorway point; a cold station and a lone price are no gaps
 function	public.ops_rollup_usage_fold(b_from date, b_to date)	test/rollup-loads.db.test.ts > ops_rollup_usage_fold: the hourly tool calls of the Berlin days asked, per tool (else other) and class, errors without the caller's own; a refold replaces; no range is refused
 function	public.search_console_weekly_load(doc jsonb)	test/rollup-loads.db.test.ts > search_console_weekly_load: a read week replaces the week and its parts; an unread one is stored but never over a read one, which only notes the try; no week or state is refused
+view	public.bfrk_stops_live	test/views-filter.db.test.ts > public.bfrk_stops_live: returns the row it is for and none it leaves out
+view	public.bw_detours_live	test/views-filter.db.test.ts > public.bw_detours_live: returns the row it is for and none it leaves out
+view	public.charging_points_live	test/views-filter.db.test.ts > public.charging_points_live: returns the row it is for and none it leaves out
+view	public.fuel_price_latest_live	test/views-filter.db.test.ts > public.fuel_price_latest_live: returns the row it is for and none it leaves out
+view	public.fuel_stations_live	test/views-filter.db.test.ts > public.fuel_stations_live: returns the row it is for and none it leaves out
+view	public.hh_cameras_live	test/views-filter.db.test.ts > public.hh_cameras_live: returns the row it is for and none it leaves out
+view	public.hydrogen_stations_live	test/views-filter.db.test.ts > public.hydrogen_stations_live: returns the row it is for and none it leaves out
+view	public.lez_zones_live	test/views-filter.db.test.ts > public.lez_zones_live: returns the row it is for and none it leaves out
+view	public.lorry_city_live	test/views-filter.db.test.ts > public.lorry_city_live: returns the row it is for and none it leaves out
+view	public.lorry_hb_live	test/views-filter.db.test.ts > public.lorry_hb_live: returns the row it is for and none it leaves out
+view	public.lorry_ivm_live	test/views-filter.db.test.ts > public.lorry_ivm_live: returns the row it is for and none it leaves out
+view	public.lorry_long_network_live	test/views-filter.db.test.ts > public.lorry_long_network_live: returns the row it is for and none it leaves out
+view	public.lorry_sevas_live	test/views-filter.db.test.ts > public.lorry_sevas_live: returns the row it is for and none it leaves out
+view	public.mvv_bus_load_live	test/views-filter.db.test.ts > public.mvv_bus_load_live: returns the row it is for and none it leaves out
+view	public.osm_addresses_live	test/views-filter.db.test.ts > public.osm_addresses_live: returns the row it is for and none it leaves out
+view	public.osm_pois_live	test/views-filter.db.test.ts > public.osm_pois_live: returns the row it is for and none it leaves out
+view	public.osm_speed_cameras_live	test/views-filter.db.test.ts > public.osm_speed_cameras_live: returns the row it is for and none it leaves out
+view	public.parking_facilities_bysa_live	test/views-filter.db.test.ts > public.parking_facilities_bysa_live: returns the row it is for and none it leaves out
+view	public.parking_facilities_live	test/views-filter.db.test.ts > public.parking_facilities_live: returns the row it is for and none it leaves out
+view	public.parking_facilities_odbl_live	test/views-filter.db.test.ts > public.parking_facilities_odbl_live: returns the row it is for and none it leaves out
+view	public.parking_forecast_profiles_live	test/views-filter.db.test.ts > public.parking_forecast_profiles_live: returns the row it is for and none it leaves out
+view	public.parking_sites_live	test/views-filter.db.test.ts > public.parking_sites_live: returns the row it is for and none it leaves out
+view	public.road_events_live	test/views-filter.db.test.ts > public.road_events_live: returns the row it is for and none it leaves out
+view	public.routes_live	test/views-filter.db.test.ts > public.routes_live: returns the row it is for and none it leaves out
+view	public.speed_enforcement_live	test/views-filter.db.test.ts > public.speed_enforcement_live: returns the row it is for and none it leaves out
+view	public.station_accessibility_live	test/views-filter.db.test.ts > public.station_accessibility_live: returns the row it is for and none it leaves out
+view	public.station_equipment_live	test/views-filter.db.test.ts > public.station_equipment_live: returns the row it is for and none it leaves out
+view	public.stop_times_live	test/views-filter.db.test.ts > public.stop_times_live: returns the row it is for and none it leaves out
+view	public.stops_live	test/views-filter.db.test.ts > public.stops_live: returns the row it is for and none it leaves out
+view	public.trips_live	test/views-filter.db.test.ts > public.trips_live: returns the row it is for and none it leaves out
+view	public.weather_warnings_en_live	test/views-filter.db.test.ts > public.weather_warnings_en_live: returns the row it is for and none it leaves out
+view	public.weather_warnings_live	test/views-filter.db.test.ts > public.weather_warnings_live: returns the row it is for and none it leaves out
+view	public.road_weather_stations_live	test/views-filter.db.test.ts > public.road_weather_stations_live: returns the row it is for and none it leaves out
+view	public.road_context_live	test/views-filter.db.test.ts > public.road_context_live: returns the row it is for and none it leaves out
+view	public.hh_roadworks_live	test/views-filter.db.test.ts > public.hh_roadworks_live: returns the row it is for and none it leaves out
+view	public.charging_sites_live	test/views-filter.db.test.ts > public.charging_sites_live: returns the row it is for and none it leaves out
+view	public.transit_stops_odbl_live	test/views-filter.db.test.ts > public.transit_stops_odbl_live: returns the row it is for and none it leaves out
+view	public.station_metro_osm_decided	test/views-filter.db.test.ts > public.station_metro_osm_decided: returns the row it is for and none it leaves out
+view	public.motorway_points_live	test/views-filter.db.test.ts > public.motorway_points_live: returns the row it is for and none it leaves out
+view	public.vbb_transit_delays_live	test/views-filter.db.test.ts > public.vbb_transit_delays_live: returns the row it is for and none it leaves out
+view	public.vbn_transit_delays_live	test/views-filter.db.test.ts > public.vbn_transit_delays_live: returns the row it is for and none it leaves out
+view	public.vrn_transit_delays_live	test/views-filter.db.test.ts > public.vrn_transit_delays_live: returns the row it is for and none it leaves out
+view	public.delfi_siri_et_calls_live	test/views-filter.db.test.ts > public.delfi_siri_et_calls_live: returns the row it is for and none it leaves out
+view	public.gbfs_station_status_live	test/views-filter.db.test.ts > public.gbfs_station_status_live: returns the row it is for and none it leaves out
+view	public.los_sites_live	test/views-filter.db.test.ts > public.los_sites_live: returns the row it is for and none it leaves out
+view	public.delfi_service_alerts_live	test/views-filter.db.test.ts > public.delfi_service_alerts_live: returns the row it is for and none it leaves out
+view	public.opendata_roadworks_live	test/views-filter.db.test.ts > public.opendata_roadworks_live: returns the row it is for and none it leaves out
+view	public.city_traffic_segments_live	test/views-filter.db.test.ts > public.city_traffic_segments_live: returns the row it is for and none it leaves out
+view	public.city_traffic_pulls_live	test/views-filter.db.test.ts > public.city_traffic_pulls_live: returns the row it is for and none it leaves out
+view	public.road_weather_forecast_live	test/views-filter.db.test.ts > public.road_weather_forecast_live: returns the row it is for and none it leaves out
+view	public.charging_feed_runs_live	test/views-filter.db.test.ts > public.charging_feed_runs_live: returns the row it is for and none it leaves out
+view	public.db_facilities_live	test/views-filter.db.test.ts > public.db_facilities_live: returns the row it is for and none it leaves out
+view	public.parking_occupancy_live	test/views-filter.db.test.ts > public.parking_occupancy_live: returns the row it is for and none it leaves out
+view	public.parking_occupancy_sid_live	test/views-filter.db.test.ts > public.parking_occupancy_sid_live: returns the row it is for and none it leaves out
+view	public.parking_occupancy_odbl_live	test/views-filter.db.test.ts > public.parking_occupancy_odbl_live: returns the row it is for and none it leaves out
+view	public.charging_point_status_live	test/views-filter.db.test.ts > public.charging_point_status_live: returns the row it is for and none it leaves out
+view	public.motorway_summary_live	test/views-filter.db.test.ts > public.motorway_summary_live: returns the row it is for and none it leaves out
+view	public.parking_facilities_sid_live	test/views-filter.db.test.ts > public.parking_facilities_sid_live: returns the row it is for and none it leaves out
+view	public.gbfs_stations_live	test/views-filter.db.test.ts > public.gbfs_stations_live: returns the row it is for and none it leaves out
+view	public.street_bays_live	test/views-filter.db.test.ts > public.street_bays_live: returns the row it is for and none it leaves out
+view	public.gbfs_vehicles_live	test/views-filter.db.test.ts > public.gbfs_vehicles_live: returns the row it is for and none it leaves out
+view	public.transit_delays_live	test/views-filter.db.test.ts > public.transit_delays_live: returns the row it is for and none it leaves out
+view	public.connect_transit_delays_live	test/views-filter.db.test.ts > public.connect_transit_delays_live: returns the row it is for and none it leaves out
+view	public.vbn_transit_delays	test/views-filter.db.test.ts > public.vbn_transit_delays: returns the row it is for and none it leaves out
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted

@@ -5,7 +5,9 @@
  * whose `from` text is not found is counted as surviving, and every `from` is
  * unique in its file (test/mutants-schema-behaviour.test.ts).
  */
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { VIEW_CASES } from "../test/views-filter.cases.js";
 
 export type SchemaMutant = { readonly name: string; readonly from: string; readonly to: string; readonly file: string; readonly tests: readonly string[] };
 
@@ -257,6 +259,34 @@ const text: SchemaMutant[] = [
   { name: "text: street bays skip the fold on update", from: "CREATE TRIGGER street_bays_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER street_bays_postcode BEFORE INSERT ON" },
 ].map((m) => ({ ...m, file: BASELINE, tests: TEXT }));
 
+const VIEWS = ["test/views-filter.db.test.ts"];
+
+/** The view's CREATE VIEW block in the baseline, up to its closing semicolon. */
+function viewBlock(sql: string, view: string): string {
+  const start = sql.indexOf(`\nCREATE VIEW ${view} AS\n`);
+  if (start < 0) throw new Error(`no CREATE VIEW ${view} in the baseline`);
+  const end = sql.indexOf(";\n", start);
+  return sql.slice(start + 1, end + 1);
+}
+
+/** Per filter view: its WHERE negated (or, for a projection, a WHERE false), and each `drops` snippet replaced by true. */
+const views: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  return VIEW_CASES.flatMap((k) => {
+    const block = viewBlock(sql, k.view);
+    const where = block.lastIndexOf("\n  WHERE ");
+    const negated =
+      where < 0
+        ? { name: `views: ${k.view} shows nothing`, from: block, to: `${block.slice(0, -1)} WHERE false;` }
+        : { name: `views: ${k.view} shows what it should leave out`, from: block, to: `${block.slice(0, where)}\n  WHERE NOT ${block.slice(where + "\n  WHERE ".length)}` };
+    const drops = (k.drops ?? []).map((d) => {
+      if (block.split(d).length !== 2) throw new Error(`${k.view}: the drop ${d} is not once in its block`);
+      return { name: `views: ${k.view} without ${d}`, from: block, to: block.replace(d, d.endsWith(")") && !d.startsWith("(") ? "true)" : d.endsWith(" AND") ? "true AND" : "true") };
+    });
+    return [negated, ...drops];
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: VIEWS }));
+
 const FUEL = ["test/fuel-functions.db.test.ts"];
 
 const fuel: SchemaMutant[] = [
@@ -335,4 +365,4 @@ const loads: SchemaMutant[] = [
   { name: "loads: an unread week stores its parts", from: "  if s = 'read' then\n    insert into search_console_weekly_parts", to: "  if true then\n    insert into search_console_weekly_parts" },
 ].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...views];
