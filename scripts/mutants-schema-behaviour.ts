@@ -280,4 +280,37 @@ const fuel: SchemaMutant[] = [
   { name: "fuel: outliers oldest first", from: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at desc", to: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at asc" },
 ].map((m) => ({ ...m, file: BASELINE, tests: FUEL }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel];
+const DERIVED = ["test/derived-tables.db.test.ts"];
+
+const derived: SchemaMutant[] = [
+  { name: "derived: a snapshot run stated by last_updated", from: "max(least(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at), n.observed_at)),", to: "max(least(coalesce(n.last_updated, n.observed_at), n.observed_at))," },
+  { name: "derived: a run stated later than its tick", from: "max(least(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at), n.observed_at)),", to: "max(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at))," },
+  { name: "derived: the note counts the confidential", from: "   where coalesce(n.confidentiality, 'noRestriction') = 'noRestriction'\n   group by n.", to: "   where true\n   group by n." },
+  { name: "derived: the note misses a padded delta", from: "(select coalesce(lower(btrim(n.exchange_protocol)) = 'deltapull', false) as is_delta) d", to: "(select coalesce(n.exchange_protocol = 'deltapull', false) as is_delta) d" },
+  { name: "derived: a second insert replaces the ticks", from: "         ticks = s.ticks + excluded.ticks;", to: "         ticks = excluded.ticks;" },
+  { name: "derived: a second insert keeps the stated time", from: "     set stated_at = greatest(s.stated_at, excluded.stated_at),", to: "     set stated_at = s.stated_at," },
+  { name: "derived: the run ledger is never pruned", from: "    delete from charging_status_runs where observed_at < now() - interval '35 days';", to: "    null;" },
+  { name: "derived: an update forgets the new run", from: "    insert into charging_status_runs_keys select distinct n.observed_at, n.source_feed, n.source_run_id from new_ticks n;", to: "    null;" },
+  { name: "derived: the recompute counts the confidential", from: "   where coalesce(t.confidentiality, 'noRestriction') = 'noRestriction'", to: "   where true" },
+  { name: "derived: a delete recomputes nothing", from: "CREATE TRIGGER charging_status_runs_forget AFTER DELETE ON public.charging_point_status REFERENCING OLD TABLE AS old_ticks FOR EACH STATEMENT", to: "CREATE TRIGGER charging_status_runs_forget AFTER INSERT ON public.charging_point_status REFERENCING NEW TABLE AS old_ticks FOR EACH STATEMENT" },
+  { name: "derived: an update recomputes nothing", from: "CREATE TRIGGER charging_status_runs_restate AFTER UPDATE ON public.charging_point_status REFERENCING OLD TABLE AS old_ticks NEW TABLE AS new_ticks FOR EACH STATEMENT EXECUTE FUNCTION public.charging_status_runs_recompute();", to: "" },
+  { name: "derived: overlaps within one feed", from: "      on b.source_feed <> a.source_feed\n", to: "      on a.zone_id <> b.zone_id\n" },
+  { name: "derived: overlaps with a road", from: "     and b.role = 'zone'\n", to: "" },
+  { name: "derived: overlaps with a closed zone", from: "     and b.closed_at is null\n     and b.geom && a.geom", to: "     and b.geom && a.geom" },
+  { name: "derived: overlaps along a touching edge", from: "     and not st_touches(a.geom, b.geom)\n", to: "" },
+  { name: "derived: overlaps one way", from: "(values (a.source_feed, a.zone_id, b.source_feed, b.zone_id),\n                              (b.source_feed, b.zone_id, a.source_feed, a.zone_id)) x(f1, z1, f2, z2)", to: "(values (a.source_feed, a.zone_id, b.source_feed, b.zone_id)) x(f1, z1, f2, z2)" },
+  { name: "derived: the larger area", from: "least(st_area(a.geom), st_area(b.geom)) as smaller_area", to: "greatest(st_area(a.geom), st_area(b.geom)) as smaller_area" },
+  { name: "derived: a closed zone keeps its overlaps", from: "     and a.role = 'zone'\n     and a.closed_at is null;", to: "     and a.role = 'zone';" },
+  { name: "derived: a road zone gets overlaps", from: "     and a.role = 'zone'\n     and a.closed_at is null;", to: "     and a.closed_at is null;" },
+  { name: "derived: an unchanged update refreshes", from: "  if tg_op = 'UPDATE'\n     and old.geom is not distinct from new.geom", to: "  if false\n     and old.geom is not distinct from new.geom" },
+  { name: "derived: only a move refreshes", from: "AFTER UPDATE OF geom, role, closed_at, source_feed, zone_id ON public.lez_zones", to: "AFTER UPDATE OF geom ON public.lez_zones" },
+  { name: "derived: an insert refreshes nothing", from: "CREATE TRIGGER lez_zones_overlaps_insert AFTER INSERT ON public.lez_zones", to: "CREATE TRIGGER lez_zones_overlaps_insert AFTER DELETE ON public.lez_zones" },
+  { name: "derived: warm without a population floor", from: " and g.population >= p_city_population_min\n", to: "\n" },
+  { name: "derived: warm radius not clamped up", from: "greatest(p_city_radius_min_m, p_city_radius_per_sqrt_thousand_m * sqrt(g.population::float8 / 1000))", to: "p_city_radius_per_sqrt_thousand_m * sqrt(g.population::float8 / 1000)" },
+  { name: "derived: warm without the motorway", from: "on ST_DWithin(s.geom, m.geom, p_motorway_corridor_m)", to: "on false" },
+  { name: "derived: gaps outside the days", from: "     where p.observed_at >= now() - make_interval(days => p_days)\n       and p.station_id in (select id from warm_ids)", to: "     where true\n       and p.station_id in (select id from warm_ids)" },
+  { name: "derived: gaps of every station", from: "       and p.station_id in (select id from warm_ids)\n", to: "\n" },
+  { name: "derived: gaps across products", from: "partition by p.station_id, p.product order by p.observed_at)) as gap_s", to: "partition by p.station_id order by p.observed_at)) as gap_s" },
+].map((m) => ({ ...m, file: BASELINE, tests: DERIVED }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived];

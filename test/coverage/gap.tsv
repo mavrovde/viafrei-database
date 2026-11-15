@@ -2,20 +2,10 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-function	public.charging_status_runs_note()
-function	public.charging_status_runs_recompute()
-function	public.fuel_warm_cadence(p_city_population_min integer, p_city_radius_min_m double precision, p_city_radius_max_m double precision, p_city_radius_per_sqrt_thousand_m double precision, p_motorway_corridor_m double precision, p_failure_threshold integer, p_days integer)
 function	public.growth_weekly_refresh(p_weeks integer)
-function	public.lez_zone_overlaps_refresh(p_feed text, p_zone text)
-function	public.lez_zones_overlaps_trigger()
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
 function	public.ops_rollup_usage_fold(b_from date, b_to date)
 function	public.search_console_weekly_load(doc jsonb)
-trigger	public.charging_point_status.charging_status_runs_forget
-trigger	public.charging_point_status.charging_status_runs_note
-trigger	public.charging_point_status.charging_status_runs_restate
-trigger	public.lez_zones.lez_zones_overlaps_insert
-trigger	public.lez_zones.lez_zones_overlaps_update
 view	domains.route_recommendations_merged
 view	domains.speed_cameras_merged
 view	domains.transit_agencies_odbl_merged
