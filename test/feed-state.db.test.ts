@@ -207,7 +207,7 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
       });
     });
 
-    it("a finished pending run that closed items is a change and nothing else, in the fold as in the recompute (the #844 close pass)", async () => {
+    it("a finished pending run that closed items is a change and nothing else, in the fold as in the recompute (an ended source's close pass)", async () => {
       await t.planted(async (c) => {
         await insertFeed(c, [{ key: "fa", min: 1, status: "ok", seen: 4 }]);
         await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fa', $1, $1, 'pending', 3)", [at(2)]);
@@ -245,14 +245,32 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
         await insertFeed(c, [{ key: "fa", min: 1, status: "ok", ins: 1 }]);
         await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fa', $1, $1, 'pending', 3)", [at(2)]);
         await insertFeed(c, [{ key: "fb", min: 1, status: "ok", ins: 1 }]);
+        await insertIngest(c, [{ key: "p_plain", min: 0, status: "ok", rows: 0 }]);
         await insertIngest(c, [{ key: "p_plain", min: 1, status: "pending", rows: 4 }]);
-        // the state the old fold held: the pending change unseen. fb is stale on purpose and has no pending change, so it is left alone
+        // the state the old fold held: the pending change unseen, the key's row kept by its attempt. fb is stale on purpose and has no pending change, so it is left alone
         await c.query("update control.feed_state set last_changed_at = $1 where ledger = 'feed'", [at(1)]);
-        await c.query("delete from control.feed_state where ledger = 'ingest'");
+        await c.query("update control.feed_state set last_changed_at = null where ledger = 'ingest'");
         await c.query("update control.feed_state set last_changed_at = $1 where ledger = 'feed' and key = 'fb'", [at(0)]);
         await c.query(sql);
         expect((await state(c, "feed")).map((x) => [x.key, x.chg])).toEqual([["fa", m(2)], ["fb", m(0)]]);
         expect((await state(c, "ingest")).map((x) => [x.key, x.chg])).toEqual([["p_plain", m(1)]]);
+      });
+    });
+
+    it("migration 0306 recreates the row of a key whose only fact is a change, which the old recompute deleted, and no other", async () => {
+      const sql = readFileSync(new URL("../db/migrations/0306_feed_state_fold_counts_every_finished_change.sql", import.meta.url), "utf8");
+      await t.planted(async (c) => {
+        // a close pass alone: a finished skipped run that closed rows, no attempt, no refusal
+        await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fc', $1, $1, 'skipped', 2)", [at(2)]);
+        await insertIngest(c, [{ key: "p_plain:z", min: 3, status: "skipped", rows: 3 }]);
+        // a key with a row and a change it already holds, stale on purpose: left alone
+        await insertFeed(c, [{ key: "fb", min: 1, status: "ok", ins: 1 }]);
+        await c.query("update control.feed_state set last_changed_at = $1 where ledger = 'feed' and key = 'fb'", [at(0)]);
+        // the old recompute's answer: no row for a key whose only fact is a change
+        await c.query("delete from control.feed_state where key in ('fc', 'p_plain:z')");
+        await c.query(sql);
+        expect((await state(c, "feed")).map((x) => [x.key, x.att, x.chg])).toEqual([["fb", m(1), m(0)], ["fc", null, m(2)]]);
+        expect((await state(c, "ingest")).map((x) => [x.key, x.att, x.chg])).toEqual([["p_plain:z", null, m(3)]]);
       });
     });
 

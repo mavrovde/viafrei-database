@@ -3,12 +3,11 @@
 -- control.feed_state_after_change folded no row whose status was 'running' or
 -- 'pending', while control.recompute_feed_state takes last_changed_at from any
 -- finished, non-budget row that inserted, updated or closed something. The
--- writers say the recompute is right: 'pending' is a terminal status (the
--- cycle ran, the contract is not ACTIVE; packages/ingest/src/platform/
--- feed-runs.ts), and the ended-source close pass (#844,
--- connectors/ended-sources.ts) writes exactly a finished 'pending' row with
--- items_closed > 0 -- a change of the data the fold never saw. Production held
--- 11 finished 'pending' feed_runs rows on 2026-11-15.
+-- recompute is right: in this schema 'pending' is a terminal status of
+-- feed_runs (the cycle ran, but the source's contract is not active), and a
+-- pass that closes the rows of an ended source writes exactly a finished
+-- 'pending' row with items_closed > 0 -- a change of the data the fold never
+-- saw.
 --
 -- The trigger now hands every finished row to the fold. Nothing else moves
 -- there: the run_fact flags already confine attempt, success and refusal to
@@ -23,7 +22,15 @@
 -- as the fold does; data_status reads such a row as never attempted and never
 -- stale, the same as no row, with last_changed_at the one thing it adds.
 --
--- The keys whose held state may be behind are recomputed below, once.
+-- The keys whose held state may be behind are recomputed below, once: a key
+-- with a finished non-budget 'pending' (feed) or 'running'/'pending' (ingest)
+-- change, which the old fold never saw, and a key with any finished
+-- non-budget change row but no feed_state row at all, which the old
+-- recompute deleted when the change was its only fact. Both selections read
+-- the ledgers' change indexes. Measured read-only on production on
+-- 2026-11-15 (schema head 292): 0 feed and 0 ingest keys in the first set,
+-- 0 feed and 0 ingest keys in the second (276 feed and 28 ingest feed_state
+-- rows); the step is for any other database this image migrates.
 --
 -- rollback:
 --   re-create control.feed_state_after_change() and control.recompute_feed_state()
@@ -202,11 +209,20 @@ begin
 end $function$;
 
 select control.recompute_feed_state('feed', array(
-  select distinct r.feed_key from feed_runs r
+  select r.feed_key from feed_runs r
    where r.finished_at is not null and r.budget_hit is null and r.status = 'pending'
-     and coalesce(r.items_inserted, 0) + coalesce(r.items_updated, 0) + coalesce(r.items_closed, 0) > 0));
+     and coalesce(r.items_inserted, 0) + coalesce(r.items_updated, 0) + coalesce(r.items_closed, 0) > 0
+  union
+  select r.feed_key from feed_runs r
+   where r.finished_at is not null and r.budget_hit is null
+     and coalesce(r.items_inserted, 0) + coalesce(r.items_updated, 0) + coalesce(r.items_closed, 0) > 0
+     and not exists (select 1 from control.feed_state s where s.ledger = 'feed' and s.key = r.feed_key)));
 
 select control.recompute_feed_state('ingest', array(
-  select distinct r.provider from ingest_runs r
+  select r.provider from ingest_runs r
    where r.finished_at is not null and r.budget_hit is null and r.status in ('running', 'pending')
-     and coalesce(r.rows, 0) > 0));
+     and coalesce(r.rows, 0) > 0
+  union
+  select r.provider from ingest_runs r
+   where r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) > 0
+     and not exists (select 1 from control.feed_state s where s.ledger = 'ingest' and s.key = r.provider)));

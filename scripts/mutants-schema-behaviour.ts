@@ -479,6 +479,8 @@ const fold0306: SchemaMutant[] = [
   { name: "0306: the ingest recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  end if;", to: "     where a.finished_at is not null or h.finished_at is not null;\n  end if;" },
   { name: "0306: the backfill recomputes no feed key", from: "r.budget_hit is null and r.status = 'pending'", to: "r.budget_hit is null and false" },
   { name: "0306: the backfill recomputes no ingest key", from: "r.budget_hit is null and r.status in ('running', 'pending')", to: "r.budget_hit is null and false" },
+  { name: "0306: the backfill forgets a feed key with a change and no feed_state row", from: "and not exists (select 1 from control.feed_state s where s.ledger = 'feed' and s.key = r.feed_key)));", to: "and false));" },
+  { name: "0306: the backfill forgets an ingest key with a change and no feed_state row", from: "and not exists (select 1 from control.feed_state s where s.ledger = 'ingest' and s.key = r.provider)));", to: "and false));" },
 ].map((m) => ({ ...m, file: M0306, tests: LEDGERS }));
 
 export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306];
