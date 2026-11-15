@@ -280,6 +280,29 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
         expect((await state(c, "feed"))[0]).toMatchObject({ att: m(3), ref: m(4), since: m(4) });
       });
     });
+
+    it("the recompute after a delete takes no degraded run without a count as the success, as the fold does", async () => {
+      await t.planted(async (c) => {
+        await insertFeed(c, [{ key: "fa", min: 1, status: "ok" }]);
+        await insertFeed(c, [{ key: "fa", min: 2, status: "degraded" }]);
+        await insertFeed(c, [{ key: "fa", min: 3, status: "error" }]);
+        const folded = (await state(c, "feed"))[0];
+        expect(folded).toMatchObject({ suc: m(1) });
+        await c.query("delete from feed_runs where feed_key = 'fa' and status = 'error'");
+        expect((await state(c, "feed"))[0]).toMatchObject({ suc: m(1), att: m(2), status: "degraded" });
+      });
+    });
+
+    it("two refusals in one statement after an attempt: the pause starts at the earlier of them, the last refusal is the later", async () => {
+      await t.planted(async (c) => {
+        await insertFeed(c, [
+          { key: "fa", min: 1, status: "ok" },
+          { key: "fa", min: 2, status: "error", hit: "share" },
+          { key: "fa", min: 3, status: "error", hit: "share" },
+        ]);
+        expect((await state(c, "feed"))[0]).toMatchObject({ att: m(1), ref: m(3), since: m(2) });
+      });
+    });
   });
 
   describe("control.feed_state from the ingest ledger", () => {
@@ -475,6 +498,8 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
       await t.planted(async (c) => {
         await register(c, "src_one", "CC BY 4.0 (label)");
         await c.query("update ingestor.sources set status = 'disabled' where id = 'src_two'");
+        // another publisher's catalogue row under the same key lends neither its label nor its cadence
+        await c.query("insert into feed_catalog (feed_key, provider, display_name, licence_id, licence_label, cadence_s, published_by) values ('src_two', 'other', 'Other', 'CC0-1.0', 'Other label', 900, 'main')");
         const r = await rows<{ source_id: string; licence_label: string; cadence_s: number | null; enabled: boolean; display_name: string; dataset_url: string | null }>(
           c,
           "select source_id, display_name, licence_label, cadence_s, enabled, dataset_url from registered_sources order by 1",

@@ -69,6 +69,15 @@ const control: SchemaMutant[] = [
 ].map((m) => ({ ...m, file: BASELINE, tests: CONTROL }));
 
 const LEDGERS = ["test/feed-state.db.test.ts"];
+/** Migration 0306 redefines these two functions, so their mutants are planted in its text: the baseline's copy is replaced at migrate time and a fault there could not be seen. */
+const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_finished_change.sql");
+const REDEFINED_BY_0306 = ["CREATE FUNCTION control.feed_state_after_change()", "CREATE FUNCTION control.recompute_feed_state("];
+const liveFile = (from: string): string => {
+  const base = readFileSync(BASELINE, "utf8");
+  const at = base.indexOf(from);
+  const fn = base.lastIndexOf("CREATE FUNCTION", at);
+  return at >= 0 && REDEFINED_BY_0306.some((h) => base.startsWith(h, fn)) ? M0306 : BASELINE;
+};
 
 const ledgers: SchemaMutant[] = [
   { name: "ledgers: a feed refusal counts as an attempt", from: "                   n.budget_hit is null and n.status in ('ok', 'unchanged', 'degraded', 'error'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or", to: "                   n.status in ('ok', 'unchanged', 'degraded', 'error'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or" },
@@ -88,7 +97,7 @@ const ledgers: SchemaMutant[] = [
   { name: "ledgers: the ingest budget is the whole key", from: "                 else (select p.budget_key from control.providers p where p.provider = split_part(r.key, ':', 1)) end,", to: "                 else (select p.budget_key from control.providers p where p.provider = r.key) end," },
   { name: "ledgers: the recompute's feed success takes a degraded run with no count", from: "               and (r.status in ('ok', 'unchanged') or (r.status = 'degraded' and r.items_seen is not null))\n             order by r.finished_at desc limit 1),", to: "               and (r.status in ('ok', 'unchanged', 'degraded'))\n             order by r.finished_at desc limit 1)," },
   { name: "ledgers: the recompute's feed refusal is the oldest", from: "         where r.feed_key = k.key and r.finished_at is not null and r.budget_hit is not null\n           and r.status in ('ok', 'unchanged', 'degraded', 'error')\n         order by r.finished_at desc limit 1) h on true", to: "         where r.feed_key = k.key and r.finished_at is not null and r.budget_hit is not null\n           and r.status in ('ok', 'unchanged', 'degraded', 'error')\n         order by r.finished_at asc limit 1) h on true" },
-  { name: "ledgers: the recompute's ingest change ignores rows", from: "             where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) > 0", to: "             where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) >= 0" },
+  { name: "ledgers: the recompute's ingest change ignores rows", from: "         where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) > 0", to: "         where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) >= 0" },
   { name: "ledgers: an owner pause in runtime_config is not read", from: "WHERE ((rc.key = ANY (ARRAY[(('source.'::text || fs.key) || '.paused'::text), (('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))", to: "WHERE ((rc.key = ANY (ARRAY[(('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))" },
   { name: "ledgers: an owner pause set to false still pauses", from: "(('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))", to: "(('mobilithek.'::text || fs.key) || '.paused'::text)])))" },
   { name: "ledgers: a schedule pause is not read", from: "                          WHERE ((ss.source_key = fs.key) AND (ss.state = 'paused'::text))", to: "                          WHERE ((ss.source_key = fs.key) AND (ss.state = 'none'::text))" },
@@ -128,7 +137,7 @@ const ledgers: SchemaMutant[] = [
   { name: "ledgers: source bounds stretch five times", from: "    if declared_s is not null and new.value::int > declared_s * 4 then", to: "    if declared_s is not null and new.value::int > declared_s * 5 then" },
   { name: "ledgers: source bounds are not checked on update", from: "CREATE TRIGGER runtime_config_source_bounds BEFORE INSERT OR UPDATE ON public.runtime_config", to: "CREATE TRIGGER runtime_config_source_bounds BEFORE INSERT ON public.runtime_config" },
   { name: "ledgers: an ingest feed_state trigger is skipped under replica", from: "ALTER TABLE public.ingest_runs ENABLE ALWAYS TRIGGER ingest_runs_feed_state_insert;", to: "" },
-].map((m) => ({ ...m, file: BASELINE, tests: LEDGERS }));
+].map((m) => ({ ...m, file: liveFile(m.from), tests: LEDGERS }));
 
 const ROAD = ["test/road-functions.db.test.ts"];
 
@@ -461,8 +470,6 @@ const loads: SchemaMutant[] = [
   { name: "loads: refresh keeps the old usage", from: "  delete from ops_rollup_usage where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_usage where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
   { name: "loads: refresh keeps the old held rows", from: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
 ].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
-
-const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_finished_change.sql");
 
 /** Migration 0306: the fold and the recompute agree on a finished run's change, whatever its status (#32 finding). */
 const fold0306: SchemaMutant[] = [
