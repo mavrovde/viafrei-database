@@ -24,6 +24,8 @@
 --   delete from public.partition_retention where schema_name = 'public';
 --   delete from schema_migrations where version = 305;
 
+-- Four of the tables written every minute: give up rather than queue (migrate retries a 55P03).
+set local lock_timeout = '5s';
 CREATE INDEX db_facility_ticks_brin ON public.db_facility_ticks USING brin (observed_at);
 CREATE INDEX los_ticks_brin ON public.los_ticks USING brin (observed_at);
 CREATE INDEX station_equipment_ticks_brin ON public.station_equipment_ticks USING brin (observed_at);

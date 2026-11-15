@@ -69,6 +69,38 @@ export function likeMatches(pattern: string, name: string): boolean {
   return re.test(name);
 }
 
+/**
+ * Rule 6, the lock bound (#31 item 6; main's 0054/0064 precedent and its
+ * migration-lock-timeout test): from this number on, a file that builds a
+ * plain index on, or alters, a table it did not create itself must set
+ * `set local lock_timeout` before the first such statement. Without it the
+ * statement queues behind a writer's lock and every later writer queues behind
+ * it; with it the file gives up with 55P03 and `migrate` retries it
+ * (DB_MIGRATE_LOCK_ATTEMPTS, DB_MIGRATE_LOCK_PAUSE_S). The files before it were
+ * written without the rule and are not judged; measured over 0293–0304, two
+ * would be flagged, 0298 and 0302 (`alter table domains.road_works`, a domains
+ * table no writer had reached when they were written).
+ */
+export const LOCK_RULE_FROM = 305;
+
+/** The first statement of a text that takes a write-blocking lock on a table the text did not create, or null. */
+export function lockingStatement(text: string): { readonly index: number; readonly statement: string } | null {
+  const own = new Set([...text.matchAll(/create\s+(?:unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_."]+)/gi)].map((m) => bare(m[1] ?? "")));
+  const found: { index: number; statement: string }[] = [];
+  for (const m of text.matchAll(/create\s+(?:unique\s+)?index\s+(?!concurrently\b)(?:if\s+not\s+exists\s+)?[a-z0-9_"]*\s*on\s+(?:only\s+)?([a-z0-9_."]+)/gi)) {
+    if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
+  }
+  for (const m of text.matchAll(/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?([a-z0-9_."]+)/gi)) {
+    if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
+  }
+  return found.sort((a, b) => a.index - b.index)[0] ?? null;
+}
+
+const bare = (name: string): string => {
+  const n = name.replaceAll('"', "").toLowerCase();
+  return n.includes(".") ? n : `public.${n}`;
+};
+
 const stripComments = (text: string): string => text.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
 
 export function lint(io: LintIo): LintResult {
@@ -194,6 +226,16 @@ export function lint(io: LintIo): LintResult {
       }
       if (!/concurrently/i.test(text)) fail(`${name}: is marked '-- no-transaction:' but runs nothing that needs it — the marker costs atomicity, so it is only for statements PostgreSQL refuses inside a transaction`);
       if (!/if not exists|or replace/i.test(text)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace')`);
+    }
+    if (num >= LOCK_RULE_FROM) {
+      const code = stripComments(text);
+      const locking = lockingStatement(code);
+      const bound = /set\s+local\s+lock_timeout\b/i.exec(code);
+      if (locking !== null && (bound === null || bound.index > locking.index)) {
+        fail(
+          `${name}: '${locking.statement.replace(/\s+/g, " ")}' locks a table this file did not create, with no 'set local lock_timeout' before it — it would queue behind a writer and every later writer behind it; set the bound first (migrate retries a 55P03)`,
+        );
+      }
     }
     if (base.kind === "ok") {
       const was = io.baseBlob("migrations", name);

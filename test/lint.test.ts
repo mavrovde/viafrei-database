@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { fsIo, gitBlobId, likeMatches, lint, type LintIo } from "../src/lint/check-migrations.js";
+import { fsIo, gitBlobId, likeMatches, lint, LOCK_RULE_FROM, lockingStatement, type LintIo } from "../src/lint/check-migrations.js";
 import { sha256Hex } from "../src/migrations/files.js";
 import { plantTree } from "./helpers.js";
 
@@ -176,5 +176,46 @@ describe("likeMatches", () => {
     expect(likeMatches("0001_%", "0001_a.sql")).toBe(true);
     expect(likeMatches("0001_a.sql", "0001_a.sql")).toBe(true);
     expect(likeMatches("0001_a.sql", "0001_aXsql")).toBe(false);
+  });
+});
+
+describe("rule 6: a file that locks a table it did not create sets lock_timeout first", () => {
+  const io = (body: string, num = 305): LintIo => ({
+    list: (d) => (d === "migrations" ? [`${String(num).padStart(4, "0")}_x.sql`] : ["ledger.tsv", `${String(num - 1).padStart(4, "0")}_baseline.sql`]),
+    read: (d, n) => Buffer.from(d === "baseline" ? (n === "ledger.tsv" ? TSV(num - 1) : "select 1;\n") : `${body}-- rollback: delete from schema_migrations where version = ${String(num)};\n`),
+    base: () => ({ kind: "absent", note: "no 'origin' remote" }),
+    baseBlob: () => null,
+  });
+  const fails = (body: string, num?: number): string[] => lint(io(body, num)).lines.filter((l) => l.startsWith("  ✗ "));
+
+  it.each([
+    ["a plain index on a table it did not create", "create index t_a on public.t (a);\n"],
+    ["a unique index", "CREATE UNIQUE INDEX t_a ON t USING btree (a);\n"],
+    ["an alter table", "alter table only domains.road_works add column x int;\n"],
+    ["the bound set only after the statement", "create index t_a on t (a);\nset local lock_timeout = '5s';\n"],
+    ["the bound in a comment only", "-- set local lock_timeout = '5s';\ncreate index t_a on t (a);\n"],
+    ["a session-wide bound (set, not set local)", "set lock_timeout = '5s';\ncreate index t_a on t (a);\n"],
+  ])("refuses %s", (_what, body) => {
+    expect(fails(body)).toEqual([expect.stringMatching(/locks a table this file did not create, with no 'set local lock_timeout' before it/)]);
+  });
+
+  it.each([
+    ["the bound before the statement", "set local lock_timeout = '5s';\ncreate index t_a on t (a);\nalter table t add column b int;\n"],
+    ["a table the file creates", "create table domains.n (a int);\ncreate index n_a on domains.n (a);\nalter table domains.n add column b int;\n"],
+    ["a table it creates, named without its schema", "create table n (a int);\ncreate index n_a on public.n (a);\n"],
+    ["no locking statement", "create view v as select 1;\n"],
+  ])("passes %s", (_what, body) => {
+    expect(fails(body)).toEqual([]);
+  });
+
+  it("judges a file from LOCK_RULE_FROM on and not before", () => {
+    expect(LOCK_RULE_FROM).toBe(305);
+    expect(fails("create index t_a on t (a);\n", 305)).toHaveLength(1);
+    expect(fails("create index t_a on t (a);\n", 304)).toEqual([]);
+  });
+
+  it("names the first locking statement; an index on a table the file created does not count, nor a concurrent build", () => {
+    expect(lockingStatement("create table a (x int);\ncreate index a_x on a (x);\nalter table b add y int;\n")?.statement).toBe("alter table b");
+    expect(lockingStatement("create index concurrently if not exists a_x on a (x);\n")).toBeNull();
   });
 });
