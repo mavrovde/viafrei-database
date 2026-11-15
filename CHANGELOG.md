@@ -11,6 +11,35 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.2.0](https://github.com/mavrovde/viafrei-database/compare/v0.1.1...v0.2.0) (2026-11-15)
+
+
+### Added
+
+* a partial GiST index over the open weather warnings' planar area, built concurrently outside a transaction (0294) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* a schema coverage gate: every function, trigger, view, constraint, policy, grant, role and partition rule is proved by a test here ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* domain tables for charging points, charging point status and hydrogen stations, road events, parking facilities and occupancy, weather warnings and road weather, road context features and webcams (0295 to 0301) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* lint rule 6: from 0294, a migration that indexes or alters a table it did not create sets lock_timeout first, and migrate retries a lock timeout (55P03) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* migrate applies the role settings to every database it migrates and exits 1 when they cannot be applied ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* new verbs and flags: partitions ensure --days-back and --from, roles passwords, and test-fixtures install behind VF_TEST_FIXTURES=1 ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* NOT NULL on the 20 domain columns a source must fill, and non-empty for the 17 text ones (0302) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* past daily partitions on demand, tick BRIN indexes and a partition retention row for every tick table (0304, 0305) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* road works carries the reader columns (0298) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* the schema head moves from 0293 to 0306 (thirteen migrations, 0294 to 0306) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+* the schema's object comments, carried into every migrated database (0303) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+
+
+### Fixed
+
+* the feed state fold counts every finished change (0306) ([7401cf6](https://github.com/mavrovde/viafrei-database/commit/7401cf693b0154d1ec7ccf9203b5d896183b1625))
+
+
+### Build and CI
+
+* build the release pull request only once the released version is tagged ([#13](https://github.com/mavrovde/viafrei-database/issues/13)) ([a92153a](https://github.com/mavrovde/viafrei-database/commit/a92153ab94e714ab1a4f49918914335d610d84a4))
+* Scorecard runs weekly and on a branch-protection change, no longer on every push to main ([e09ee5f](https://github.com/mavrovde/viafrei-database/commit/e09ee5f7f949a5cb3d3a5f2efd089e25eb29abf9))
+* the full mutation run is one pre-release job, and publish waits for it ([#36](https://github.com/mavrovde/viafrei-database/issues/36)) ([0d78599](https://github.com/mavrovde/viafrei-database/commit/0d7859913aaa795a80dd20ba910c1e995c283e0e))
+
 ## [0.1.1](https://github.com/mavrovde/viafrei-database/compare/v0.1.0...v0.1.1) (2026-11-13)
 
 
