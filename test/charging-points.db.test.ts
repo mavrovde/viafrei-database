@@ -11,10 +11,13 @@
  * needs that one EMPTY), migrates it to head through the service, and drops it
  * afterwards. Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { DatabaseService } from "../src/service.js";
+import { REPO } from "./helpers.js";
 
 const url = process.env["TEST_DATABASE_URL"];
 const required = process.env["VF_REQUIRE_DB"] === "1";
@@ -54,7 +57,7 @@ const WRITABLE: Readonly<Record<string, string>> = {
 const REQUIRED = new Set(["device_id", "point_no", "site_key"]);
 const WRITER_TYPES = new Set(["text", "integer", "bigint", "double precision", "numeric", "boolean", "timestamp with time zone", "date", "jsonb"]);
 
-type Point = { external_id: string; match_key?: string | null; geom_wkt?: string | null; extras?: unknown } & Partial<Record<keyof typeof WRITABLE, unknown>>;
+type Point = { external_id: string; match_key?: string | null; observed_at?: string | null; geom_wkt?: string | null; extras?: unknown } & Partial<Record<keyof typeof WRITABLE, unknown>>;
 
 /** The ingestor's upsert for this domain (core/write-sql.ts upsertStatement, the same text for these columns). */
 function upsertSql(): string {
@@ -95,6 +98,7 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
     for (const [id, domain, trust] of [
       ["charging-high", "charging_points", 80],
       ["charging-low", "charging_points", 20],
+      ["charging-peer", "charging_points", 80],
       ["cameras-only", "speed_cameras", 50],
     ] as const) {
       await pool.query(
@@ -197,13 +201,14 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
     };
     const all = await shape("charging_points");
     // The domain's own checks, beyond the convention: what a point's data is.
-    const own = all.filter((d) => / T_(geom_point|connector_types_array|plugs_array|max_power_kw|current_type) /.test(d));
+    const own = all.filter((d) => / T_(point_no|geom_point|connector_types_array|plugs_array|max_power_kw|current_type) /.test(d));
     expect(own).toEqual([
       "c T_connector_types_array CHECK (((connector_types IS NULL) OR (jsonb_typeof(connector_types) = 'array'::text)))",
       "c T_current_type CHECK (((current_type IS NULL) OR (current_type = ANY (ARRAY['ac'::text, 'dc'::text, 'both'::text]))))",
       "c T_geom_point CHECK (((geom IS NULL) OR (geometrytype(geom) = 'POINT'::text)))",
       "c T_max_power_kw CHECK (((max_power_kw IS NULL) OR (max_power_kw >= (0)::double precision)))",
       "c T_plugs_array CHECK (((plugs IS NULL) OR (jsonb_typeof(plugs) = 'array'::text)))",
+      "c T_point_no CHECK ((point_no >= 1))",
     ]);
     const mine = all.filter((d) => !own.includes(d));
     expect(mine).toEqual(await shape("speed_cameras"));
@@ -237,8 +242,8 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
 
   it("grants the ingestor what speed_cameras grants it, and nobody else anything", async () => {
     const r = await db().query<{ rel: string; grantee: string; privs: string }>(
-      `select c.relname as rel, g.rolname as grantee, string_agg(x.privilege_type, ',' order by x.privilege_type) as privs
-         from pg_class c cross join lateral aclexplode(c.relacl) x join pg_roles g on g.oid = x.grantee
+      `select c.relname as rel, coalesce(g.rolname, 'PUBLIC') as grantee, string_agg(x.privilege_type, ',' order by x.privilege_type) as privs
+         from pg_class c cross join lateral aclexplode(c.relacl) x left join pg_roles g on g.oid = x.grantee
         where c.relnamespace = 'domains'::regnamespace and c.relname in ('charging_points', 'charging_points_merged', 'speed_cameras', 'speed_cameras_merged')
           and x.grantee <> c.relowner
         group by 1, 2 order by 1, 2`,
@@ -248,12 +253,29 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
     expect(of("charging_points_merged")).toEqual(["viafrei_ingestor:SELECT"]);
     expect(of("charging_points")).toEqual(of("speed_cameras"));
     expect(of("charging_points_merged")).toEqual(of("speed_cameras_merged"));
+    // No reader can read either relation, by a grant of its own or through PUBLIC.
+    const readers = ["viafrei_mcp", "viafrei_digest", "viafrei_status", "viafrei_ops", "viafrei_translate"];
+    const can = await db().query<{ role: string; rel: string; ok: boolean }>(
+      `select r as role, t as rel, has_table_privilege(r, t, 'select') as ok
+         from unnest($1::text[]) r cross join unnest(array['domains.charging_points', 'domains.charging_points_merged']) t order by 1, 2`,
+      [readers],
+    );
+    expect(can.rows.length).toBe(readers.length * 2);
+    expect(can.rows.filter((x) => x.ok)).toEqual([]);
+    // The web shell reads no database: it has no role here at all.
+    expect((await db().query<{ r: string | null }>("select to_regrole('viafrei_web')::text as r")).rows[0]?.r).toBeNull();
   });
 
   it("takes a register point through the ingestor's upsert, and an unchanged one moves no row", async () => {
     await asSource("charging-high", async (c) => {
       expect((await write(c, "charging-high", [POINT])).rows).toEqual([{ inserted: true }]);
       expect((await write(c, "charging-high", [POINT])).rows).toEqual([]);
+      const before = (await c.query<{ u: string }>(`select updated_at::text as u from ${T} where source_id = 'charging-high'`)).rows[0]?.u;
+      // A changed state updates the row in place and moves updated_at.
+      expect((await write(c, "charging-high", [{ ...POINT, max_power_kw: 22 }])).rows).toEqual([{ inserted: false }]);
+      const after = (await c.query<{ u: string; kw: number; moved: boolean }>(`select updated_at::text as u, max_power_kw as kw, updated_at > $1::timestamptz as moved from ${T} where source_id = 'charging-high'`, [before])).rows;
+      expect(after.map((x) => [x.kw, x.moved])).toEqual([[22, true]]);
+      expect((await write(c, "charging-high", [POINT])).rows).toEqual([{ inserted: false }]);
       const r = await c.query<Record<string, unknown>>(
         `select external_id, device_id, point_no, site_key, max_power_kw, connector_types, plugs, commissioned_on::text as commissioned,
                 published_on::text as published, ST_AsText(geom) as wkt, extras
@@ -284,7 +306,9 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
         [{ ...POINT, point_no: null }, "23502", "point_no"],
         [{ ...POINT, site_key: null }, "23502", "site_key"],
         [{ ...POINT, external_id: "" }, "23514", "charging_points_external_id_check"],
+        [{ ...POINT, point_no: 0 }, "23514", "charging_points_point_no"],
         [{ ...POINT, geom_wkt: "LINESTRING(13 52, 13.1 52.1)" }, "23514", "charging_points_geom_point"],
+        [{ ...POINT, geom_wkt: "MULTIPOINT((13 52), (13.1 52.1))" }, "23514", "charging_points_geom_point"],
         [{ ...POINT, connector_types: "iec62196T2" }, "23514", "charging_points_connector_types_array"],
         [{ ...POINT, plugs: { plug: "Typ 2" } }, "23514", "charging_points_plugs_array"],
         [{ ...POINT, max_power_kw: -0.5 }, "23514", "charging_points_max_power_kw"],
@@ -342,10 +366,81 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
     });
   });
 
-  it("leaves the old tables as they were", async () => {
-    const r = await db().query<{ t: string | null }>("select to_regclass('public.charging_points')::text as t union all select to_regclass('public.charging_sites')::text");
-    expect(r.rows.map((x) => x.t)).toEqual(["charging_points", "charging_sites"]);
-    const k = await db().query<{ n: number }>("select count(*)::int as n from information_schema.columns where table_schema = 'public' and table_name = 'charging_points' and column_name = 'point_key'");
-    expect(k.rows[0]?.n).toBe(1);
+  /** The merged view's row for one entity key, as superuser (the rows are planted, RLS is not the point here). */
+  const merged = async (c: pg.PoolClient, key: string): Promise<{ source_id: string; source_count: number; trust: number | null }[]> =>
+    (await c.query<{ source_id: string; source_count: number; trust: number | null }>("select source_id, source_count, trust from domains.charging_points_merged where entity_key = $1", [key])).rows;
+  /** Runs fn as the owner in a transaction that is rolled back. */
+  async function planted<R>(fn: (c: pg.PoolClient) => Promise<R>): Promise<R> {
+    const c = await db().connect();
+    try {
+      await c.query("begin");
+      return await fn(c);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  }
+  const plant = (c: pg.PoolClient, source: string, external: string, key: string, observed: string, closed: boolean): Promise<unknown> =>
+    c.query(
+      `insert into ${T} (source_id, external_id, match_key, observed_at, closed_at, device_id, point_no, site_key)
+       values ($1, $2, $3, $4::timestamptz, case when $5 then clock_timestamp() end, 'D', 1, 'S')`,
+      [source, external, key, observed, closed],
+    );
+
+  it("merges only open rows: a closed winner gives way, and an entity with only closed rows is absent", async () => {
+    await planted(async (c) => {
+      await plant(c, "charging-high", "A:1", "K1", "2026-11-01T00:00:00Z", true);
+      await plant(c, "charging-low", "B:1", "K1", "2026-11-01T00:00:00Z", false);
+      await plant(c, "charging-high", "C:1", "K2", "2026-11-01T00:00:00Z", true);
+      await plant(c, "charging-low", "D:1", "K2", "2026-11-01T00:00:00Z", true);
+      expect(await merged(c, "K1")).toEqual([{ source_id: "charging-low", source_count: 1, trust: 20 }]);
+      expect(await merged(c, "K2")).toEqual([]);
+    });
+  });
+
+  it("breaks a tie of trust by the freshest observation, whichever source sorts first", async () => {
+    await planted(async (c) => {
+      await plant(c, "charging-high", "A:1", "K3", "2026-11-02T00:00:00Z", false);
+      await plant(c, "charging-peer", "B:1", "K3", "2026-11-03T00:00:00Z", false);
+      await plant(c, "charging-high", "C:1", "K4", "2026-11-03T00:00:00Z", false);
+      await plant(c, "charging-peer", "D:1", "K4", "2026-11-02T00:00:00Z", false);
+      expect(await merged(c, "K3")).toEqual([{ source_id: "charging-peer", source_count: 2, trust: 80 }]);
+      expect(await merged(c, "K4")).toEqual([{ source_id: "charging-high", source_count: 2, trust: 80 }]);
+    });
+  });
+
+  it("keeps a row whose source is not registered, ranked after every registered one", async () => {
+    await planted(async (c) => {
+      await plant(c, "charging-unknown", "A:1", "K5", "2026-11-05T00:00:00Z", false);
+      expect(await merged(c, "K5")).toEqual([{ source_id: "charging-unknown", source_count: 1, trust: null }]);
+      await plant(c, "charging-low", "B:1", "K5", "2026-11-01T00:00:00Z", false);
+      expect(await merged(c, "K5")).toEqual([{ source_id: "charging-low", source_count: 2, trust: 20 }]);
+    });
+  });
+
+  it("leaves the old tables as the baseline made them: the same columns and constraints", async () => {
+    const baseline = readFileSync(join(REPO, "db", "baseline", "0293_baseline.sql"), "utf8");
+    for (const table of ["charging_points", "charging_sites"]) {
+      const block = new RegExp(`\\nCREATE TABLE public\\.${table} \\(\\n([^]*?)\\n\\)`).exec(baseline)?.[1];
+      expect(block, table).toBeDefined();
+      const lines = (block ?? "").split("\n").map((l) => l.trim().replace(/,$/, ""));
+      const columns = lines.filter((l) => !l.startsWith("CONSTRAINT ")).map((l) => l.split(" ")[0]);
+      const inline = lines.filter((l) => l.startsWith("CONSTRAINT ")).map((l) => l.replace(/^CONSTRAINT /, ""));
+      const added = [...baseline.matchAll(new RegExp(`\\nALTER TABLE ONLY public\\.${table}\\n    ADD CONSTRAINT ([^;]+);`, "g"))].map((m) => m[1] ?? "");
+      expect(columns.length, table).toBeGreaterThan(20);
+      const cols = await db().query<{ a: string }>(
+        `select attname as a from pg_attribute where attrelid = ('public.' || $1)::regclass and attnum > 0 and not attisdropped order by attnum`,
+        [table],
+      );
+      expect(cols.rows.map((x) => x.a), table).toEqual(columns);
+      // Read with the dump's empty search_path, so a definition is qualified as the baseline writes it.
+      const cons = await planted(async (c) => {
+        await c.query("set local search_path = ''");
+        return (
+          await c.query<{ d: string }>("select conname || ' ' || pg_catalog.pg_get_constraintdef(oid) as d from pg_catalog.pg_constraint where conrelid = ('public.' || $1)::pg_catalog.regclass", [table])
+        ).rows.map((x) => x.d);
+      });
+      expect(cons.sort(), table).toEqual([...inline, ...added].sort());
+    }
   });
 });

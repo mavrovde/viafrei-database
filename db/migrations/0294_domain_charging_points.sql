@@ -15,6 +15,10 @@
 -- columns (prices, the publisher's point id, the DATEX II marking) and relaxes
 -- the not-null columns they do not have.
 --
+-- The merged view's (w).* and r.* were expanded when it was created: a later
+-- migration that adds a column to the table must drop and recreate
+-- charging_points_merged, or the view goes on without that column.
+--
 -- Nothing reads this table yet and no reader is granted it. The old tables and
 -- their data are not touched.
 --
@@ -54,6 +58,7 @@ create table domains.charging_points (
   published_on date,
   primary key (id),
   constraint charging_points_owner_key unique (source_id, feed, external_id),
+  constraint charging_points_point_no check (point_no >= 1),
   constraint charging_points_geom_point check (geom is null or GeometryType(geom) = 'POINT'),
   constraint charging_points_connector_types_array check (connector_types is null or jsonb_typeof(connector_types) = 'array'),
   constraint charging_points_plugs_array check (plugs is null or jsonb_typeof(plugs) = 'array'),
