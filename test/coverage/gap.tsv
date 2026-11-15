@@ -75,26 +75,6 @@ function	public.vf_postcode_normalise()
 function	public.watch_events_notify()
 function	public.watches_enforce_session_limit()
 function	public.weather_warning_english(german_id bigint)
-partitioned	public.autobahn_events
-partitioned	public.charging_point_status
-partitioned	public.city_traffic_ticks
-partitioned	public.connect_transit_delays
-partitioned	public.db_facility_ticks
-partitioned	public.delfi_siri_et_calls
-partitioned	public.fuel_prices
-partitioned	public.gbfs_station_status
-partitioned	public.los_ticks
-partitioned	public.ops_rollup_feed
-partitioned	public.parking_occupancy
-partitioned	public.parking_occupancy_sid
-partitioned	public.road_event_ticks
-partitioned	public.station_equipment_ticks
-partitioned	public.street_bay_ticks
-partitioned	public.traffic_count_ticks
-partitioned	public.transit_delays
-partitioned	public.vbb_transit_delays
-partitioned	public.vbn_siri_et_calls
-partitioned	public.vrn_transit_delays
 policy	domains.route_recommendations.route_recommendations_own_insert
 policy	domains.route_recommendations.route_recommendations_own_update
 policy	domains.route_recommendations.route_recommendations_read

@@ -1,0 +1,24 @@
+# Every partitioned table of schema public: table, partition key (pg_get_partkeydef), its BRIN index(es) or -, retention.
+# retention: drop:N = a no-archive tick whose day is dropped after N whole past UTC days (viafrei@4dd794ab0 packages/ingest/src/platform/tick-retention-policy.ts TICK_DROP_KEEP_DAYS);
+# archive = every other daily tick, dumped to the cold store one day at a time (partition_archives) before its day is dropped; rollup = ops_rollup_feed, kept by ops_rollup_refresh.
+# A migration that partitions, re-keys or un-partitions a table changes its row here in the same commit.
+public.autobahn_events	RANGE (observed_at)	autobahn_events_brin	drop:1
+public.charging_point_status	RANGE (observed_at)	charging_point_status_brin	archive
+public.city_traffic_ticks	RANGE (observed_at)	city_traffic_ticks_brin	archive
+public.connect_transit_delays	RANGE (observed_at)	connect_transit_delays_brin	drop:1
+public.db_facility_ticks	RANGE (observed_at)	-	archive
+public.delfi_siri_et_calls	RANGE (observed_at)	delfi_siri_et_calls_observed_brin	drop:1
+public.fuel_prices	RANGE (observed_at)	fuel_prices_brin	archive
+public.gbfs_station_status	RANGE (observed_at)	gbfs_station_status_observed_brin	archive
+public.los_ticks	RANGE (observed_at)	-	archive
+public.ops_rollup_feed	LIST (bucket_day)	-	rollup
+public.parking_occupancy	RANGE (observed_at)	parking_occupancy_brin	archive
+public.parking_occupancy_sid	RANGE (observed_at)	parking_occupancy_sid_brin	archive
+public.road_event_ticks	RANGE (observed_at)	road_event_ticks_brin	drop:1
+public.station_equipment_ticks	RANGE (observed_at)	-	archive
+public.street_bay_ticks	RANGE (observed_at)	-	archive
+public.traffic_count_ticks	RANGE (observed_at)	traffic_count_ticks_brin	archive
+public.transit_delays	RANGE (observed_at)	transit_delays_brin	drop:1
+public.vbb_transit_delays	RANGE (observed_at)	vbb_transit_delays_brin	drop:1
+public.vbn_siri_et_calls	RANGE (observed_at)	vbn_siri_et_calls_brin	drop:1
+public.vrn_transit_delays	RANGE (observed_at)	vrn_transit_delays_brin	drop:1
