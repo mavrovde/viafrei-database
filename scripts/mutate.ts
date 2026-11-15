@@ -13,18 +13,20 @@
  * A mutant with `config: DB` (every schema behaviour mutant has it) runs its
  * tests with vitest.db.config.ts and VF_REQUIRE_DB=1, so it needs
  * TEST_DATABASE_URL (and psql) like `npm run test:db` and cannot pass by being
- * skipped; each such run migrates its own database.
+ * skipped; each such run migrates its own database. Every distinct run, unit
+ * and database alike, must pass unmutated first, or the script exits 2 with no
+ * mutant planted (scripts/mutate-run.ts).
  */
 import { spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { SCHEMA_BEHAVIOUR_MUTANTS } from "./mutants-schema-behaviour.js";
+import { type Mutant, runMutants } from "./mutate-run.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const FILE = join(ROOT, "src", "migrations", "plan.ts");
 const TESTS = ["test/plan.test.ts", "test/service.test.ts", "test/http.test.ts", "test/actions.test.ts"];
 
-type Mutant = { readonly name: string; readonly from: string; readonly to: string; readonly file?: string; readonly tests?: readonly string[]; readonly config?: string };
 const DB = "vitest.db.config.ts";
 const at = (...p: string[]): string => join(ROOT, ...p);
 const GATE = join(ROOT, "scripts", "coverage-schema.ts");
@@ -180,57 +182,19 @@ const vitest = (args: readonly string[], env: NodeJS.ProcessEnv) =>
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
 
 const originals = new Map<string, string>();
-const restore = (): void => {
-  for (const [f, s] of originals) writeFileSync(f, s);
-};
 process.on("SIGINT", () => {
-  restore();
+  for (const [f, text] of originals) writeFileSync(f, text);
   process.exit(130);
 });
 
-let survived = 0;
-let killed = 0;
-// A mutant is killed by a FAILING run, so the same tests must pass unmutated
-// first: a database run without TEST_DATABASE_URL fails every time and would
-// otherwise read as every mutant killed.
-const controls = new Set(MUTANTS.filter((m) => (only === null || m.name.includes(only)) && m.config !== undefined).map((m) => JSON.stringify([m.config, m.tests ?? TESTS])));
-for (const c of controls) {
-  const [config, tests] = JSON.parse(c) as [string, string[]];
-  const r = vitest(["--config", config, ...tests], { ...process.env, VF_REQUIRE_DB: "1" });
-  if (r.status !== 0) {
-    console.log(`✗ refused: ${tests.join(" ")} fails UNMUTATED under ${config} (TEST_DATABASE_URL and psql set?) — no mutant of it can be judged`);
-    process.exit(2);
-  }
-  console.log(`  control: ${tests.join(" ")} passes unmutated`);
-}
-try {
-  for (const m of MUTANTS) {
-    if (only !== null && !m.name.includes(only)) continue;
-    const file = m.file ?? FILE;
-    const original = originals.get(file) ?? readFileSync(file, "utf8");
-    originals.set(file, original);
-    // A function, so a `$$` in the replacement is two dollars and not a replacement pattern.
-    const mutated = original.replace(m.from, () => m.to);
-    if (mutated === original) {
-      console.log(`  ? ${m.name}: the pattern no longer matches ${file} — fix the mutant`);
-      survived += 1;
-      continue;
-    }
-    writeFileSync(file, mutated);
-    // A database test runs under its own config, and must not pass by being skipped.
-    const env = m.config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" };
-    const r = vitest([...(m.config === undefined ? [] : ["--config", m.config]), ...(m.tests ?? TESTS)], env);
-    restore();
-    if (r.status === 0) {
-      console.log(`  ✗ SURVIVED: ${m.name}`);
-      survived += 1;
-    } else {
-      console.log(`  ✓ killed: ${m.name}`);
-      killed += 1;
-    }
-  }
-} finally {
-  restore();
-}
-console.log(`${survived === 0 ? "✓" : "✗"} mutants: ${String(killed)} killed, ${String(survived)} survived`);
-process.exit(survived === 0 ? 0 : 1);
+// A database mutant runs under its own config and VF_REQUIRE_DB=1, so it cannot
+// pass by being skipped; a unit mutant runs the unit config. Each distinct run
+// is first made UNMUTATED (scripts/mutate-run.ts): a red control is exit 2.
+const selected = MUTANTS.filter((m) => only === null || m.name.includes(only));
+const result = runMutants(selected, { file: FILE, tests: TESTS }, {
+  run: (config, tests) => vitest([...(config === undefined ? [] : ["--config", config]), ...tests], config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" }).status,
+  read: (f) => readFileSync(f, "utf8"),
+  write: (f, text) => writeFileSync(f, text),
+  log: (line) => console.log(line),
+}, originals);
+process.exit(result.code);

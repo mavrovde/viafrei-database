@@ -90,8 +90,8 @@ describe("an image only for a confirmed release", () => {
     expect(mutantsFaults(release.replace("    needs: [gate, mutants]\n", "    needs: gate\n"))).toEqual(["publish does not wait for the mutation check"]);
     expect(mutantsFaults(release.replace("        run: npm run mutate\n", "        run: npm run mutate -- --only lint\n"))).toEqual(["the mutation check does not run every mutant"]);
     expect(mutantsFaults(release.replace(/(\n {2}mutants:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
-    expect(mutantsFaults(release.replace("    timeout-minutes: 75\n", "    timeout-minutes: 75\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
-    expect(job(release, "mutants")).toContain("\n    timeout-minutes: 75\n");
+    expect(mutantsFaults(release.replace("    timeout-minutes: 120\n", "    timeout-minutes: 120\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
+    expect(job(release, "mutants")).toContain("\n    timeout-minutes: 120\n");
     // The full set runs in this file alone: no pull request, push or schedule runs it.
     for (const n of workflows.filter((w) => w !== "release.yml")) expect(readFileSync(join(WF, n), "utf8"), n).not.toContain("npm run mutate");
   });
