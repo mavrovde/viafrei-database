@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PsqlResult, PsqlRunner } from "../src/psql.js";
 import { applyRolePasswords, applyRoleSettings, passwordUsable, roleScript, ROLES, SETTINGS_FILE, type RoleSpec } from "../src/roles.js";
 import { REPO } from "./helpers.js";
-import { byRole, parseSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
+import { byRole, databaseSettings, parseSettings, prodSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
 
 const PW = "a3f9c2e1b4d5a6f7c8e9d0b1";
 const specs: RoleSpec[] = [
@@ -133,7 +133,7 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
     const run: PsqlRunner = (s, a = []) => (seen.push({ script: String(s), args: a.join(" ") }), Promise.resolve({ code: 0, stdout: "", stderr: "" }));
     const r = await applyRoleSettings(run, join(REPO, "db", "roles"));
     expect(r.ok).toBe(true);
-    expect(r.line).toMatch(/^ {2}role settings: 38 applied to this database/);
+    expect(r.line).toMatch(/^ {2}role settings: 39 applied to this database/);
     expect(seen).toHaveLength(1);
     expect(seen[0]?.args).toBe("-f -");
     expect(seen[0]?.script).toBe(readFileSync(join(REPO, "db", "roles", SETTINGS_FILE), "utf8"));
@@ -158,7 +158,22 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     const schema = schemaSettingStatements();
     expect(schema.length).toBeGreaterThanOrEqual(38);
     expect(settingStatements(settingsFile())).toEqual(schema);
-    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--"))).toEqual(schema);
+    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--") && !l.includes("ALTER DATABASE"))).toEqual(schema);
+  });
+
+  it("holds production's settings: every role's, value for value, and the database-wide search_path of database viafrei", () => {
+    const prod = prodSettings();
+    expect(prod).toHaveLength(40);
+    const norm = (x: string): string => {
+      const [n = "", ...v] = x.split("=");
+      return `${n.toLowerCase()}=${v.join("=").toLowerCase()}`;
+    };
+    const ours = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
+    const theirs = prod.filter((p) => p.database === "(all dbs)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
+    expect(ours).toEqual(theirs);
+    expect(databaseSettings(settingsFile())).toEqual(prod.filter((p) => p.role === "(all roles)" && p.database === "viafrei").map((p) => p.setting));
+    expect(databaseSettings(settingsFile())).toEqual(['search_path="$user", public, topology, tiger']);
+    expect(() => databaseSettings("DO $$ BEGIN EXECUTE 'ALTER DATABASE x SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
   });
 
   it("every statement parses to a role, a setting and a value, the readers' memory and jit among them", () => {

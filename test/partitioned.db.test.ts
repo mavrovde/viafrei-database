@@ -26,7 +26,7 @@ function expected(): Row[] {
     .filter((l) => l.trim() !== "" && !l.startsWith("#"))
     .map((l, i) => {
       const [table = "", key = "", brin = "", retention = "", ...rest] = l.split("\t");
-      if (rest.length > 0 || !/^(drop:\d+|archive|rollup)$/.test(retention)) throw new Error(`expected.tsv row ${String(i + 1)}: ${JSON.stringify(l)}`);
+      if (rest.length > 0 || !/^(drop:\d+|archive:\d+|rollup)$/.test(retention)) throw new Error(`expected.tsv row ${String(i + 1)}: ${JSON.stringify(l)}`);
       return { table, key, brin: brin === "-" ? [] : brin.split(","), retention };
     });
 }
@@ -147,7 +147,7 @@ describe("what retention needs of each daily tick", () => {
   });
 
   it("every archived tick takes one partition_archives row per day, refuses a second, and its detached day attaches back (the restore)", async () => {
-    const archived = daily().filter((t) => t.retention === "archive");
+    const archived = daily().filter((t) => t.retention.startsWith("archive:"));
     expect(archived.length).toBe(11);
     for (const t of archived) {
       await rolledBack(async (c) => {
@@ -169,6 +169,15 @@ describe("what retention needs of each daily tick", () => {
         expect(await days(c, t.table)).toContainEqual(oldest);
       });
     }
+  });
+
+  it("partition_retention holds each daily tick's window and archive flag as the table says, and no other public row", async () => {
+    const r = await db.pool.query<{ t: string; k: number; a: boolean; reason: string }>(
+      "select 'public.' || table_name as t, keep_days as k, archive as a, reason from public.partition_retention where schema_name = 'public' order by 1",
+    );
+    expect(r.rows.map((x) => `${x.t}\t${x.a ? "archive" : "drop"}:${String(x.k)}`)).toEqual(daily().map((t) => `${t.table}\t${t.retention}`));
+    expect(r.rows.every((x) => x.reason.length > 20)).toBe(true);
+    expect(daily().find((t) => t.table === "public.fuel_prices")?.retention).toBe("archive:28");
   });
 
   it("ops_rollup_feed is LIST-partitioned by bucket_day with no default partition, untouched by ensure_daily_partitions, and refuses a day it has no partition for", async () => {

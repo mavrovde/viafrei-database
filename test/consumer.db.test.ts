@@ -27,7 +27,7 @@ import { loadConfig } from "../src/config.js";
 import { ROLES } from "../src/roles.js";
 import { DatabaseService } from "../src/service.js";
 import { REPO } from "./helpers.js";
-import { byRole, parseSettings, settingsFile } from "./role-settings.js";
+import { byRole, databaseSettings, parseSettings, settingsFile } from "./role-settings.js";
 
 const ADMIN = process.env["TEST_DATABASE_URL"] ?? "";
 const NAME = `test_vfdb_consumer_${String(process.pid)}`;
@@ -78,6 +78,15 @@ async function heldSettings(db: string): Promise<Map<string, string[]>> {
 
 const expected = (): Map<string, string[]> => byRole(parseSettings(settingsFile()), owner);
 
+/** The database-wide settings (no role) pg_db_role_setting holds for one database. */
+async function heldDatabaseSettings(db: string): Promise<string[]> {
+  const r = await admin.query<{ s: string }>(
+    "select x as s from pg_db_role_setting d cross join unnest(d.setconfig) x where d.setrole = 0 and d.setdatabase = (select oid from pg_database where datname = $1) order by 1",
+    [db],
+  );
+  return r.rows.map((x) => x.s);
+}
+
 beforeAll(async () => {
   if (ADMIN === "") throw new Error("TEST_DATABASE_URL is not set");
   admin = new pg.Pool({ connectionString: ADMIN, max: 1 });
@@ -115,11 +124,18 @@ describe("1 — the role settings reach every database migrate touches", () => {
       const m = await svc.migrate("cli");
       expect(m.ok).toBe(true);
       expect(m.lines.join("\n")).toMatch(/✓ 0 migration\(s\) applied/);
-      expect(m.lines.join("\n")).toMatch(/role settings: 38 applied to this database/);
+      expect(m.lines.join("\n")).toMatch(/role settings: 39 applied to this database/);
     } finally {
       await svc.close();
     }
     expect(await heldSettings(CLONE)).toEqual(expected());
+  });
+
+  it("the migrated database and its copy hold production's database-wide setting, PostGIS's search_path, and no other", async () => {
+    const want = databaseSettings(settingsFile());
+    expect(want).toEqual(['search_path="$user", public, topology, tiger']);
+    expect(await heldDatabaseSettings(NAME)).toEqual(want);
+    expect(await heldDatabaseSettings(CLONE)).toEqual(want);
   });
 
   it("roles settings applies them alone, and a migrate --dry-run applies none", async () => {
@@ -130,7 +146,7 @@ describe("1 — the role settings reach every database migrate touches", () => {
     expect((await heldSettings(CLONE)).size).toBe(0);
     const r = await cli(["roles", "settings"], { DATABASE_URL: urlOf(CLONE) });
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/role settings: 38 applied/);
+    expect(r.out).toMatch(/role settings: 39 applied/);
     expect(await heldSettings(CLONE)).toEqual(expected());
   });
 });

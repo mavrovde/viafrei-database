@@ -1,23 +1,24 @@
 # Every partitioned table of schema public: table, partition key (pg_get_partkeydef), its BRIN index(es) or -, retention.
 # retention: drop:N = a no-archive tick whose day is dropped after N whole past UTC days (viafrei@4dd794ab0 packages/ingest/src/platform/tick-retention-policy.ts TICK_DROP_KEEP_DAYS);
-# archive = every other daily tick, dumped to the cold store one day at a time (partition_archives) before its day is dropped; rollup = ops_rollup_feed, kept by ops_rollup_refresh.
+# archive:N = every other daily tick, kept N days (PARTITION_ARCHIVE_DAYS 14, fuel_prices 28 by PARTITION_ARCHIVE_TABLE_DAYS), then dumped to the cold store one day at a time (partition_archives) and dropped;
+# rollup = ops_rollup_feed, kept by ops_rollup_refresh. Each drop:N and archive:N is also a partition_retention row (0305).
 # A migration that partitions, re-keys or un-partitions a table changes its row here in the same commit.
 public.autobahn_events	RANGE (observed_at)	autobahn_events_brin	drop:1
-public.charging_point_status	RANGE (observed_at)	charging_point_status_brin	archive
-public.city_traffic_ticks	RANGE (observed_at)	city_traffic_ticks_brin	archive
+public.charging_point_status	RANGE (observed_at)	charging_point_status_brin	archive:14
+public.city_traffic_ticks	RANGE (observed_at)	city_traffic_ticks_brin	archive:14
 public.connect_transit_delays	RANGE (observed_at)	connect_transit_delays_brin	drop:1
-public.db_facility_ticks	RANGE (observed_at)	-	archive
+public.db_facility_ticks	RANGE (observed_at)	db_facility_ticks_brin	archive:14
 public.delfi_siri_et_calls	RANGE (observed_at)	delfi_siri_et_calls_observed_brin	drop:1
-public.fuel_prices	RANGE (observed_at)	fuel_prices_brin	archive
-public.gbfs_station_status	RANGE (observed_at)	gbfs_station_status_observed_brin	archive
-public.los_ticks	RANGE (observed_at)	-	archive
+public.fuel_prices	RANGE (observed_at)	fuel_prices_brin	archive:28
+public.gbfs_station_status	RANGE (observed_at)	gbfs_station_status_observed_brin	archive:14
+public.los_ticks	RANGE (observed_at)	los_ticks_brin	archive:14
 public.ops_rollup_feed	LIST (bucket_day)	-	rollup
-public.parking_occupancy	RANGE (observed_at)	parking_occupancy_brin	archive
-public.parking_occupancy_sid	RANGE (observed_at)	parking_occupancy_sid_brin	archive
+public.parking_occupancy	RANGE (observed_at)	parking_occupancy_brin	archive:14
+public.parking_occupancy_sid	RANGE (observed_at)	parking_occupancy_sid_brin	archive:14
 public.road_event_ticks	RANGE (observed_at)	road_event_ticks_brin	drop:1
-public.station_equipment_ticks	RANGE (observed_at)	-	archive
-public.street_bay_ticks	RANGE (observed_at)	-	archive
-public.traffic_count_ticks	RANGE (observed_at)	traffic_count_ticks_brin	archive
+public.station_equipment_ticks	RANGE (observed_at)	station_equipment_ticks_brin	archive:14
+public.street_bay_ticks	RANGE (observed_at)	street_bay_ticks_brin	archive:14
+public.traffic_count_ticks	RANGE (observed_at)	traffic_count_ticks_brin	archive:14
 public.transit_delays	RANGE (observed_at)	transit_delays_brin	drop:1
 public.vbb_transit_delays	RANGE (observed_at)	vbb_transit_delays_brin	drop:1
 public.vbn_siri_et_calls	RANGE (observed_at)	vbn_siri_et_calls_brin	drop:1

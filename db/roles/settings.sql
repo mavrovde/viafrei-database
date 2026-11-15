@@ -7,6 +7,10 @@
 -- run, and `roles settings` applies it alone. Idempotent: each statement sets
 -- the value it names. test/consumer.db.test.ts holds it equal to the
 -- baseline's own statements and to every later migration's.
+--
+-- The last statement is the one DATABASE-WIDE setting production holds
+-- (pg_db_role_setting with no role, measured 2026-11-15, test/roles/prod-settings.tsv):
+-- PostGIS's search_path. It is per database too, so it is applied the same way.
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET work_mem TO ''16MB''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET hash_mem_multiplier TO ''1.0''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET max_parallel_workers_per_gather TO ''0''', current_database()); END $$;
@@ -45,3 +49,4 @@ DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_translate IN DATABASE %I SET stat
 DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_translate IN DATABASE %I SET lock_timeout TO ''1s''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_translate IN DATABASE %I SET idle_in_transaction_session_timeout TO ''10s''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_translate IN DATABASE %I SET "TimeZone" TO ''UTC''', current_database()); END $$;
+DO $$ BEGIN EXECUTE format('ALTER DATABASE %I SET search_path TO "$user", public, topology, tiger', current_database()); END $$;

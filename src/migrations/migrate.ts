@@ -144,6 +144,30 @@ export async function migrate(o: MigrateOptions): Promise<MigrateResult> {
     }
   };
 
+  /**
+   * After a unit psql reported as applied: every version it stands for must
+   * now be in the ledger. psql exits 0 without having recorded a unit when the
+   * file quits it (`\q`) or switches ON_ERROR_STOP off and then fails: the
+   * error aborts the transaction, the ledger insert is ignored, the commit
+   * rolls back, and psql reports success. Either is a failure naming the file.
+   */
+  const reached = async (label: string, want: readonly Pick<MigrationFile, "version" | "checksum">[]): Promise<MigrateResult | null> => {
+    let now: AppliedRow[];
+    try {
+      now = await readLedger(o.psql);
+    } catch (e) {
+      return stop(1, `✗ ${label}: ${(e as Error).message}`, before);
+    }
+    const sums = new Map(now.map((r) => [r.version, r.checksum]));
+    const lost = want.find((w) => !sums.has(w.version));
+    if (lost === undefined) return null;
+    return stop(
+      1,
+      `✗ ${label}: psql exited 0 but version ${String(lost.version)} is not in schema_migrations — the file did not run to its ledger insert (a \\q, or ON_ERROR_STOP switched off before an error?); nothing of it is applied, every file before it is`,
+      before,
+    );
+  };
+
   // The baseline's versions are checked first: they come before every file.
   const b = o.baseline ?? null;
   const pending: MigrationFile[] = [];
@@ -162,7 +186,7 @@ export async function migrate(o: MigrateOptions): Promise<MigrateResult> {
         out(`would apply the baseline ${b.name} (versions 1..${String(b.head)})`);
       } else {
         out(`applying the baseline ${b.name} (versions 1..${String(b.head)}, one transaction)`);
-        const stopped = await apply(b.name, false, [baselineScript(b, ledgerInsert)]);
+        const stopped = (await apply(b.name, false, [baselineScript(b, ledgerInsert)])) ?? (await reached(b.name, b.entries));
         if (stopped !== null) return stopped;
         applied.push(b.name);
       }
@@ -198,7 +222,7 @@ export async function migrate(o: MigrateOptions): Promise<MigrateResult> {
       continue;
     }
     out(f.noTransaction ? `applying ${f.name} (no transaction — see the file's -- no-transaction: note)` : `applying ${f.name}`);
-    const stopped = f.noTransaction ? await apply(f.name, true, noTransactionScripts(f)) : await apply(f.name, false, [wrappedScript(f)]);
+    const stopped = (f.noTransaction ? await apply(f.name, true, noTransactionScripts(f)) : await apply(f.name, false, [wrappedScript(f)])) ?? (await reached(f.name, [f]));
     if (stopped !== null) return stopped;
     applied.push(f.name);
     n += 1;

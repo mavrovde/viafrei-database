@@ -34,6 +34,32 @@ export function schemaSettingStatements(): string[] {
   return out;
 }
 
+const DATABASE_STATEMENT = /^DO \$\$ BEGIN EXECUTE format\('ALTER DATABASE %I SET ([a-z_]+) TO (.+)', current_database\(\)\); END \$\$;$/;
+
+/** The database-wide settings of a text (`ALTER DATABASE %I SET …`), as `name=value` the way pg_db_role_setting holds them. */
+export function databaseSettings(sql: string): string[] {
+  return sql
+    .split("\n")
+    .filter((l) => !l.trimStart().startsWith("--") && /\bALTER DATABASE\b/i.test(l))
+    .map((l) => {
+      const m = DATABASE_STATEMENT.exec(l);
+      if (m === null) throw new Error(`a database setting in a shape this reader does not know: ${l.slice(0, 120)}`);
+      return `${m[1] ?? ""}=${m[2] ?? ""}`;
+    });
+}
+
+/** test/roles/prod-settings.tsv: production's pg_db_role_setting, as role or "(all roles)", database or "(all dbs)", `name=value`. */
+export function prodSettings(): { role: string; database: string; setting: string }[] {
+  return readFileSync(join(REPO, "test", "roles", "prod-settings.tsv"), "utf8")
+    .split("\n")
+    .filter((l) => l.trim() !== "" && !l.startsWith("#"))
+    .map((l) => {
+      const [role = "", database = "", setting = "", ...rest] = l.split("\t");
+      if (rest.length > 0 || !setting.includes("=")) throw new Error(`prod-settings.tsv: ${JSON.stringify(l)}`);
+      return { role, database, setting };
+    });
+}
+
 export const settingsFile = (): string => readFileSync(join(REPO, "db", "roles", "settings.sql"), "utf8");
 
 /** role → sorted `name=value` lines, the shape pg_db_role_setting.setconfig holds; CURRENT_USER becomes `owner`. */
