@@ -183,7 +183,7 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
 
   it("records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one", async () => {
     const r = await t.pool.query<{ schema_name: string; table_name: string; keep_days: number; archive: boolean }>("select schema_name, table_name, keep_days, archive from partition_retention where table_name = 'charging_point_status' order by 1, 2");
-    // The public twin has its own row since 0305 (the public ticks' retention, main's tick-retention-policy.ts): the same window.
+    // The public twin has its own row since 0305 (the public ticks' retention): the same window.
     expect(r.rows).toEqual([
       { schema_name: "domains", table_name: "charging_point_status", keep_days: 14, archive: true },
       { schema_name: "public", table_name: "charging_point_status", keep_days: 14, archive: true },

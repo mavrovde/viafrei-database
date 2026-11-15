@@ -199,7 +199,7 @@ export class DomainDb {
 }
 
 /**
- * The ingestor's two writes for a domain (core/write-sql.ts): the state upsert
+ * The ingestor's two writes for a domain: the state upsert
  * (insert or update when something differs) and the tick append (insert, a
  * repeat of the owner key with the same observed_at a no-op). Both take one
  * jsonb parameter per batch through jsonb_to_recordset; geometry comes as WKT.

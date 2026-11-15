@@ -1,6 +1,6 @@
 /**
- * The migration-body replays main carried until 3127c77bb (#31 item 6, lead
- * decision (a)): each is now a test of what the migration ESTABLISHED, run
+ * The migration-body replays of the migrations before the baseline (#31 item
+ * 6): each is now a test of what the migration ESTABLISHED, run
  * against the baseline schema this repository ships — never the old body
  * replayed as a fixture. One rolled-back transaction per case.
  *
@@ -218,7 +218,7 @@ describe("0158: an alert naming a LINE is placed by the Kreise of that line's ti
   });
 });
 
-describe("0201: the engine's schedule, run-now and the source bounds (#835)", () => {
+describe("0201: the engine's schedule, run-now and the source bounds", () => {
   const schedule = (key: string, floor: number, declared: number, lastRequest: string | null = null): [string, unknown[]] => [
     "insert into source_schedule (source_key, host, declared_cadence_s, granted_cadence_s, floor_s, last_request_at) values ($1, 'ingest-dwd', $2, $2, $3, $4)",
     [key, declared, floor, lastRequest],
@@ -361,7 +361,7 @@ describe("0274/0285/0286: the callers' shares of a budget key", () => {
   it("0274's shape: db_timetables at 60 a minute, the tool's floor 29 (0285) beside the worker's cap of 30, is admitted; both db_station_boards readers may read it", async () => {
     await tx(async (c) => {
       expect(await key(c, "db_timetables", 60, [["mcp", 29, 59], ["worker", 1, 30]])).toBeNull();
-      expect(await attempt(c, "select control.set_budget('db_timetables', 'worker', 'cap', 30, 'migration', '#1269: the stored boards take at most half of DB''s minute')")).toBeNull();
+      expect(await attempt(c, "select control.set_budget('db_timetables', 'worker', 'cap', 30, 'migration', 'the stored boards take at most half of DB''s minute')")).toBeNull();
       expect(await col(c, "select has_table_privilege(r, 'db_station_boards', 'select') as v from unnest(array['viafrei_digest', 'viafrei_mcp', 'viafrei_status']) as r")).toEqual([true, true, false]);
     });
   });
@@ -395,7 +395,7 @@ describe("0274/0285/0286: the callers' shares of a budget key", () => {
     await tx(async (c) => {
       expect(await key(c, "tankerkoenig", 60, [["mcp", 1, 59], ["warm", 1, 10]])).toBeNull();
       expect(
-        await attempt(c, "select control.set_budget('tankerkoenig', 'warm', 'cap', 0, 'migration', '#816 W-0 (0286): warming is not inside the Tankerkoenig terms (data-steward and owner 2026-11-13)')"),
+        await attempt(c, "select control.set_budget('tankerkoenig', 'warm', 'cap', 0, 'migration', '0286: warming is not inside the Tankerkoenig terms')"),
       ).toBeNull();
       expect(await one(c, "select floor, cap from control.shares where budget_key = 'tankerkoenig' and caller = 'warm'")).toEqual({ floor: 0, cap: 0 });
       expect(await col(c, "select field || ':' || coalesce(after, '') as v from control.changes where budget_key = 'tankerkoenig' and caller = 'warm' and actor = 'migration' order by id")).toContain("cap:0");

@@ -8,19 +8,28 @@
 -- the value it names. test/consumer.db.test.ts holds it equal to the
 -- baseline's own statements and to every later migration's.
 --
+-- Precedence: every statement here is applied IN DATABASE, and a per-database
+-- role setting wins over the same role's all-databases setting (ALTER ROLE ...
+-- SET without IN DATABASE) and over the database-wide one, whenever either is
+-- changed. A later all-databases change therefore does NOT take effect in this
+-- database; change the value here instead.
+--
+-- Privilege: ALTER ROLE on another role needs CREATEROLE (and, in PostgreSQL
+-- 16, the ADMIN option on that role) or a superuser. A migrator role without
+-- it fails on the first statement that names another role, and `migrate` and
+-- `roles settings` report the run as failed rather than as applied.
+--
 -- The last statement is the one DATABASE-WIDE setting production holds
 -- (pg_db_role_setting with no role, measured 2026-11-15, test/roles/prod-settings.tsv):
 -- PostGIS's search_path. It is per database too, so it is applied the same way.
 --
--- THE MEMORY BOUND (#855; main's migrations 0181_reader_memory_bound and
--- 0191_owner_memory_bound, whose headers derive it — the derivation and the
--- prod measurements behind `nodes` are there). The work_mem, multiplier and
--- parallel settings below are its inputs, and test/memory-bound.test.ts
--- re-derives every figure from these lines and holds the settings of this
--- file equal to them, so a setting moved without the arithmetic is red.
--- What decides `connections` (the pools) and the headroom (the db service's
--- mem_limit and shared_buffers) lives in the consumers and the deploy, and
--- is judged there.
+-- THE MEMORY BOUND: the work_mem, multiplier and parallel settings below are
+-- the inputs of a worst-case memory arithmetic, and
+-- test/memory-bound.test.ts re-derives every figure from these lines and
+-- holds the settings of this file equal to them, so a setting moved without
+-- the arithmetic is red. What decides `connections` (the pools) and the
+-- headroom (the database service's memory limit and shared_buffers) lives in
+-- the consumers and the deploy, and is judged there.
 --
 --   per reader role, worst case = connections × work_mem × hash_mem_multiplier × nodes
 --   bound: viafrei_digest connections=7 work_mem_mb=16 hash_mem_multiplier=1 nodes=2

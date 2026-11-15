@@ -60,7 +60,7 @@ const WRITER_TYPES = new Set(["text", "integer", "bigint", "double precision", "
 
 type Point = { external_id: string; match_key?: string | null; observed_at?: string | null; geom_wkt?: string | null; extras?: unknown } & Partial<Record<keyof typeof WRITABLE, unknown>>;
 
-/** The ingestor's upsert for this domain (core/write-sql.ts upsertStatement, the same text for these columns). */
+/** The ingestor's upsert for this domain (the same statement text for these columns). */
 function upsertSql(): string {
   const cols = Object.keys(WRITABLE);
   const recordset = ["external_id text", "match_key text", "observed_at timestamptz", "geom_wkt text", "extras jsonb", ...cols.map((c) => `${c} ${WRITABLE[c] ?? ""}`)].join(", ");

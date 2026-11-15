@@ -179,7 +179,7 @@ describe("the partitioned tables of schema public", () => {
 });
 
 describe("what retention needs of each daily tick", () => {
-  it("the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole", async () => {
+  it("the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole", async () => {
     const drops = daily().filter((t) => t.retention.startsWith("drop:"));
     expect(drops.map((t) => t.table.replace("public.", "")).sort()).toEqual(
       ["autobahn_events", "connect_transit_delays", "delfi_siri_et_calls", "road_event_ticks", "transit_delays", "vbb_transit_delays", "vbn_siri_et_calls", "vrn_transit_delays"].sort(),

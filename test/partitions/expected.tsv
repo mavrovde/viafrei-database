@@ -1,6 +1,6 @@
 # Every partitioned table of schema public: table, partition key (pg_get_partkeydef), its BRIN index(es) or -, retention.
-# retention: drop:N = a no-archive tick whose day is dropped after N whole past UTC days (viafrei@4dd794ab0 packages/ingest/src/platform/tick-retention-policy.ts TICK_DROP_KEEP_DAYS);
-# archive:N = every other daily tick, kept N days (PARTITION_ARCHIVE_DAYS 14, fuel_prices 28 by PARTITION_ARCHIVE_TABLE_DAYS), then dumped to the cold store one day at a time (partition_archives) and dropped;
+# retention: drop:N = a no-archive tick whose day is dropped after N whole past UTC days (the schema's no-archive window, partition_retention archive = false);
+# archive:N = every other daily tick, kept N days (14, fuel_prices 28, partition_retention archive = true), then dumped to the cold store one day at a time (partition_archives) and dropped;
 # rollup = ops_rollup_feed, kept by ops_rollup_refresh. Each drop:N and archive:N is also a partition_retention row (0305).
 # A migration that partitions, re-keys or un-partitions a table changes its row here in the same commit.
 public.autobahn_events	RANGE (observed_at)	autobahn_events_brin	drop:1

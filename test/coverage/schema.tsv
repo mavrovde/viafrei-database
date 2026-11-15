@@ -553,7 +553,7 @@ function	control.bucket_width(p_window_s integer, p_burst_window_s integer)	test
 function	control.changes_append_only()	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
 function	control.check_budget_shape()	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
 function	control.check_budget_shape()	test/replays.db.test.ts > 0285's bound: a cap that takes the other callers' floors, a caller with no floor, floors over the ceiling and a cap over it are refused, each by name
-function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a key planted as before #1221 (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing
+function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a key planted as before the shares had floors (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing
 function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a ceiling below the callers switched on is refused by name; a paused key and a key of one caller are fitted to the ceiling
 function	control.hold(p_provider text, p_reason text)	test/control-plane.db.test.ts > hold: a 5xx holds a key with a hold for its hold_s and admit refuses it; a key without one is never held; a reason outside the list is refused
 function	control.hold(p_provider text, p_reason text)	test/control-plane.db.test.ts > a hold never shortens one in force
@@ -2273,7 +2273,7 @@ partitioned	public.autobahn_events	test/partitioned.db.test.ts > the table names
 partitioned	public.autobahn_events	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.autobahn_events	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.autobahn_events	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.autobahn_events	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.autobahn_events	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.charging_point_status	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.charging_point_status	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.charging_point_status	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
@@ -2288,7 +2288,7 @@ partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > the tabl
 partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.connect_transit_delays	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.db_facility_ticks	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.db_facility_ticks	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.db_facility_ticks	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
@@ -2298,7 +2298,7 @@ partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > the table n
 partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.delfi_siri_et_calls	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.fuel_prices	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.fuel_prices	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.fuel_prices	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
@@ -2330,7 +2330,7 @@ partitioned	public.road_event_ticks	test/partitioned.db.test.ts > the table name
 partitioned	public.road_event_ticks	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.road_event_ticks	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.road_event_ticks	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.road_event_ticks	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.road_event_ticks	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.station_equipment_ticks	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.station_equipment_ticks	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.station_equipment_ticks	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
@@ -2350,22 +2350,22 @@ partitioned	public.transit_delays	test/partitioned.db.test.ts > the table names 
 partitioned	public.transit_delays	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.transit_delays	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.transit_delays	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.transit_delays	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.transit_delays	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.vbb_transit_delays	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.vbn_siri_et_calls	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > the table names every partitioned table of public, key for key and BRIN for BRIN, and nothing else
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > every daily tick is RANGE-partitioned by day on observed_at with no default partition, and a row outside its window is refused
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
-partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > the no-archive ticks drop their oldest day in one transaction, detach and drop, and the window stays whole
 policy	domains.charging_point_status.charging_point_status_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
 policy	domains.charging_point_status.charging_point_status_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
 policy	domains.charging_point_status.charging_point_status_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds

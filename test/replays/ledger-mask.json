@@ -1,5 +1,5 @@
 {
-  "_about": "#940 (2.5.0): one fixture for the ledger's address mask in BOTH engines — errors.test.ts runs maskAddresses/ledgerText over it, ledger-mask.db.test.ts runs migration 0235's vf_ledger_mask. Addresses are documentation ranges (192.0.2.0/24, 198.51.100.0/24, 2001:db8::/32).",
+  "_about": "One fixture for the ledger's address mask in BOTH engines: the workers' own mask runs over it in their tests, and test/replays.db.test.ts runs migration 0235's vf_ledger_mask. Addresses are documentation ranges (192.0.2.0/24, 198.51.100.0/24, 2001:db8::/32).",
   "cases": [
     {
       "in": "refused: connect ECONNREFUSED 192.0.2.33:443 (geoportal.example.test, attempt 3/3, 19 ms)",

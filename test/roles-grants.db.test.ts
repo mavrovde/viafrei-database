@@ -201,7 +201,7 @@ describe("each role: what has_*_privilege says it can do is exactly the table", 
   it("viafrei_ingestor: every relation, column, schema and function of ours", () => check("viafrei_ingestor"));
 });
 
-describe("each consumer's own list, from viafrei's role.ts", () => {
+describe("each consumer's own declared list", () => {
   it("viafrei_digest reads every relation digest names and none it forbids", async () => {
     const c = await consumer("viafrei_digest");
     expect(c.claims).toBeGreaterThan(100);

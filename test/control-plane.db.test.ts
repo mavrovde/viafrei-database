@@ -358,7 +358,7 @@ describe.skipIf(url === undefined)("the control plane", () => {
   });
 
   describe("fit_shares and the shape triggers", () => {
-    it("a key planted as before #1221 (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing", async () => {
+    it("a key planted as before the shares had floors (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing", async () => {
       await t.planted(async (c) => {
         await reason(c);
         await c.query("update control.shares set floor = 0, cap = 10 where budget_key = 'plain'");

@@ -53,6 +53,7 @@ export async function installFixtures(env: NodeJS.ProcessEnv, run?: PsqlRunner, 
     const first = r.stderr.split("\n").find((l) => l.trim() !== "") ?? "(no message)";
     return { exitCode: 1, lines: [`✗ test fixtures could not be installed (psql exit ${String(r.code)}): ${first.slice(0, 300)}`] };
   }
-  const n = (sql.match(/^CREATE OR REPLACE FUNCTION vf_test\./gm) ?? []).length;
+  // the coverage gate's pattern: vf_test and vf_test_clock alike
+  const n = (sql.match(/^CREATE OR REPLACE FUNCTION vf_test[a-z_]*\./gm) ?? []).length;
   return { exitCode: 0, lines: [`✓ test fixtures: ${String(n)} vf_test function(s) installed (test database ${databaseOf(env["DATABASE_URL"] ?? "") ?? ""})`] };
 }

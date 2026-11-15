@@ -134,6 +134,8 @@ describe("installed on a test database", () => {
   beforeAll(() => {
     const first = verb({ DATABASE_URL: db.url, VF_TEST_FIXTURES: "1" });
     expect(first, first.out).toMatchObject({ code: 0 });
+    // counted as the coverage gate counts them: every vf_test schema, the clock's included
+    expect(first.out).toContain("✓ test fixtures: 12 vf_test function(s) installed");
     // Idempotent: a second install is the same install.
     expect(verb({ DATABASE_URL: db.url, VF_TEST_FIXTURES: "1" }).code).toBe(0);
   }, 120_000);

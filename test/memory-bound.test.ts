@@ -1,6 +1,5 @@
 /**
- * The memory bound's `-- bound:` arithmetic (#31 item 7; main's 0181 and 0191,
- * #855), carried in db/roles/settings.sql beside the settings it sizes:
+ * The memory bound's `-- bound:` arithmetic (#31 item 7), carried in db/roles/settings.sql beside the settings it sizes:
  *
  *   the arithmetic   every figure the headers write out is re-derived from the
  *                    bound lines: each reader's worst case, the readers' sum and
