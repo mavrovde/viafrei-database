@@ -42,6 +42,8 @@ const TD_PART = `do $$ declare d date; begin
 end $$`;
 
 const losSite = (id: string, set: Record<string, string> = {}): Seed => ["public.los_sites", { site_id: q(id), carriageway: "'hfb'", road: "'A1'", geom: PT(7, 51), ...set }];
+/** Sites <p>1..<p>6: one the live views show, then one closed, off the main carriageway, with no road, with no place, restricted. */
+const losSites = (p: string): Seed[] => [{}, { closed_at: "now()" }, { carriageway: "'nfb'" }, { road: "null" }, { geom: "null" }, { confidentiality: "'restrictedToAuthorities'" }].map((set, i) => losSite(`${p}${String(i + 1)}`, set));
 const delay = (trip: string, stop: string, min: number, d: string, set: Record<string, string> = {}): Seed =>
   ["public.transit_delays", { trip_id: q(trip), stop_id: q(stop), observed_at: AGO(min), feed_ts: AGO(min), delay_s: d, source: "'delfi_rt_tu'", ...set }];
 const untimed = (trip: string): Seed[] => [
@@ -221,12 +223,7 @@ export const COMPLEX_CASES: readonly ComplexCase[] = [
   {
     view: "public.los_lane_now_live",
     seed: [
-      losSite("c1"),
-      losSite("c2", { closed_at: "now()" }),
-      losSite("c3", { carriageway: "'nfb'" }),
-      losSite("c4", { road: "null" }),
-      losSite("c5", { geom: "null" }),
-      losSite("c6", { confidentiality: "'restrictedToAuthorities'" }),
+      ...losSites("c"),
       ...(
         [
           ["L1", "c1", {}],
@@ -260,12 +257,7 @@ export const COMPLEX_CASES: readonly ComplexCase[] = [
   {
     view: "public.los_now_live",
     seed: [
-      losSite("S1"),
-      losSite("S2", { closed_at: "now()" }),
-      losSite("S3", { carriageway: "'nfb'" }),
-      losSite("S4", { road: "null" }),
-      losSite("S5", { geom: "null" }),
-      losSite("S6", { confidentiality: "'restrictedToAuthorities'" }),
+      ...losSites("S"),
       losSite("S7"),
       ...["S1", "S2", "S3", "S4", "S5", "S6", "S7"].map((s): Seed => ["public.los_state", { site_id: q(s), status: "'jam'", ...(s === "S7" ? { confidentiality: "'restrictedToAuthorities'" } : {}) }]),
     ],

@@ -18,6 +18,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
+import { testDatabase } from "./generator-input.js";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -76,7 +77,7 @@ export const expectedAcl = (): AclRow[] => parseAcl(readFileSync(join(ROOT, "tes
 
 /* v8 ignore start — the generator, run by hand */
 if (import.meta.filename === process.argv[1]) {
-  const c = new pg.Client({ connectionString: process.argv[2] });
+  const c = new pg.Client(testDatabase(process.argv[2]));
   await c.connect();
   const rows = await readAcl(c);
   await c.end();

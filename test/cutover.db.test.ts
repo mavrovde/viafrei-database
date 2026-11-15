@@ -24,6 +24,7 @@ import { assembleSchema, loadSchema, parseLedgerTsv, readBaseline } from "../src
 import { DatabaseService } from "../src/service.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { endPool } from "./domain-db.js";
 import { REPO } from "./helpers.js";
 
 const url = process.env["TEST_DATABASE_URL"];
@@ -92,8 +93,8 @@ describe.skipIf(url === undefined)("the cutover from a shell-migrated 0292", () 
   }, 900_000);
 
   afterAll(async () => {
-    await pool?.end();
-    for (const s of services) await s.close();
+    if (pool !== undefined) await endPool(pool);
+    for (const s of services) await endPool(s.pool, () => s.close());
     await admin.query(`drop database if exists ${name} with (force)`);
     await admin.end();
   });

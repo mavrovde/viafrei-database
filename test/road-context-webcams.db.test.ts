@@ -13,6 +13,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type pg from "pg";
 import { appendSql, DomainDb, MERGE_COLUMNS, refusal, SYSTEM, upsertSql, WRITER_TYPES } from "./domain-db.js";
+import { expectMergedGrantsReadable, expectTickShape, tableNamed } from "./domain-expect.js";
 
 const url = process.env["TEST_DATABASE_URL"];
 const required = process.env["VF_REQUIRE_DB"] === "1";
@@ -96,11 +97,7 @@ const TABLES: readonly Table[] = [
   },
 ];
 const STATES = TABLES.filter((x) => x.kind === "state");
-const byName = (n: string): Table => {
-  const x = TABLES.find((y) => y.name === n);
-  if (x === undefined) throw new Error(n);
-  return x;
-};
+const byName = tableNamed(TABLES);
 
 type Row = { external_id: string; match_key?: string | null; observed_at?: string | null; geom_wkt?: string | null } & Record<string, unknown>;
 
@@ -195,13 +192,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
       if (table.kind === "state") {
         expect(rest, table.name).toEqual(model);
       } else {
-        expect(rest.filter((d) => /T_(owner_key|pkey) /.test(d)), table.name).toEqual([
-          "CREATE UNIQUE INDEX T_owner_key ON domains.T USING btree (source_id, feed, external_id, observed_at)",
-          "CREATE UNIQUE INDEX T_pkey ON domains.T USING btree (id, observed_at)",
-          "p T_pkey PRIMARY KEY (id, observed_at)",
-          "u T_owner_key UNIQUE (source_id, feed, external_id, observed_at)",
-        ]);
-        expect(rest.filter((d) => !/T_(owner_key|pkey) /.test(d)), table.name).toEqual(model.filter((d) => !/T_(owner_key|pkey) /.test(d)));
+        expectTickShape(rest, model, table.name, "ON");
       }
     }
   });
@@ -214,19 +205,7 @@ describe.skipIf(url === undefined)("the road context and webcam domains", () => 
       const want = table.kind === "state" ? cameras : cameras.filter((p) => p.cmd !== "UPDATE").map((p) => ({ ...p, with_check: p.with_check?.replace("s.domain = 'T'::text", "s.domain = 'road_context_features'::text") ?? null }));
       expect(await t.policies(table.name), table.name).toEqual(want);
     }
-    for (const table of STATES) {
-      expect((await t.columnsOf(`${table.name}_merged`)).map((x) => x.column_name), table.name).toEqual([...SYSTEM, ...Object.keys(table.cols), ...(table.generated ?? []), ...MERGE_COLUMNS]);
-    }
-    expect(await t.columnsOf("road_context_feature_versions_merged")).toEqual([]);
-    const g = await t.grants([...TABLES.map((x) => x.name), ...STATES.map((x) => `${x.name}_merged`), "speed_cameras", "speed_cameras_merged"]);
-    for (const table of STATES) {
-      expect(g.get(table.name), table.name).toEqual(g.get("speed_cameras"));
-      expect(g.get(`${table.name}_merged`), table.name).toEqual(g.get("speed_cameras_merged"));
-    }
-    expect(g.get("road_context_feature_versions")).toEqual(["viafrei_ingestor:INSERT,SELECT"]);
-    const r = await t.readable([...TABLES.map((x) => `domains.${x.name}`), ...STATES.map((x) => `domains.${x.name}_merged`)]);
-    expect(r.checked).toBe(5 * (TABLES.length + STATES.length));
-    expect(r.open).toEqual([]);
+    await expectMergedGrantsReadable(t, TABLES, "road_context_feature_versions", (table) => [...SYSTEM, ...Object.keys(table.cols), ...(table.generated ?? []), ...MERGE_COLUMNS]);
   });
 
   it("keeps the version history unpartitioned and out of the retention job, as its old twin", async () => {

@@ -1,6 +1,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach } from "vitest";
 import type { PsqlResult, PsqlRunner } from "../src/psql.js";
 
 export const REPO = join(import.meta.dirname, "..");
@@ -12,6 +13,24 @@ export function plantTree(files: Record<string, string | Buffer>): { root: strin
   mkdirSync(dir, { recursive: true });
   for (const [n, body] of Object.entries(files)) writeFileSync(join(dir, n), body);
   return { root, dir, done: () => rmSync(root, { recursive: true, force: true }) };
+}
+
+/**
+ * A planter of flat throwaway directories (`prefix` + random), each removed
+ * after the test that made it. Call it once at the top of a test file.
+ */
+export function flatPlanter(prefix: string): (files: Record<string, string>) => string {
+  let dirs: string[] = [];
+  afterEach(() => {
+    for (const d of dirs) rmSync(d, { recursive: true, force: true });
+    dirs = [];
+  });
+  return (files) => {
+    const root = mkdtempSync(join(tmpdir(), prefix));
+    dirs.push(root);
+    for (const [n, c] of Object.entries(files)) writeFileSync(join(root, n), c);
+    return root;
+  };
 }
 
 /** Copies a script of `scripts/` into `root/scripts/` so it resolves ROOT to the planted tree. */

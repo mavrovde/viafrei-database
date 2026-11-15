@@ -5,6 +5,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { byCodeUnit } from "./generator-input.js";
 import { REPO } from "./helpers.js";
 
 export type Setting = { readonly role: string; readonly name: string; readonly value: string };
@@ -69,6 +70,6 @@ export function byRole(settings: readonly Setting[], owner: string): Map<string,
     const role = s.role === "CURRENT_USER" ? owner : s.role;
     out.set(role, [...(out.get(role) ?? []), `${s.name}=${s.value}`]);
   }
-  for (const [k, v] of out) out.set(k, v.sort());
+  for (const [k, v] of out) out.set(k, [...v].sort(byCodeUnit));
   return out;
 }

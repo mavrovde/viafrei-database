@@ -4,16 +4,15 @@
  * baseline was cut. Parsed against ledger.tsv, accepted by migrate, readiness
  * and ledger-compare, and refused for any third checksum.
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ALIASES_HEADER, assembleSchema, loadSchema, BaselineError, baselineEntry, compareLedgerExport, LEDGER_HEADER, parseAliasesTsv, parseLedgerTsv, readBaseline, type Baseline } from "../src/migrations/baseline.js";
 import { acceptsChecksum, describeFile, sha256Hex } from "../src/migrations/files.js";
 import { migrate } from "../src/migrations/migrate.js";
 import { compare } from "../src/migrations/plan.js";
 import { lint, type LintIo } from "../src/lint/check-migrations.js";
-import { fakePsql, REPO } from "./helpers.js";
+import { fakePsql, flatPlanter, REPO } from "./helpers.js";
 
 const sum = (n: number): string => sha256Hex(Buffer.from(`original ${String(n)}`));
 const edited = (n: number): string => sha256Hex(Buffer.from(`edited ${String(n)}`));
@@ -23,17 +22,7 @@ const alias = (n: number, checksum = edited(n), reason = "comments edited after 
 const aliases = (...lines: string[]): string => `${ALIASES_HEADER}\n${lines.join("\n")}\n`;
 const DUMP = "create table a(id int);\n";
 
-let dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs) rmSync(d, { recursive: true, force: true });
-  dirs = [];
-});
-const plant = (files: Record<string, string>): string => {
-  const root = mkdtempSync(join(tmpdir(), "vf-aliases-"));
-  dirs.push(root);
-  for (const [n, c] of Object.entries(files)) writeFileSync(join(root, n), c);
-  return root;
-};
+const plant = flatPlanter("vf-aliases-");
 const withAliases = (head: number, text: string): Baseline => {
   const b = readBaseline(plant({ "ledger.tsv": tsv(head), [`${String(head).padStart(4, "0")}_baseline.sql`]: DUMP, "aliases.tsv": text }));
   if (b === null) throw new Error("no baseline");

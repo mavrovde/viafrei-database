@@ -27,6 +27,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
+import { byCodeUnit, repoFile, testDatabase } from "./generator-input.js";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -66,7 +67,8 @@ export function parseChecks(text: string): CheckRow[] {
 }
 
 export const CHECKS_FILE = join(ROOT, "test", "checks", "constraints.tsv");
-export const expectedChecks = (file = CHECKS_FILE): CheckRow[] => parseChecks(readFileSync(file, "utf8"));
+/** The table of `file`, a path inside the repository (the generator's second argument). */
+export const expectedChecks = (file = CHECKS_FILE): CheckRow[] => parseChecks(readFileSync(repoFile(file), "utf8"));
 export const checkLine = (r: CheckRow): string => `${r.relation}\t${r.name}\t${escapeDef(r.def)}\t${r.plant === null ? "-" : JSON.stringify(r.plant)}`;
 
 /** The columns a check names (identifiers in its definition that are columns of the relation). */
@@ -181,10 +183,10 @@ export function candidates(def: string, type = "text"): string[] {
 
 /* v8 ignore start — the generator, run by hand */
 if (import.meta.filename === process.argv[1]) {
-  const c = new pg.Client({ connectionString: process.argv[2] });
+  const c = new pg.Client(testDatabase(process.argv[2]));
   await c.connect();
   const kept = new Map((process.argv[3] === undefined ? [] : expectedChecks(process.argv[3])).map((r) => [`${r.relation}.${r.name}`, r.plant]));
-  const hand = (process.env.CHECKS_HAND === undefined ? {} : JSON.parse(readFileSync(process.env.CHECKS_HAND, "utf8"))) as Record<string, Record<string, string>[]>;
+  const hand = (process.env.CHECKS_HAND === undefined ? {} : JSON.parse(readFileSync(repoFile(process.env.CHECKS_HAND), "utf8"))) as Record<string, Record<string, string>[]>;
   const all = await readChecks(c);
   const lines: string[] = [];
   await c.query("begin");
@@ -224,9 +226,10 @@ if (import.meta.filename === process.argv[1]) {
   }
   await c.query("rollback");
   await c.end();
+  lines.sort(byCodeUnit);
   process.stdout.write(
     "# Every CHECK constraint of ours (test/checks.ts): relation, constraint, definition, a plant row that breaks it alone (JSON) or -.\n# A migration that adds, changes or drops a check changes its row here in the same commit.\n" +
-      lines.sort().map((l) => `${l}\n`).join(""),
+      lines.map((l) => `${l}\n`).join(""),
   );
 }
 /* v8 ignore stop */

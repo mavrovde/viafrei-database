@@ -12,7 +12,8 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type pg from "pg";
-import { appendSql, DomainDb, MERGE_COLUMNS, refusal, SYSTEM, upsertSql, WRITER_TYPES } from "./domain-db.js";
+import { appendSql, DomainDb, MERGE_COLUMNS, refusal, SYSTEM, upsertSql } from "./domain-db.js";
+import { expectSystemThenDomainColumns, expectTickShape } from "./domain-expect.js";
 
 const url = process.env["TEST_DATABASE_URL"];
 const required = process.env["VF_REQUIRE_DB"] === "1";
@@ -206,19 +207,7 @@ describe.skipIf(url === undefined)("the parking domains", () => {
   });
 
   it("has the system columns of speed_cameras, then the domain columns, each in a type a writer declares", async () => {
-    const cameras = (await t.columnsOf("speed_cameras")).slice(0, SYSTEM.length);
-    for (const table of TABLES) {
-      const mine = await t.columnsOf(table.name);
-      expect(mine.map((x) => x.column_name), table.name).toEqual([...SYSTEM, ...Object.keys(table.cols)]);
-      expect(mine.slice(0, SYSTEM.length), table.name).toEqual(cameras);
-      for (const x of mine.slice(SYSTEM.length)) {
-        const where = `${table.name}.${x.column_name}`;
-        expect(x.data_type, where).toBe(table.cols[x.column_name]);
-        expect(WRITER_TYPES.has(x.data_type), where).toBe(true);
-        expect(x.is_nullable, where).toBe(table.required.includes(x.column_name) ? "NO" : "YES");
-        expect(x.column_default, where).toBe(table.defaults?.[x.column_name] ?? null);
-      }
-    }
+    await expectSystemThenDomainColumns(t, TABLES);
   });
 
   it("has the constraints and indexes of the convention, and each table its own", async () => {
@@ -233,14 +222,7 @@ describe.skipIf(url === undefined)("the parking domains", () => {
       if (table.kind === "state") {
         expect(rest, table.name).toEqual(model);
       } else {
-        const on = table.partitioned === true ? "ON ONLY" : "ON";
-        expect(rest.filter((d) => /T_(owner_key|pkey) /.test(d)), table.name).toEqual([
-          `CREATE UNIQUE INDEX T_owner_key ${on} domains.T USING btree (source_id, feed, external_id, observed_at)`,
-          `CREATE UNIQUE INDEX T_pkey ${on} domains.T USING btree (id, observed_at)`,
-          "p T_pkey PRIMARY KEY (id, observed_at)",
-          "u T_owner_key UNIQUE (source_id, feed, external_id, observed_at)",
-        ]);
-        expect(rest.filter((d) => !/T_(owner_key|pkey) /.test(d)).map((d) => d.replace(" ON ONLY ", " ON ")), table.name).toEqual(model.filter((d) => !/T_(owner_key|pkey) /.test(d)));
+        expectTickShape(rest, model, table.name, table.partitioned === true ? "ON ONLY" : "ON");
       }
     }
   });

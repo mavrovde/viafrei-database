@@ -16,8 +16,8 @@
  * skipped; each such run migrates its own database.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { accessSync, constants, readFileSync, writeFileSync } from "node:fs";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { SCHEMA_BEHAVIOUR_MUTANTS } from "./mutants-schema-behaviour.js";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -122,16 +122,16 @@ const MUTANTS: readonly Mutant[] = [
   { name: "lint: rule 6 never fires", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "if (locking !== null && (bound === null || bound.index > locking.index)) {", to: "if (locking !== null && bound === null && false) {" },
   { name: "lint: rule 6 takes a lock_timeout set after the statement", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "(bound === null || bound.index > locking.index)", to: "bound === null" },
   { name: "lint: rule 6 judges files before 0294", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "if (num >= LOCK_RULE_FROM) {", to: "if (num >= 0) {" },
-  { name: "lint: rule 6 misses a create trigger", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "(?:constraint\\s+)?trigger\\s+", to: "(?:constraint\\s+)?triggerX\\s+" },
-  { name: "lint: rule 6 misses a drop trigger", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "\\bdrop\\s+trigger\\s+", to: "\\bdrop\\s+triggerX\\s+" },
-  { name: "lint: rule 6 misses a plain drop index", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "\\bdrop\\s+index\\s+(?!concurrently", to: "\\bdrop\\s+indexX\\s+(?!concurrently" },
-  { name: "lint: rule 6 misses a plain reindex", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "\\breindex\\s+", to: "\\breindexX\\s+" },
-  { name: "lint: rule 6 misses a lock table", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "lock\\s+(?:table\\s+)?(?:only", to: "lockX\\s+(?:table\\s+)?(?:only" },
-  { name: "lint: rule 6 misses a truncate", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "truncate\\s+(?:table", to: "truncateX\\s+(?:table" },
-  { name: "lint: rule 6 misses a create or replace view", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "replace\\s+view\\s+", to: "replace\\s+viewX\\s+" },
-  { name: "lint: rule 6 misses a dynamic alter", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "format\\s*\\(\\s*'\\s*alter", to: "format\\s*\\(\\s*'\\s*alterX" },
-  { name: "lint: rule 6 reads a function body as applied", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "body.replace(/[^\\n]/g, \" \")", to: "body" },
-  { name: "lint: rule 6 takes lock and truncate anywhere in the text", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "(?<=^|;)[^\\S\\n]*lock", to: "lock" },
+  { name: "lint: rule 6 misses a create trigger", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`(?:constraint\s+)?trigger\s+`, to: String.raw`(?:constraint\s+)?triggerX\s+` },
+  { name: "lint: rule 6 misses a drop trigger", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`\bdrop\s+trigger\s+`, to: String.raw`\bdrop\s+triggerX\s+` },
+  { name: "lint: rule 6 misses a plain drop index", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`\bdrop\s+index\s+(?!concurrently`, to: String.raw`\bdrop\s+indexX\s+(?!concurrently` },
+  { name: "lint: rule 6 misses a plain reindex", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`\breindex\s+`, to: String.raw`\breindexX\s+` },
+  { name: "lint: rule 6 misses a lock table", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`lock\s+(?:table\s+)?(?:only`, to: String.raw`lockX\s+(?:table\s+)?(?:only` },
+  { name: "lint: rule 6 misses a truncate", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`truncate\s+(?:table`, to: String.raw`truncateX\s+(?:table` },
+  { name: "lint: rule 6 misses a create or replace view", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`replace\s+view\s+`, to: String.raw`replace\s+viewX\s+` },
+  { name: "lint: rule 6 misses a dynamic alter", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`format\s*\(\s*'\s*alter`, to: String.raw`format\s*\(\s*'\s*alterX` },
+  { name: "lint: rule 6 reads a function body as applied", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`body.replace(/[^\n]/g, " ")`, to: "body" },
+  { name: "lint: rule 6 takes lock and truncate anywhere in the text", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: String.raw`(?<=^|;)[^\S\n]*lock`, to: "lock" },
   { name: "lint: rule 6 reads into string literals", file: at("src", "lint", "check-migrations.ts"), tests: ["test/lint.test.ts"], from: "(l) => `'${\" \".repeat(l.length - 2)}'`", to: "(l) => l" },
   { name: "fixtures: the install takes a database not named test_", file: at("src", "fixtures.ts"), tests: ["test/fixtures.db.test.ts"], config: DB, from: '!db.startsWith("test_")', to: "false" },
   { name: "fixtures: the install runs without VF_TEST_FIXTURES=1", file: at("src", "fixtures.ts"), tests: ["test/fixtures.db.test.ts"], config: DB, from: 'if (env[FIXTURES_ENV] !== "1") return', to: 'if (env[FIXTURES_ENV] === "never") return' },
@@ -154,6 +154,29 @@ const MUTANTS: readonly Mutant[] = [
   ...SCHEMA_BEHAVIOUR_MUTANTS.map((m) => ({ ...m, config: DB })),
 ];
 
+// vitest is run by this node from the repository's own install, never found on
+// PATH; the runs get a fixed PATH: this node's directory, psql's (VF_DB_PSQL, or
+// the psql the caller's PATH names, resolved once to an absolute path, which
+// the database tests then call by name) and the system directories.
+const VITEST = join(ROOT, "node_modules", "vitest", "vitest.mjs");
+const executable = (f: string): boolean => {
+  try {
+    accessSync(f, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const psqlBin = ((): string | null => {
+  const given = process.env["VF_DB_PSQL"];
+  if (given !== undefined && isAbsolute(given)) return given;
+  for (const d of (process.env["PATH"] ?? "").split(delimiter)) if (isAbsolute(d) && executable(join(d, given ?? "psql"))) return join(d, given ?? "psql");
+  return null;
+})();
+const FIXED_PATH = [...new Set([dirname(process.execPath), ...(psqlBin === null ? [] : [dirname(psqlBin)]), "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])].join(delimiter);
+const vitest = (args: readonly string[], env: NodeJS.ProcessEnv) =>
+  spawnSync(process.execPath, [VITEST, "run", ...args], { cwd: ROOT, encoding: "utf8", env: { ...env, PATH: FIXED_PATH, ...(psqlBin === null ? {} : { VF_DB_PSQL: psqlBin }) } });
+
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
 
 const originals = new Map<string, string>();
@@ -173,7 +196,7 @@ let killed = 0;
 const controls = new Set(MUTANTS.filter((m) => (only === null || m.name.includes(only)) && m.config !== undefined).map((m) => JSON.stringify([m.config, m.tests ?? TESTS])));
 for (const c of controls) {
   const [config, tests] = JSON.parse(c) as [string, string[]];
-  const r = spawnSync("npx", ["vitest", "run", "--config", config, ...tests], { cwd: ROOT, encoding: "utf8", env: { ...process.env, VF_REQUIRE_DB: "1" } });
+  const r = vitest(["--config", config, ...tests], { ...process.env, VF_REQUIRE_DB: "1" });
   if (r.status !== 0) {
     console.log(`✗ refused: ${tests.join(" ")} fails UNMUTATED under ${config} (TEST_DATABASE_URL and psql set?) — no mutant of it can be judged`);
     process.exit(2);
@@ -196,7 +219,7 @@ try {
     writeFileSync(file, mutated);
     // A database test runs under its own config, and must not pass by being skipped.
     const env = m.config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" };
-    const r = spawnSync("npx", ["vitest", "run", ...(m.config === undefined ? [] : ["--config", m.config]), ...(m.tests ?? TESTS)], { cwd: ROOT, encoding: "utf8", env });
+    const r = vitest([...(m.config === undefined ? [] : ["--config", m.config]), ...(m.tests ?? TESTS)], env);
     restore();
     if (r.status === 0) {
       console.log(`  ✗ SURVIVED: ${m.name}`);

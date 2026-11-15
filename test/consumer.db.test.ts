@@ -26,6 +26,7 @@ import { main } from "../src/cli.js";
 import { loadConfig } from "../src/config.js";
 import { ROLES } from "../src/roles.js";
 import { DatabaseService } from "../src/service.js";
+import { endPool } from "./domain-db.js";
 import { REPO } from "./helpers.js";
 import { byRole, databaseSettings, parseSettings, settingsFile } from "./role-settings.js";
 
@@ -104,8 +105,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await pool.end();
-  await copy.end();
+  await endPool(pool);
+  await endPool(copy);
   await admin.query(`drop database if exists ${CLONE} with (force)`);
   await admin.query(`drop database if exists ${NAME} with (force)`);
   await admin.end();

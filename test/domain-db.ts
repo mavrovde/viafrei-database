@@ -10,6 +10,7 @@ import { join } from "node:path";
 import pg from "pg";
 import { loadConfig } from "../src/config.js";
 import { DatabaseService } from "../src/service.js";
+import { byCodeUnit } from "./generator-input.js";
 import { REPO } from "./helpers.js";
 
 export const SYSTEM = ["id", "source_id", "feed", "external_id", "match_key", "observed_at", "first_seen_at", "updated_at", "closed_at", "geom", "extras"];
@@ -31,6 +32,31 @@ export const refusal = (p: Promise<unknown>): Promise<Refusal> =>
   );
 
 export type Col = { column_name: string; data_type: string; is_nullable: string; column_default: string | null; is_identity: string };
+
+/**
+ * Ends a pool and waits until each of its connections has closed. pg's
+ * Pool.end() resolves once the pool has let go of its clients, before their
+ * sessions are over; a `drop database … with (force)` right after it
+ * terminates a session that is still closing, and the FATAL 57P01 that sends
+ * reaches an idle client whose pool has no error listener: an unhandled error
+ * in a run whose tests all passed. `end` is how the pool's owner ends it
+ * (DatabaseService.close() also stops its timers).
+ */
+export async function endPool(pool: pg.Pool, end: () => Promise<void> = () => pool.end()): Promise<void> {
+  let open = pool.totalCount;
+  const closed = new Promise<void>((resolve) => {
+    if (open === 0) {
+      resolve();
+      return;
+    }
+    pool.on("remove", () => {
+      open -= 1;
+      if (open === 0) resolve();
+    });
+  });
+  await end();
+  await closed;
+}
 
 export class DomainDb {
   readonly name: string;
@@ -78,8 +104,9 @@ export class DomainDb {
   }
 
   async drop(): Promise<void> {
-    await this.p?.end();
-    await this.svc?.close();
+    if (this.p !== undefined) await endPool(this.p);
+    const svc = this.svc;
+    if (svc !== undefined) await endPool(svc.pool, () => svc.close());
     await this.admin.query(`drop database if exists ${this.name} with (force)`);
     await this.admin.end();
   }
@@ -135,7 +162,7 @@ export class DomainDb {
   async shape(table: string): Promise<string[]> {
     const idx = await this.pool.query<{ d: string }>("select indexdef as d from pg_indexes where schemaname = 'domains' and tablename = $1", [table]);
     const con = await this.pool.query<{ d: string }>("select contype::text || ' ' || conname || ' ' || pg_get_constraintdef(oid) as d from pg_constraint where conrelid = ('domains.' || $1)::regclass", [table]);
-    return [...idx.rows, ...con.rows].map((x) => x.d.replaceAll(table, "T")).sort();
+    return [...idx.rows, ...con.rows].map((x) => x.d.replaceAll(table, "T")).sort(byCodeUnit);
   }
 
   async rls(table: string): Promise<{ e: boolean; f: boolean } | undefined> {
@@ -194,7 +221,7 @@ export class DomainDb {
         await c.query<{ d: string }>("select conname || ' ' || pg_catalog.pg_get_constraintdef(oid) as d from pg_catalog.pg_constraint where conrelid = ('public.' || $1)::pg_catalog.regclass", [table])
       ).rows.map((x) => x.d);
     });
-    return { baseline: { columns, constraints: [...inline, ...added].sort() }, catalogue: { columns: cols.rows.map((x) => x.a), constraints: cons.sort() } };
+    return { baseline: { columns, constraints: [...inline, ...added].sort(byCodeUnit) }, catalogue: { columns: cols.rows.map((x) => x.a), constraints: cons.sort(byCodeUnit) } };
   }
 }
 

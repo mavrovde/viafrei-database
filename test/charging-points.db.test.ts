@@ -17,7 +17,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { DatabaseService } from "../src/service.js";
-import { SPEED_CAMERAS_OWN } from "./domain-db.js";
+import { endPool, SPEED_CAMERAS_OWN } from "./domain-db.js";
 import { REPO } from "./helpers.js";
 
 const url = process.env["TEST_DATABASE_URL"];
@@ -111,8 +111,9 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
   }, 900_000);
 
   afterAll(async () => {
-    await pool?.end();
-    await svc?.close();
+    if (pool !== undefined) await endPool(pool);
+    const s = svc;
+    if (s !== undefined) await endPool(s.pool, () => s.close());
     await admin.query(`drop database if exists ${name} with (force)`);
     await admin.end();
   });
