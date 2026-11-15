@@ -571,6 +571,52 @@ trigger	control.callers.callers_audit	test/control-plane.db.test.ts > a change t
 trigger	control.changes.changes_append_only	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
 trigger	control.shares.shares_audit	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
 trigger	control.shares.shares_shape	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > an attempt, a success and a change set their times; a budget refusal is no attempt and starts the pause; the next real run ends it
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > an update of a run the row holds recomputes that key; an update that changes nothing it reads leaves it
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > the fold equals the recompute: random histories of attempts, refusals, errors and changes, inserted out of order in batches
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > a change is any item inserted, updated or closed, each alone
+function	control.feed_state_after_change()	test/feed-state.db.test.ts > a provider key's budget is its part before the colon; an interrupted run is an attempt and no success; rows make a change
+function	control.feed_state_after_truncate()	test/feed-state.db.test.ts > a truncate of one ledger forgets that ledger's rows only
+function	control.fold_feed_state(p_ledger text, p_facts control.run_fact[])	test/feed-state.db.test.ts > an attempt, a success and a change set their times; a budget refusal is no attempt and starts the pause; the next real run ends it
+function	control.fold_feed_state(p_ledger text, p_facts control.run_fact[])	test/feed-state.db.test.ts > the fold equals the recompute: random histories of attempts, refusals, errors and changes, inserted out of order in batches
+function	control.fold_feed_state(p_ledger text, p_facts control.run_fact[])	test/feed-state.db.test.ts > an attempt that lands between two known refusals: the pause starts at the first refusal after it
+function	control.recompute_feed_state(p_ledger text, p_keys text[])	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing
+function	control.recompute_feed_state(p_ledger text, p_keys text[])	test/feed-state.db.test.ts > the fold equals the recompute: random histories of attempts, refusals, errors and changes, inserted out of order in batches
+function	ingestor.project_run(p_run_id bigint)	test/feed-state.db.test.ts > project_run writes one feed run per finished run of this transaction's source, once; every other case is refused
+function	ingestor.register_feed(p_feed_key text, p_display_name text, p_provider text, p_licence_id text, p_licence_label text, p_attribution text, p_cadence_s integer, p_min_interval_s integer, p_enabled boolean, p_registry_version text)	test/feed-state.db.test.ts > register_feed publishes an ingestor source into the catalogue and reopens it; a key that is no source or belongs to another publisher is refused; taken_feed_keys names the latter
+function	ingestor.taken_feed_keys(p_ids text[])	test/feed-state.db.test.ts > register_feed publishes an ingestor source into the catalogue and reopens it; a key that is no source or belongs to another publisher is refused; taken_feed_keys names the latter
+function	public.feed_versions_bump()	test/feed-state.db.test.ts > an ok or degraded run bumps the version; unchanged, error and unfinished runs do not; the observed time never moves back
+function	public.feed_versions_bump()	test/feed-state.db.test.ts > an update bumps only when the finish, the status or the count moved
+function	public.feed_versions_bump()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
+function	public.feed_versions_forget()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
+function	public.runtime_config_source_bounds()	test/feed-state.db.test.ts > a source key names a declared source; an interval is within its floor and four times its declared cadence; other keys pass untouched
+trigger	public.feed_runs.feed_runs_feed_state_delete	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing
+trigger	public.feed_runs.feed_runs_feed_state_delete	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.feed_runs.feed_runs_feed_state_insert	test/feed-state.db.test.ts > an attempt, a success and a change set their times; a budget refusal is no attempt and starts the pause; the next real run ends it
+trigger	public.feed_runs.feed_runs_feed_state_insert	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.feed_runs.feed_runs_feed_state_truncate	test/feed-state.db.test.ts > a truncate of one ledger forgets that ledger's rows only
+trigger	public.feed_runs.feed_runs_feed_state_truncate	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.feed_runs.feed_runs_feed_state_update	test/feed-state.db.test.ts > an update of a run the row holds recomputes that key; an update that changes nothing it reads leaves it
+trigger	public.feed_runs.feed_runs_feed_state_update	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.ingest_runs.ingest_runs_feed_state_delete	test/feed-state.db.test.ts > a provider key's budget is its part before the colon; an interrupted run is an attempt and no success; rows make a change
+trigger	public.ingest_runs.ingest_runs_feed_state_delete	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.ingest_runs.ingest_runs_feed_state_insert	test/feed-state.db.test.ts > a provider key's budget is its part before the colon; an interrupted run is an attempt and no success; rows make a change
+trigger	public.ingest_runs.ingest_runs_feed_state_insert	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.ingest_runs.ingest_runs_feed_state_truncate	test/feed-state.db.test.ts > a truncate of one ledger forgets that ledger's rows only
+trigger	public.ingest_runs.ingest_runs_feed_state_truncate	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.ingest_runs.ingest_runs_feed_state_update	test/feed-state.db.test.ts > a provider key's budget is its part before the colon; an interrupted run is an attempt and no success; rows make a change
+trigger	public.ingest_runs.ingest_runs_feed_state_update	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
+trigger	public.feed_runs.feed_versions_bump_insert	test/feed-state.db.test.ts > an ok or degraded run bumps the version; unchanged, error and unfinished runs do not; the observed time never moves back
+trigger	public.feed_runs.feed_versions_bump_update	test/feed-state.db.test.ts > an update bumps only when the finish, the status or the count moved
+trigger	public.ingest_runs.feed_versions_bump_insert	test/feed-state.db.test.ts > an ok or degraded run bumps the version; unchanged, error and unfinished runs do not; the observed time never moves back
+trigger	public.ingest_runs.feed_versions_bump_update	test/feed-state.db.test.ts > an update bumps only when the finish, the status or the count moved
+trigger	public.feed_runs.feed_versions_forget	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
+trigger	public.runtime_config.runtime_config_source_bounds	test/feed-state.db.test.ts > a source key names a declared source; an interval is within its floor and four times its declared cadence; other keys pass untouched
+view	control.data_status	test/feed-state.db.test.ts > a success older than three cadences is stale; the same age with a budget refusal after it is paused and never stale, with the hit, the pause's start and its resume
+view	control.data_status	test/feed-state.db.test.ts > a hold in force pauses the feed from the hold's start; the owner's pause, by the schedule or by runtime_config, comes first
+view	public.feed_checks	test/feed-state.db.test.ts > feed_checks: one row per open catalogue feed, checked_at the held success, paused_at the pause, a feed with no state not paused
+view	public.registered_sources	test/feed-state.db.test.ts > registered_sources: every ingestor source with its catalogue cadence and label when the ingestor published it
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted
