@@ -66,6 +66,12 @@ const MUTANTS: readonly Mutant[] = [
   { name: "db: 0304 ignores days_back", config: DB, file: at("db", "migrations", "0304_partitions_days_back.sql"), tests: ["test/consumer.db.test.ts"], from: "for i in -days_back..days_ahead loop", to: "for i in -3..days_ahead loop" },
   { name: "db: 0304 takes a negative days_back", config: DB, file: at("db", "migrations", "0304_partitions_days_back.sql"), tests: ["test/consumer.db.test.ts"], from: "days_back is null or days_back < 0 or days_back > 400", to: "days_back is null or days_back > 400" },
   { name: "db: 0303 loses the feed_runs.status comment", config: DB, file: at("db", "migrations", "0303_carried_comments.sql"), tests: ["test/consumer.db.test.ts"], from: "COMMENT ON COLUMN public.feed_runs.status IS", to: "SELECT 'public.feed_runs.status' IS NOT NULL OR" },
+  // #32: the service roles and their grants, against test/acl/expected.tsv and test/acl/consumers.tsv.
+  { name: "db: expected.tsv loses a grant the catalogue holds", config: DB, file: at("test", "acl", "expected.tsv"), tests: ["test/roles-grants.db.test.ts"], from: "viafrei_mcp\trelation\tpublic.autobahn_events\tSELECT\n", to: "" },
+  { name: "db: expected.tsv names a privilege nobody holds", config: DB, file: at("test", "acl", "expected.tsv"), tests: ["test/roles-grants.db.test.ts"], from: "viafrei_ops\trelation\tpublic.error_events\tSELECT\n", to: "viafrei_ops\trelation\tpublic.error_events\tSELECT,UPDATE\n" },
+  { name: "db: a migration grants a forbidden relation", config: DB, file: at("db", "migrations", "0304_partitions_days_back.sql"), tests: ["test/roles-grants.db.test.ts"], from: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\n", to: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\ngrant select on public.deployments to viafrei_digest;\n" },
+  { name: "db: the ACL read leaves out column grants", config: DB, file: at("test", "acl.ts"), tests: ["test/roles-grants.db.test.ts"], from: "cross join lateral aclexplode(att.attacl) a", to: "cross join lateral aclexplode(att.attacl) a where false" },
+  { name: "db: the consumer list claims a write the role has not", config: DB, file: at("test", "acl", "consumers.tsv"), tests: ["test/roles-grants.db.test.ts"], from: "viafrei_status\tpublic.deployments\tselect\t", to: "viafrei_status\tpublic.deployments\tinsert:id\t" },
 ];
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
@@ -100,7 +106,8 @@ try {
     const file = m.file ?? FILE;
     const original = originals.get(file) ?? readFileSync(file, "utf8");
     originals.set(file, original);
-    const mutated = original.replace(m.from, m.to);
+    // A function, so a `$$` in the replacement is two dollars and not a replacement pattern.
+    const mutated = original.replace(m.from, () => m.to);
     if (mutated === original) {
       console.log(`  ? ${m.name}: the pattern no longer matches ${file} — fix the mutant`);
       survived += 1;
