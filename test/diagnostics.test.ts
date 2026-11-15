@@ -38,11 +38,13 @@ describe("collect", () => {
       if (sql === SQL.vacuum) return [{ schema: "public", name: "t", live: "10", dead: "2", dead_pct: 16.7, last_autovacuum: null, last_autoanalyze: null, autovacuums: "3" }];
       if (sql === SQL.wraparound) return [{ schema: "public", name: "t", xid_age: "99" }];
       if (sql === SQL.vacuumRunning) return [];
+      if (sql === SQL.partitionWindow) return [{ schema: "public", name: "ticks", partitions: 9, has_default: true, default_rows_estimate: "42", oldest_from: null, newest_to: null, covers_now: true, covers_tomorrow: true }];
       if (sql.includes("to_regclass('schema_migrations')")) return [{ t: null }];
       return [];
     });
     const d = await collect(f.pool);
     expect([d.sizeBytes, d.largest[0]?.bytes, d.vacuum[0]?.live, d.vacuum[0]?.dead, d.vacuum[0]?.autovacuums, d.wraparound[0]?.xid_age]).toEqual([1024, 2048, 10, 2, 3, 99]);
+    expect(d.partitions).toEqual([{ schema: "public", name: "ticks", partitions: 9, has_default: true, default_rows_estimate: 42, oldest_from: null, newest_to: null, covers_now: true, covers_tomorrow: true }]);
     expect([d.vacuumRunning, d.ledgerTail]).toEqual([0, []]);
   });
 
