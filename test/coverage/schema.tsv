@@ -763,6 +763,29 @@ view	domains.transit_trip_updates_odbl_merged	test/views-merged.db.test.ts > dom
 view	domains.transit_trips_odbl_merged	test/views-merged.db.test.ts > domains.transit_trips_odbl_merged: the most trusted open row per entity, then the newest, then the first id
 function	public.growth_weekly_refresh(p_weeks integer)	test/rollup-loads.db.test.ts > growth_weekly_refresh: each asked Berlin week from Search Console, the site days and the MCP hours, read only where the source covers the week; a refresh replaces; older than 104 weeks is deleted; a week count outside 1..105 is refused
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)	test/rollup-loads.db.test.ts > ops_rollup_refresh: the runs of the window in five-minute buckets per ledger and key, their Berlin days, the usage and the held rows; the window's partitions made and the 90-day-old ones dropped; a refresh replaces; an empty or over-long window is refused
+view	public.city_traffic_now_live	test/views-complex.db.test.ts > public.city_traffic_now_live: a segment with a status, at its feed's pull of the same instant
+view	public.fuel_feed_health	test/views-complex.db.test.ts > public.fuel_feed_health: the Tankerkönig runs of the day and the hour, the watched stations' newest price and coverage
+view	public.fuel_station_board_live	test/views-complex.db.test.ts > public.fuel_station_board_live: one row per live station, its positive open prices per product
+view	public.fuel_station_watch_due	test/views-complex.db.test.ts > public.fuel_station_watch_due: the active stations whose backoff has passed, by priority, the never polled first
+view	public.gtfs_route_kreise	test/views-complex.db.test.ts > public.gtfs_route_kreise: the Kreise each live route stops in
+view	public.gtfs_untimed_trips	test/views-complex.db.test.ts > public.gtfs_untimed_trips: the trips of more than one stop whose times never move
+view	public.lorry_reads_live	test/views-complex.db.test.ts > public.lorry_reads_live: each lorry feed's newest successful read
+view	public.los_lane_now_live	test/views-complex.db.test.ts > public.los_lane_now_live: an open, public lane of an open, public main-carriageway site with a road and a place
+view	public.los_now_live	test/views-complex.db.test.ts > public.los_now_live: an open, public main-carriageway site with a road and a place, and a public state
+view	public.motorway_register_live	test/views-complex.db.test.ts > public.motorway_register_live: every motorway number, once, from the German TMC table and the Autobahn API
+view	public.osm_street_tiles	test/views-complex.db.test.ts > public.osm_street_tiles: the open streets from class 2 in one-kilometre tiles per class
+view	public.osm_street_tiles_lo	test/views-complex.db.test.ts > public.osm_street_tiles_lo: the open simplified streets of classes 2 to 4 in ten-kilometre tiles
+view	public.service_alert_lands_live	test/views-complex.db.test.ts > public.service_alert_lands_live: per Land, the public alerts placed by stop or route and the newest sighting
+view	public.station_index_live	test/views-complex.db.test.ts > public.station_index_live: each open station with its newest slug, the first of one instant
+view	public.traffic_count_now_live	test/views-complex.db.test.ts > public.traffic_count_now_live: every open site with its vehicle and heavy counts, if any
+view	public.traffic_count_profiles_live	test/views-complex.db.test.ts > public.traffic_count_profiles_live: the open sites' profiles of their feed's newest month
+view	public.transit_departures_odbl_live	test/views-complex.db.test.ts > public.transit_departures_odbl_live: the boardable departures of open trips on the service days of the window, with the trip update at the stop
+view	public.transit_odbl_service_days_live	test/views-complex.db.test.ts > public.transit_odbl_service_days_live: four service days in Berlin's and every open agency's zone
+view	public.transit_punctuality_area_live	test/views-complex.db.test.ts > public.transit_punctuality_area_live: the last half hour of DELFI delays per nation, Land, city and Kreis, untimed trips apart
+view	public.transit_punctuality_live	test/views-complex.db.test.ts > public.transit_punctuality_live: per Land, the trips with a DELFI delay in the last half hour and the late ones
+view	public.transit_station_live	test/views-complex.db.test.ts > public.transit_station_live: the eight main stations, their stops and platforms and the last half hour of their delays
+view	public.transit_stop_modes	test/views-complex.db.test.ts > public.transit_stop_modes: per stop family, its modes and lines from live trips, routes and stops
+view	public.weather_warnings_area_live	test/views-complex.db.test.ts > public.weather_warnings_area_live: every live warning with its English text, when there is one
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted

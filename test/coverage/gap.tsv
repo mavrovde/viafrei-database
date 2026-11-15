@@ -2,26 +2,3 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-view	public.city_traffic_now_live
-view	public.fuel_feed_health
-view	public.fuel_station_board_live
-view	public.fuel_station_watch_due
-view	public.gtfs_route_kreise
-view	public.gtfs_untimed_trips
-view	public.lorry_reads_live
-view	public.los_lane_now_live
-view	public.los_now_live
-view	public.motorway_register_live
-view	public.osm_street_tiles
-view	public.osm_street_tiles_lo
-view	public.service_alert_lands_live
-view	public.station_index_live
-view	public.traffic_count_now_live
-view	public.traffic_count_profiles_live
-view	public.transit_departures_odbl_live
-view	public.transit_odbl_service_days_live
-view	public.transit_punctuality_area_live
-view	public.transit_punctuality_live
-view	public.transit_station_live
-view	public.transit_stop_modes
-view	public.weather_warnings_area_live

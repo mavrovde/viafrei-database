@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { VIEW_CASES } from "../test/views-filter.cases.js";
+import { COMPLEX_CASES } from "../test/views-complex.cases.js";
 
 export type SchemaMutant = { readonly name: string; readonly from: string; readonly to: string; readonly file: string; readonly tests: readonly string[] };
 
@@ -287,6 +288,22 @@ const views: SchemaMutant[] = (() => {
   });
 })().map((m) => ({ ...m, file: BASELINE, tests: VIEWS }));
 
+const COMPLEX = ["test/views-complex.db.test.ts"];
+
+/** Per joined or aggregating view: each of its case's snippets broken alone, inside the view's (or materialized view's) block. */
+const complex: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  return COMPLEX_CASES.flatMap((k) => {
+    const at = [`\nCREATE VIEW ${k.view} AS\n`, `\nCREATE MATERIALIZED VIEW ${k.view} AS\n`].map((h) => sql.indexOf(h)).find((i) => i >= 0);
+    if (at === undefined) throw new Error(`no CREATE VIEW ${k.view} in the baseline`);
+    const block = sql.slice(at + 1, sql.indexOf(";\n", at) + 1);
+    return k.mutants.map(([what, from, to]) => {
+      if (block.split(from).length !== 2) throw new Error(`${k.view}: ${from} is not once in its block`);
+      return { name: `views: ${k.view} shows ${what}`, from: block, to: block.replace(from, to) };
+    });
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: COMPLEX }));
+
 const FUEL = ["test/fuel-functions.db.test.ts"];
 
 const fuel: SchemaMutant[] = [
@@ -457,4 +474,4 @@ const fold0310: SchemaMutant[] = [
   { name: "0310: the backfill recomputes no ingest key", from: "r.budget_hit is null and r.status in ('running', 'pending')", to: "r.budget_hit is null and false" },
 ].map((m) => ({ ...m, file: M0310, tests: LEDGERS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...fold0310];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0310];
