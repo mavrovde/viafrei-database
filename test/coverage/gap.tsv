@@ -703,7 +703,6 @@ function	public.road_ref_key(road text)
 function	public.runtime_config_source_bounds()
 function	public.search_console_weekly_load(doc jsonb)
 function	public.station_slugs_frozen()
-function	public.tick_brin_autosummarize(part regclass)
 function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)
 function	public.vf_ledger_mask(t text)
 function	public.vf_page_key(identity text)
@@ -1188,7 +1187,6 @@ table	public.parking_occupancy_odbl
 table	public.parking_occupancy_sid
 table	public.parking_sites
 table	public.partition_archives
-table	public.partition_settings
 table	public.place_slugs
 table	public.place_website_checks
 table	public.place_websites

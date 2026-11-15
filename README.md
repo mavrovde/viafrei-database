@@ -85,8 +85,10 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | Command | What it does |
 |---|---|
 | `serve` (default) | Runs migrate, then partitions ensure (30 days ahead), then the role passwords. Then it serves `/healthz` and `/ready` on 8080, and the interface on 8090 when `DB_HOST` is set. A failed step is retried with backoff while the process stays up and not ready |
-| `migrate [--dry-run]` | Applies the pending migrations in order, each in its own transaction (except files marked `-- no-transaction:`) |
-| `partitions ensure [--days N]` | Creates the daily partitions of every tick table from 3 days back through today + N |
+| `migrate [--dry-run]` | Applies the pending migrations in order, each in its own transaction (except files marked `-- no-transaction:`). After every successful run (not a dry run) it applies the role settings of `db/roles/settings.sql` to this database, so a database copied from a template (`CREATE DATABASE … TEMPLATE`, which copies no role setting) gets them even when nothing is pending |
+| `partitions ensure [--days N] [--days-back B \| --from YYYY-MM-DD]` | Creates the daily partitions of every tick table from 3 days back (or B days back, or from the given date; at most 400) through today + N, so a test or a restore that needs a dated past row gets its partition without writing `partition of` |
+| `roles settings` | Applies the role settings (`ALTER ROLE … IN DATABASE`: timeouts, memory, `jit`, read-only) to this database alone |
+| `roles passwords` | Applies the role passwords from `VF_DB_ROLE_DIR` outside `serve`, the same step `serve` runs at boot; without `VF_DB_ROLE_DIR` it is a usage error (exit 2) |
 | `check` | A verdict: schema at head, and today and tomorrow covered on every tick table (the tick tables have no default partition on purpose: a tick outside the window is refused, so a default partition is reported as a warning) |
 | `head` | Prints `READY <head>` (exit 0) or `NOT READY: <why>` (exit 1) |
 | `status` | All the diagnostics below, as JSON |

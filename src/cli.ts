@@ -5,7 +5,10 @@
  *
  *   serve                      (default) migrate, partitions ensure, role passwords, then serve
  *   migrate [--dry-run]        apply pending migrations under the advisory lock
- *   partitions ensure [--days N]   ensure_daily_partitions(N) (default 7)
+ *   partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD]
+ *                              ensure_daily_partitions(N[, B]) (default 7, three days back)
+ *   roles settings             the role settings (ALTER ROLE ... IN DATABASE) for this database
+ *   roles passwords            the role passwords from VF_DB_ROLE_DIR, outside serve
  *   analyze <table>            ANALYZE one table
  *   check                      read-only verdict: head, checksums, partition window
  *   status                     read-only diagnostics as JSON
@@ -27,13 +30,13 @@ import { APP_ROOT, ConfigError, loadConfig, schemaDirs } from "./config.js";
 import { BaselineError, compareLedgerExport, loadSchema } from "./migrations/baseline.js";
 import { jsonLogger } from "./log.js";
 import { DatabaseService } from "./service.js";
-import { partitionDays, DEFAULT_CLI_DAYS } from "./partitions.js";
+import { partitionDays, parseFromDate, DEFAULT_CLI_DAYS, type Back } from "./partitions.js";
 import { readiness } from "./migrations/plan.js";
 import { fsIo, lint } from "./lint/check-migrations.js";
 import { AllowListError, createAccessPolicy } from "./server/access.js";
 import { interfaceHandler, readinessHandler } from "./server/http.js";
 
-export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|->]`;
+export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD] | roles settings | roles passwords | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|->]`;
 
 const print = (l: string): void => void process.stdout.write(`${l}\n`);
 const printErr = (l: string): void => void process.stderr.write(`${l}\n`);
@@ -104,6 +107,7 @@ export async function main(argv: readonly string[]): Promise<number> {
         return await serve();
       case "migrate":
       case "partitions":
+      case "roles":
       case "analyze":
       case "check":
       case "status":
@@ -133,17 +137,31 @@ async function oneShot(verb: string, rest: readonly string[]): Promise<number> {
   if (verb === "partitions" && rest[0] !== "ensure") return usage("partitions takes one sub-verb: ensure");
   if (verb === "analyze" && rest.length !== 1) return usage("analyze takes exactly one table name");
   if ((verb === "check" || verb === "status" || verb === "head") && rest.length > 0) return usage(`${verb} takes no argument`);
+  if (verb === "roles" && (rest.length !== 1 || (rest[0] !== "settings" && rest[0] !== "passwords"))) return usage("roles takes one sub-verb: settings or passwords");
   let days = DEFAULT_CLI_DAYS;
+  let back: Back = null;
   if (verb === "partitions") {
     const tail = rest.slice(1);
-    if (tail.length !== 0 && !(tail.length === 2 && tail[0] === "--days")) return usage("partitions ensure takes only --days N");
+    const seen = new Map<string, string>();
+    for (let i = 0; i < tail.length; i += 2) {
+      const flag = tail[i] ?? "";
+      const value = tail[i + 1];
+      if (!["--days", "--days-back", "--from"].includes(flag) || value === undefined || seen.has(flag)) return usage("partitions ensure takes --days N, and one of --days-back B or --from YYYY-MM-DD");
+      seen.set(flag, value);
+    }
+    if (seen.has("--days-back") && seen.has("--from")) return usage("--days-back and --from are one choice: give one of them");
     try {
-      days = partitionDays(tail[1], DEFAULT_CLI_DAYS);
+      days = partitionDays(seen.get("--days"), DEFAULT_CLI_DAYS);
+      const b = seen.get("--days-back");
+      const f = seen.get("--from");
+      if (b !== undefined) back = { days: partitionDays(b, 3) };
+      else if (f !== undefined) back = { from: parseFromDate(f) };
     } catch (e) {
       return usage((e as Error).message);
     }
   }
   const config = loadConfig(process.env, "cli");
+  if (verb === "roles" && rest[0] === "passwords" && config.roleSecretDir === null) return usage("roles passwords needs VF_DB_ROLE_DIR, the directory with one password file per role");
   const svc = new DatabaseService({ config, log: jsonLogger((l) => void process.stderr.write(`${l}\n`)) });
   try {
     if (verb === "status") {
@@ -163,7 +181,11 @@ async function oneShot(verb: string, rest: readonly string[]): Promise<number> {
       verb === "migrate"
         ? await svc.migrate("cli", rest.includes("--dry-run"))
         : verb === "partitions"
-          ? await svc.ensurePartitions("cli", days)
+          ? await svc.ensurePartitions("cli", days, back)
+          : verb === "roles"
+            ? rest[0] === "settings"
+              ? await svc.applySettings("cli")
+              : await svc.applyRoles("cli")
           : verb === "analyze"
             ? await svc.analyze(rest[0] ?? "", "cli")
             : await svc.check("cli");

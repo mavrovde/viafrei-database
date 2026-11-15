@@ -90,3 +90,28 @@ export async function applyRolePasswords(o: {
   }
   return { ok: !outcomes.some((x) => x.fatal), outcomes };
 }
+
+/**
+ * The role settings (db/roles/settings.sql): ALTER ROLE ... IN DATABASE for
+ * the database the psql runner points at. Held per database, so a database
+ * copied from a template has none; `migrate` applies them after every
+ * successful run and `roles settings` alone. No secret is involved.
+ */
+export const SETTINGS_FILE = "settings.sql";
+
+export async function applyRoleSettings(psql: PsqlRunner, sqlDir: string): Promise<{ readonly ok: boolean; readonly line: string }> {
+  let sql: string;
+  try {
+    sql = readFileSync(join(sqlDir, SETTINGS_FILE), "utf8");
+  } catch {
+    return { ok: false, line: `✗ role settings: ${SETTINGS_FILE} could not be read from the roles directory` };
+  }
+  const n = (sql.match(/^DO /gm) ?? []).length;
+  if (n === 0) return { ok: false, line: `✗ role settings: ${SETTINGS_FILE} holds no statement — refused rather than reported as applied` };
+  const r = await psql(sql, ["-f", "-"]);
+  if (r.code !== 0) {
+    const first = r.stderr.split("\n").find((l) => l.trim() !== "") ?? "(no message)";
+    return { ok: false, line: `✗ role settings could not be applied (psql exit ${String(r.code)}): ${first.slice(0, 300)}` };
+  }
+  return { ok: true, line: `  role settings: ${String(n)} applied to this database (idempotent)` };
+}
