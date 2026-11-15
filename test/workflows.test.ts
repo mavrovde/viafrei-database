@@ -80,14 +80,14 @@ describe("an image only for a confirmed release", () => {
   });
 
   it("publishes nothing unless the gate said so, and verifies only what it published", () => {
-    expect(job(release, "publish")).toContain("\n    needs: [gate, mutants]\n    if: needs.gate.outputs.publish == 'true'\n");
+    expect(job(release, "publish")).toContain("\n    needs: [gate, mutants, snyk]\n    if: needs.gate.outputs.publish == 'true'\n");
     expect(job(release, "verify")).toContain("\n    needs: [gate, publish]\n");
     expect(job(release, "tag")).toContain("\n    needs: [gate, publish, verify]\n");
   });
 
   it("runs every mutant on the gate's commit before anything is built, and only here", () => {
     expect(mutantsFaults(release)).toEqual([]);
-    expect(mutantsFaults(release.replace("    needs: [gate, mutants]\n", "    needs: gate\n"))).toEqual(["publish does not wait for the mutation check"]);
+    expect(mutantsFaults(release.replace("    needs: [gate, mutants, snyk]\n", "    needs: [gate, snyk]\n"))).toEqual(["publish does not wait for the mutation check"]);
     expect(mutantsFaults(release.replace("        run: npm run mutate\n", "        run: npm run mutate -- --only lint\n"))).toEqual(["the mutation check does not run every mutant"]);
     expect(mutantsFaults(release.replace(/(\n {2}mutants:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
     expect(mutantsFaults(release.replace("    timeout-minutes: 120\n", "    timeout-minutes: 120\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
@@ -192,6 +192,8 @@ describe("permissions", () => {
     expect(release).toMatch(/\npermissions:\n {2}contents: read\n\n/);
     expect(permissions(job(release, "gate"))).toEqual(["contents: read", "actions: read"]);
     expect(permissions(job(release, "mutants"))).toEqual(["contents: read"]);
+    // snyk.yml uploads its SARIF to code scanning, the one write a scan needs
+    expect(permissions(job(release, "snyk"))).toEqual(["contents: read", "security-events: write"]);
     expect(permissions(job(release, "publish"))).toEqual(["contents: read", "packages: write", "id-token: write", "attestations: write"]);
     expect(permissions(job(release, "verify"))).toEqual(["contents: read", "packages: read", "attestations: read"]);
     expect(permissions(job(release, "tag"))).toEqual(["contents: read", "packages: write"]);
@@ -245,6 +247,8 @@ describe("pins", () => {
   it("every action in every workflow is pinned by a full commit SHA", () => {
     for (const n of workflows) {
       for (const m of readFileSync(join(WF, n), "utf8").matchAll(/uses: (\S+)/g)) {
+        // a workflow of this repository, called by its path, is pinned by the commit that runs it
+        if ((m[1] ?? "").startsWith("./.github/workflows/")) continue;
         expect(m[1], `${n}: ${m[1] ?? ""}`).toMatch(/^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/);
       }
     }
@@ -278,7 +282,7 @@ describe("pins", () => {
 export function mutantsFaults(release: string): string[] {
   const m = job(release, "mutants");
   const faults: string[] = [];
-  if (!job(release, "publish").includes("\n    needs: [gate, mutants]\n")) faults.push("publish does not wait for the mutation check");
+  if (!/\n {4}needs: \[gate, mutants(, snyk)?\]\n/.test(job(release, "publish"))) faults.push("publish does not wait for the mutation check");
   if (!/\n {6}- name: Every mutant\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {8}run: npm run mutate\n/.test(m)) faults.push("the mutation check does not run every mutant");
   if (!m.includes("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n")) faults.push("the mutation check does not run on the gate's say-so");
   if (m.includes("continue-on-error")) faults.push("the mutation check may fail without failing the release");
@@ -658,8 +662,10 @@ describe("the checks the README names", () => {
     ...jobNames(read("ci.yml")).map((j) => `CI | ${j}`),
     ...jobNames(read("security.yml")).map((j) => `Security | ${j}`),
     ...jobNames(read("scorecard.yml")).map((j) => `Scorecard | ${j}`),
+    ...jobNames(read("snyk.yml")).map((j) => `Snyk | ${j}`),
     "Release | Release gate",
     "Release | Mutation check",
+    "Release | Snyk (dependencies)",
   ];
 
   it("the job names are pinned, so a renamed job is red here and in the README", () => {
@@ -674,10 +680,12 @@ describe("the checks the README names", () => {
       "Security | Secrets in history (gitleaks)",
       "Security | DAST (OWASP ZAP against the container)",
       "Scorecard | Scorecard analysis",
+      "Snyk | Snyk (dependencies)",
       "Release | Release gate",
       "Release | Mutation check",
+      "Release | Snyk (dependencies)",
     ]);
-    expect(jobNames(release).slice(0, 2)).toEqual(["Release gate", "Mutation check"]);
+    expect(jobNames(release).slice(0, 3)).toEqual(["Release gate", "Mutation check", "Snyk (dependencies)"]);
   });
 
   it("the README's Checks table lists exactly those jobs, in that order", () => {
@@ -871,5 +879,113 @@ describe("the images bumped by hand", () => {
   it("does not read a digest without an image name, or a uses: line, as an image", () => {
     const d = `@sha256:${"c".repeat(64)}`;
     expect(pinnedImageFaults(security, [...sources, `IMAGE="$name${d}"`, `oci://$IMAGE${d}`, `      - uses: actions/checkout${d}`])).toEqual([]);
+  });
+});
+
+// Owner 2026-11-15: Snyk runs once a week on main and once per release, before
+// anything is published, and never on a pull request or a push.
+
+/** snyk.yml's whole trigger block: the dispatch takes no input and is followed directly by the call. */
+export const SNYK_TRIGGERS = '\non:\n  schedule:\n    - cron: "17 5 * * 1" # Mondays 05:17 UTC\n  workflow_dispatch:\n  workflow_call:\n    inputs:\n      ref:\n';
+/** The scan step whole (name, env and run, nothing between) and the upload's head after it: no `|| true`, no lower threshold, the SARIF uploaded only for the run's own commit. */
+export const SNYK_SCAN =
+  "\n      - name: Snyk test\n        env:\n          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        run: |\n          mkdir -p sarif\n          ./snyk test --severity-threshold=high --sarif-file-output=sarif/snyk.sarif\n" +
+  "      - name: Upload SARIF to code scanning\n        # A called run scans another commit than the caller's github.sha; its findings are\n        # uploaded only when they belong to the commit code scanning files them under.\n" +
+  "        if: always() && hashFiles('sarif/snyk.sarif') != '' && (inputs.ref == '' || inputs.ref == github.sha)\n";
+/** The scan checks out the commit it was handed, or the run's own. */
+export const SNYK_CHECKOUT = "\n        with:\n          ref: ${{ inputs.ref || github.sha }}\n          persist-credentials: false\n";
+const SNYK_SECRETS = "\n    secrets:\n      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n";
+
+/** The guard step's run block, dedented, as the runner hands it to bash. */
+export function snykGuard(snyk: string): string {
+  const m = /\n {6}- name: The run scans main or a release's commit\n(?: {8}.*\n)*? {8}run: \|\n((?: {10}.*\n)+)/.exec(snyk);
+  return (m?.[1] ?? "").replace(/^ {10}/gm, "");
+}
+
+/** The guard's exit status for one REF_IN on one GITHUB_REF, run as the runner does. */
+export function runSnykGuard(script: string, ref: string, gitRef: string): number {
+  try {
+    execFileSync("bash", ["--noprofile", "--norc", "-eo", "pipefail", "-c", script], { env: { PATH: process.env.PATH ?? "", REF_IN: ref, GITHUB_REF: gitRef }, stdio: "ignore" });
+    return 0;
+  } catch (e) {
+    return (e as { status?: number }).status ?? -1;
+  }
+}
+
+const SHA40 = "0123456789abcdef0123456789abcdef01234567";
+/** What the guard must answer: a wrong ref is exit 2, never a skip (a skipped job is a green run about nothing). */
+export const SNYK_GUARD_CASES: [string, string, number][] = [
+  ["", "refs/heads/feature", 2],
+  ["", "refs/pull/1/merge", 2],
+  ["", "refs/heads/main", 0],
+  [SHA40, "refs/heads/feature", 0],
+  ["v1.2.3", "refs/heads/main", 2],
+  [SHA40.toUpperCase(), "refs/heads/main", 2],
+  [SHA40.slice(1), "refs/heads/main", 2],
+];
+
+export function snykFaults(files: Record<string, string>): string[] {
+  const faults: string[] = [];
+  const sn = files["snyk.yml"] ?? "";
+  const on = /\non:\n([^]*?)\n(?=[a-z])/.exec(sn)?.[1] ?? "";
+  const triggers = [...on.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]);
+  if (triggers.join() !== "schedule,workflow_dispatch,workflow_call") faults.push(`snyk.yml runs on ${triggers.join(", ")}, not the weekly schedule, a dispatch and the release call alone`);
+  if (!sn.includes(SNYK_TRIGGERS)) faults.push("snyk.yml's trigger block is not the weekly schedule, a dispatch with no input and the release call");
+  if (!sn.includes(SNYK_SCAN)) faults.push("snyk.yml's scan step and SARIF upload are not exactly the high-threshold scan and the own-commit upload");
+  if (!sn.includes(SNYK_CHECKOUT)) faults.push("snyk.yml does not check out ${{ inputs.ref || github.sha }}");
+  if (sn.includes("continue-on-error")) faults.push("snyk.yml carries continue-on-error");
+  const guard = snykGuard(sn);
+  if (guard === "") faults.push("snyk.yml has no guard step");
+  else
+    for (const [ref, gitRef, want] of SNYK_GUARD_CASES) {
+      const got = runSnykGuard(guard, ref, gitRef);
+      if (got !== want) faults.push(`the guard exits ${String(got)} for REF_IN="${ref}" on ${gitRef}, not ${String(want)}`);
+    }
+  for (const [n, t] of Object.entries(files)) {
+    if (n !== "snyk.yml" && t.includes("snyk test")) faults.push(`${n} runs the Snyk CLI; only snyk.yml does`);
+    if (n !== "release.yml" && t.includes("workflows/snyk.yml")) faults.push(`${n} references workflows/snyk.yml; only release.yml calls it`);
+    if (t.includes("secrets: inherit")) faults.push(`${n} passes secrets: inherit`);
+  }
+  const rel = files["release.yml"] ?? "";
+  const s = /\n {2}snyk:\n/.test(rel.slice(rel.indexOf("\njobs:\n"))) ? job(rel, "snyk") : "";
+  if (!s.includes("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n") || !s.includes("\n    uses: ./.github/workflows/snyk.yml\n    with:\n      ref: ${{ needs.gate.outputs.commit }}\n")) faults.push("release.yml's snyk job does not call snyk.yml on the gate's commit");
+  if (!s.endsWith(`${SNYK_SECRETS}\n`) && !s.endsWith(SNYK_SECRETS)) faults.push("release.yml's snyk job does not pass exactly SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}");
+  if (!/\n {4}needs: \[gate, mutants, snyk\]\n/.test(job(rel, "publish"))) faults.push("release.yml's publish does not need snyk");
+  return faults;
+}
+
+describe("Snyk: weekly on main and once per release, never on a pull request or a push", () => {
+  const files: Record<string, string> = Object.fromEntries(workflows.map((n) => [n, readFileSync(join(WF, n), "utf8")]));
+  const plant = (n: string, from: string, to: string): Record<string, string> => {
+    const t = files[n] ?? "";
+    expect(t.includes(from), `${n}: ${from}`).toBe(true);
+    return { ...files, [n]: t.replace(from, to) };
+  };
+
+  it("the workflows hold the rule", () => {
+    expect(snykFaults(files)).toEqual([]);
+    // Snyk is the one schedule this rule adds; ci.yml keeps none (triggerFaults)
+    expect(readFileSync(join(REPO, "SECURITY.md"), "utf8")).toContain("| Snyk over the dependencies | Snyk | weekly on `main`, and every release before the image is published |");
+  });
+
+  it("each planted fault goes red", () => {
+    const cases: [string, Record<string, string>][] = [
+      ['the guard exits 0 for REF_IN="" on refs/heads/feature', plant("snyk.yml", 'not on $GITHUB_REF"; exit 2', 'not on $GITHUB_REF"; exit 0')],
+      ['the guard exits 2 for REF_IN="" on refs/heads/main', plant("snyk.yml", "if [[ -n $REF_IN ]]; then", "if [[ -n x ]]; then")],
+      ['the guard exits 0 for REF_IN="v1.2.3"', plant("snyk.yml", "            [[ $REF_IN =~ ^[0-9a-f]{40}$ ]] || {", "            true || {")],
+      ["a dispatch with no input", plant("snyk.yml", "  workflow_dispatch:\n", "  workflow_dispatch:\n    inputs:\n      ref:\n        type: string\n")],
+      ["the weekly schedule, a dispatch and the release call alone", plant("snyk.yml", "  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n")],
+      ["the weekly schedule, a dispatch and the release call alone", plant("snyk.yml", "  workflow_dispatch:\n", "  push:\n    branches: [main]\n  workflow_dispatch:\n")],
+      ["the high-threshold scan", plant("snyk.yml", "--sarif-file-output=sarif/snyk.sarif\n", "--sarif-file-output=sarif/snyk.sarif || true\n")],
+      ["the high-threshold scan", plant("snyk.yml", "          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        run: |\n          mkdir", "          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        continue-on-error: true\n        run: |\n          mkdir")],
+      ["the own-commit upload", plant("snyk.yml", " && (inputs.ref == '' || inputs.ref == github.sha)", "")],
+      ["snyk.yml does not check out", plant("snyk.yml", "ref: ${{ inputs.ref || github.sha }}", "ref: ${{ github.sha }}")],
+      ["snyk.yml carries continue-on-error", plant("snyk.yml", "    timeout-minutes: 10\n", "    timeout-minutes: 10\n    continue-on-error: true\n")],
+      ["ci.yml references workflows/snyk.yml", plant("ci.yml", "\njobs:\n", "\njobs:\n  s:\n    uses: ./.github/workflows/snyk.yml\n")],
+      ["release.yml passes secrets: inherit", plant("release.yml", SNYK_SECRETS, "\n    secrets: inherit\n")],
+      ["release.yml's publish does not need snyk", plant("release.yml", "    needs: [gate, mutants, snyk]\n", "    needs: [gate, mutants]\n")],
+      ["security.yml runs the Snyk CLI", plant("security.yml", "\njobs:\n", "\njobs:\n  x:\n    steps:\n      - run: ./snyk test\n")],
+    ];
+    for (const [want, f] of cases) expect(snykFaults(f).join("; "), want).toContain(want);
   });
 });
