@@ -2,22 +2,10 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-function	control.admit(p_provider text, p_caller text, p_subject text)
-function	control.audit_change()
-function	control.bucket_width(p_window_s integer, p_burst_window_s integer)
-function	control.changes_append_only()
-function	control.check_budget_shape()
 function	control.feed_state_after_change()
 function	control.feed_state_after_truncate()
-function	control.fit_shares(p_budget_key text)
 function	control.fold_feed_state(p_ledger text, p_facts control.run_fact[])
-function	control.hold(p_provider text, p_reason text)
-function	control.publish_terms(p jsonb)
 function	control.recompute_feed_state(p_ledger text, p_keys text[])
-function	control.release(p_provider text, p_caller text, p_token text)
-function	control.rollup_refresh(p_from timestamp with time zone)
-function	control.set_budget(p_budget_key text, p_caller text, p_field text, p_value numeric, p_actor text, p_reason text)
-function	control.want(p_provider text)
 function	ingestor.project_run(p_run_id bigint)
 function	ingestor.register_feed(p_feed_key text, p_display_name text, p_provider text, p_licence_id text, p_licence_label text, p_attribution text, p_cadence_s integer, p_min_interval_s integer, p_enabled boolean, p_registry_version text)
 function	ingestor.taken_feed_keys(p_ids text[])
@@ -75,12 +63,6 @@ function	public.vf_postcode_normalise()
 function	public.watch_events_notify()
 function	public.watches_enforce_session_limit()
 function	public.weather_warning_english(german_id bigint)
-trigger	control.budgets.budgets_audit
-trigger	control.budgets.budgets_shape
-trigger	control.callers.callers_audit
-trigger	control.changes.changes_append_only
-trigger	control.shares.shares_audit
-trigger	control.shares.shares_shape
 trigger	public.charging_point_status.charging_status_runs_forget
 trigger	public.charging_point_status.charging_status_runs_note
 trigger	public.charging_point_status.charging_status_runs_restate

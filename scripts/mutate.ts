@@ -15,6 +15,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { SCHEMA_BEHAVIOUR_MUTANTS } from "./mutants-schema-behaviour.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const FILE = join(ROOT, "src", "migrations", "plan.ts");
@@ -135,6 +136,8 @@ const MUTANTS: readonly Mutant[] = [
   { name: "db: 0263 ui.card_page_size takes 51", config: DB, file: at("db", "baseline", "0293_baseline.sql"), tests: ["test/replays.db.test.ts"], from: "WHEN (key = 'ui.card_page_size'::text) THEN (((value)::integer >= 3) AND ((value)::integer <= 50))", to: "WHEN (key = 'ui.card_page_size'::text) THEN (((value)::integer >= 3) AND ((value)::integer <= 51))" },
   { name: "db: 0285 a cap may take the other callers' floors", config: DB, file: at("db", "baseline", "0293_baseline.sql"), tests: ["test/replays.db.test.ts"], from: "sh.cap > ceil_ - (fl - sh.floor)", to: "sh.cap > ceil_" },
   { name: "db: 0285 owed_by without owed_at", config: DB, file: at("db", "baseline", "0293_baseline.sql"), tests: ["test/replays.db.test.ts"], from: "CONSTRAINT budget_state_owed_pair CHECK (((owed_by IS NULL) = (owed_at IS NULL)))", to: "CONSTRAINT budget_state_owed_pair CHECK (((owed_by IS NULL) OR (owed_at IS NOT NULL)))" },
+  // #32: the schema behaviour mutants (functions, triggers, views); each names database tests only.
+  ...SCHEMA_BEHAVIOUR_MUTANTS.map((m) => ({ ...m, config: DB })),
 ];
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
@@ -156,7 +159,7 @@ let killed = 0;
 const controls = new Set(MUTANTS.filter((m) => (only === null || m.name.includes(only)) && m.config !== undefined).map((m) => JSON.stringify([m.config, m.tests ?? TESTS])));
 for (const c of controls) {
   const [config, tests] = JSON.parse(c) as [string, string[]];
-  const r = spawnSync("npx", ["vitest", "run", "--config", config, ...tests], { cwd: ROOT, encoding: "utf8" });
+  const r = spawnSync("npx", ["vitest", "run", "--config", config, ...tests], { cwd: ROOT, encoding: "utf8", env: { ...process.env, VF_REQUIRE_DB: "1" } });
   if (r.status !== 0) {
     console.log(`✗ refused: ${tests.join(" ")} fails UNMUTATED under ${config} (TEST_DATABASE_URL and psql set?) — no mutant of it can be judged`);
     process.exit(2);
@@ -177,7 +180,9 @@ try {
       continue;
     }
     writeFileSync(file, mutated);
-    const r = spawnSync("npx", ["vitest", "run", ...(m.config === undefined ? [] : ["--config", m.config]), ...(m.tests ?? TESTS)], { cwd: ROOT, encoding: "utf8" });
+    // A database test runs under its own config, and must not pass by being skipped.
+    const env = m.config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" };
+    const r = spawnSync("npx", ["vitest", "run", ...(m.config === undefined ? [] : ["--config", m.config]), ...(m.tests ?? TESTS)], { cwd: ROOT, encoding: "utf8", env });
     restore();
     if (r.status === 0) {
       console.log(`  ✗ SURVIVED: ${m.name}`);

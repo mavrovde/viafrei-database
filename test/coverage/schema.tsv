@@ -543,6 +543,34 @@ view	domains.weather_warnings_en_merged	test/weather.db.test.ts > joins a German
 view	domains.weather_warnings_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
 view	domains.weather_warnings_merged	test/weather.db.test.ts > joins a German warning to its English text by content, as the old function does
 view	domains.webcams_merged	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+function	control.admit(p_provider text, p_caller text, p_subject text)	test/control-plane.db.test.ts > share, reserved and ceiling: a caller stops at its cap, the others where they would eat an unmet floor, and the floor's owner still goes to the ceiling
+function	control.admit(p_provider text, p_caller text, p_subject text)	test/control-plane.db.test.ts > no-budget and no-share: an unknown provider, an unknown caller and a caller without a share each leave a refusal row
+function	control.admit(p_provider text, p_caller text, p_subject text)	test/control-plane.db.test.ts > spacing, the person's stamp and the owed mark: a person refused for the spacing below its floor is owed the next slot; the background yields to it
+function	control.admit(p_provider text, p_caller text, p_subject text)	test/control-plane.db.test.ts > burst: three a minute key-wide, the fourth refused whoever asks
+function	control.audit_change()	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
+function	control.audit_change()	test/control-plane.db.test.ts > the actor defaults to the role that made the change
+function	control.bucket_width(p_window_s integer, p_burst_window_s integer)	test/control-plane.db.test.ts > bucket_width: a minute of the shorter window, never below one second
+function	control.changes_append_only()	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
+function	control.check_budget_shape()	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
+function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a key planted as before #1221 (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing
+function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a ceiling below the callers switched on is refused by name; a paused key and a key of one caller are fitted to the ceiling
+function	control.hold(p_provider text, p_reason text)	test/control-plane.db.test.ts > hold: a 5xx holds a key with a hold for its hold_s and admit refuses it; a key without one is never held; a reason outside the list is refused
+function	control.hold(p_provider text, p_reason text)	test/control-plane.db.test.ts > a hold never shortens one in force
+function	control.publish_terms(p jsonb)	test/control-plane.db.test.ts > publishes callers, budgets with their ceiling at the licence, a state row per budget and the seed shares — audited as publish_terms
+function	control.publish_terms(p jsonb)	test/control-plane.db.test.ts > re-publishing changes nothing in force: a lowered ceiling and a changed cap stay, a share is seeded once; an empty declaration is refused
+function	control.release(p_provider text, p_caller text, p_token text)	test/control-plane.db.test.ts > release: an unsent slot is counted not-sent once, and is free again; a malformed token or an unknown provider changes nothing
+function	control.rollup_refresh(p_from timestamp with time zone)	test/control-plane.db.test.ts > the hourly rollup equals the ledger, caller by caller and outcome by outcome, with the shape in force
+function	control.rollup_refresh(p_from timestamp with time zone)	test/control-plane.db.test.ts > retention: usage keeps 48 h, refusals 14 days, usage_hourly 90 days — the row just inside each is kept
+function	control.set_budget(p_budget_key text, p_caller text, p_field text, p_value numeric, p_actor text, p_reason text)	test/control-plane.db.test.ts > refuses a bad actor, no reason, a negative, an unknown budget, a fraction, above-licence, a shape the key has not, an unknown field
+function	control.set_budget(p_budget_key text, p_caller text, p_field text, p_value numeric, p_actor text, p_reason text)	test/control-plane.db.test.ts > a cap of 0 switches one door off with its floor; a cap back above 0 gives it a floor of 1
+function	control.want(p_provider text)	test/control-plane.db.test.ts > want stamps a spaced key's person ask and leaves a key without spacing alone
+trigger	control.budgets.budgets_audit	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
+trigger	control.budgets.budgets_audit	test/control-plane.db.test.ts > every control trigger fires always: session_replication_role = replica skips none
+trigger	control.budgets.budgets_shape	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
+trigger	control.callers.callers_audit	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
+trigger	control.changes.changes_append_only	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
+trigger	control.shares.shares_audit	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
+trigger	control.shares.shares_shape	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted
