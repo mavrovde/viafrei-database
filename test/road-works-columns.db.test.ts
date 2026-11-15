@@ -109,15 +109,16 @@ describe.skipIf(url === undefined)("domains.road_works reader columns", () => {
   });
 
   it("has its own checks and the anchor index, the rest as speed_cameras", async () => {
-    const own = /T_(kind|period_ordered|closure_window_ordered|anchor) /;
+    const own = /T_(kind|period_ordered|closure_window_ordered|anchor|title_nonempty) /;
     const shape = await t.shape("road_works");
     expect(shape.filter((d) => own.test(d))).toEqual([
       "CREATE INDEX T_anchor ON domains.T USING gist (anchor) WHERE (closed_at IS NULL)",
       "c T_closure_window_ordered CHECK (((closure_starts_at IS NULL) OR (closure_ends_at IS NULL) OR (closure_starts_at < closure_ends_at)))",
       "c T_kind CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['roadworks'::text, 'event'::text, 'message'::text]))))",
       "c T_period_ordered CHECK (((starts_at IS NULL) OR (ends_at IS NULL) OR (starts_at <= ends_at)))",
+      "c T_title_nonempty CHECK ((title <> ''::text))",
     ]);
-    expect(shape.filter((d) => !own.test(d))).toEqual(await t.shape("speed_cameras"));
+    expect(shape.filter((d) => !own.test(d))).toEqual(await t.convention());
     expect(await t.policies("road_works")).toEqual(await t.policies("speed_cameras"));
   });
 

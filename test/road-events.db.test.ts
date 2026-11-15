@@ -133,7 +133,7 @@ describe.skipIf(url === undefined)("domains.road_events", () => {
       "c T_record_types_array CHECK ((jsonb_typeof(record_types) = 'array'::text))",
       "c T_valid_windows_array CHECK (((valid_windows IS NULL) OR (jsonb_typeof(valid_windows) = 'array'::text)))",
     ]);
-    expect(shape.filter((d) => !own.test(d))).toEqual(await t.shape("speed_cameras"));
+    expect(shape.filter((d) => !own.test(d))).toEqual(await t.convention());
   });
 
   it("enables and forces row-level security with the policies of speed_cameras, and the merged view", async () => {

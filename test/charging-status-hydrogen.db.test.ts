@@ -225,7 +225,7 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
 
   it("has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at", async () => {
     const own = /T_(geom_point|refill_nonempty|address_object|brin|evse) /;
-    const cameras = (await t.shape("speed_cameras")).filter((d) => !/T_(owner_key|pkey) /.test(d));
+    const cameras = (await t.convention()).filter((d) => !/T_(owner_key|pkey) /.test(d));
     const status = await t.shape("charging_point_status");
     expect(status.filter((d) => own.test(d))).toEqual([
       "CREATE INDEX T_brin ON ONLY domains.T USING brin (observed_at)",
@@ -245,7 +245,7 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
       "c T_geom_point CHECK (((geom IS NULL) OR (geometrytype(geom) = 'POINT'::text)))",
       "c T_refill_nonempty CHECK (((jsonb_typeof(refill) = 'array'::text) AND (jsonb_array_length(refill) > 0)))",
     ]);
-    expect(h2.filter((d) => !own.test(d))).toEqual(await t.shape("speed_cameras"));
+    expect(h2.filter((d) => !own.test(d))).toEqual(await t.convention());
   });
 
   it("enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy", async () => {

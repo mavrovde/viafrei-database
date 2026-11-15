@@ -17,6 +17,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { DatabaseService } from "../src/service.js";
+import { SPEED_CAMERAS_OWN } from "./domain-db.js";
 import { REPO } from "./helpers.js";
 
 const url = process.env["TEST_DATABASE_URL"];
@@ -211,7 +212,7 @@ describe.skipIf(url === undefined)("domains.charging_points", () => {
       "c T_point_no CHECK ((point_no >= 1))",
     ]);
     const mine = all.filter((d) => !own.includes(d));
-    expect(mine).toEqual(await shape("speed_cameras"));
+    expect(mine).toEqual((await shape("speed_cameras")).filter((d) => !SPEED_CAMERAS_OWN.includes(d)));
     expect(mine.filter((d) => d.startsWith("CREATE"))).toEqual([
       "CREATE INDEX T_geom ON domains.T USING gist (geom)",
       "CREATE INDEX T_match ON domains.T USING btree (match_key) WHERE (closed_at IS NULL)",

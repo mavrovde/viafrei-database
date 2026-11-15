@@ -302,7 +302,7 @@ describe.skipIf(url === undefined)("the weather domains", () => {
   });
 
   it("has the constraints and indexes of the convention, and each table its own", async () => {
-    const model = await t.shape("speed_cameras");
+    const model = await t.convention();
     for (const table of TABLES) {
       const shape = (await t.shape(table.name)).map((d) => d.replaceAll(table.name, "T"));
       const own = shape.filter((d) => table.own.includes(d));

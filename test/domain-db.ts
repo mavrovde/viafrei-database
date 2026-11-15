@@ -15,6 +15,8 @@ import { REPO } from "./helpers.js";
 export const SYSTEM = ["id", "source_id", "feed", "external_id", "match_key", "observed_at", "first_seen_at", "updated_at", "closed_at", "geom", "extras"];
 export const MERGE_COLUMNS = ["entity_key", "trust", "attribution", "licence_id", "sources", "source_count"];
 /** The ingestor's SQL_TYPE vocabulary: the types a domain writer can declare. */
+/** domains.speed_cameras' own domain checks, outside the convention (0302: a camera's kind is required). */
+export const SPEED_CAMERAS_OWN: readonly string[] = ["c T_kind_nonempty CHECK ((kind <> ''::text))"];
 export const WRITER_TYPES = new Set(["text", "integer", "bigint", "double precision", "numeric", "boolean", "timestamp with time zone", "date", "jsonb"]);
 /** Every reader role of the baseline: none may read a new domain relation. */
 export const READERS = ["viafrei_mcp", "viafrei_digest", "viafrei_status", "viafrei_ops", "viafrei_translate"];
@@ -111,6 +113,17 @@ export class DomainDb {
         [table, schema],
       )
     ).rows;
+  }
+
+  /**
+   * The shape every domain table is compared with: domains.speed_cameras' indexes
+   * and constraints without its own domain check (SPEED_CAMERAS_OWN). Throws if
+   * that check is gone, so the filter cannot become a no-op.
+   */
+  async convention(): Promise<string[]> {
+    const all = await this.shape("speed_cameras");
+    if (!SPEED_CAMERAS_OWN.every((d) => all.includes(d))) throw new Error("speed_cameras no longer carries its own checks");
+    return all.filter((d) => !SPEED_CAMERAS_OWN.includes(d));
   }
 
   /** Indexes and constraints of a domain table, its own name replaced by T, sorted. */
