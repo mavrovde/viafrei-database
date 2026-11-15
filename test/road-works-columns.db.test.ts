@@ -8,8 +8,11 @@
  *
  * Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type pg from "pg";
+import { REPO } from "./helpers.js";
 import { DomainDb, MERGE_COLUMNS, refusal, SYSTEM, upsertSql, WRITER_TYPES } from "./domain-db.js";
 
 const url = process.env["TEST_DATABASE_URL"];
@@ -56,6 +59,7 @@ describe.skipIf(url === undefined)("domains.road_works reader columns", () => {
     await t.make([
       ["works-a", "road_works", 50],
       ["works-b", "road_works", 30],
+      ["works-c", "road_works", 50],
     ]);
   }, 900_000);
 
@@ -132,7 +136,12 @@ describe.skipIf(url === undefined)("domains.road_works reader columns", () => {
         .split("\n")
         .filter((l) => !/^\s+(r\.\w+|\(w\)\.\w+ AS \w+),$/.test(l))
         .join("\n");
-    const mine = strip(await def("road_works_merged"), "road_works");
+    const COMPLETE =
+      "(num_nonnulls(l.title, l.description, l.street, l.municipality, l.starts_at, l.ends_at, l.restriction, l.kind, l.place_text, l.organisation, l.closure, l.affects_traffic, l.day_precision, l.period_text, l.link, l.closure_starts_at, l.closure_ends_at)) DESC, ";
+    const full = strip(await def("road_works_merged"), "road_works");
+    // The one difference from speed_cameras_merged: road_works keeps the baseline's completeness tie-break.
+    expect(full).toContain(`l.observed_at DESC, ${COMPLETE}l.source_id`);
+    const mine = full.replace(COMPLETE, "");
     const model = strip(await def("speed_cameras_merged"), "speed_cameras");
     expect(mine).toMatch(/row_number\(\) OVER/);
     expect(mine).toBe(model);
@@ -140,6 +149,53 @@ describe.skipIf(url === undefined)("domains.road_works reader columns", () => {
     expect(g.get("road_works")).toEqual(g.get("speed_cameras"));
     expect(g.get("road_works_merged")).toEqual(g.get("speed_cameras_merged"));
     expect((await t.readable([W, `${W}_merged`])).open).toEqual([]);
+  });
+
+  it("decides two rows of equal trust and the same observed_at by completeness, the baseline's tie-break", async () => {
+    await t.planted(async (c) => {
+      const at = "2026-11-10T08:00:00Z";
+      for (const [src, extra] of [
+        ["works-a", { place_text: null, organisation: null, link: null }],
+        ["works-c", {}],
+      ] as const) {
+        await c.query("select set_config('viafrei.source_id', $1, true)", [src]);
+        await upsert(c, src, [{ ...WORK, external_id: `w-${src}`, match_key: "same-work", observed_at: at, ...extra }]);
+      }
+      const won = await c.query<{ source_id: string; source_count: number }>(`select source_id, source_count from ${W}_merged where entity_key = 'same-work'`);
+      expect(won.rows).toEqual([{ source_id: "works-c", source_count: 2 }]);
+    });
+  });
+
+  it("keeps the merged view's grant through the recreate: the owner and viafrei_ingestor's select, nothing else", async () => {
+    const acl = await t.pool.query<{ g: string }>(
+      `select g.grantee::regrole::text || ':' || g.privilege_type as g
+         from pg_class c, aclexplode(c.relacl) g
+        where c.oid = '${W}_merged'::regclass and g.grantee <> c.relowner order by 1`,
+    );
+    expect(acl.rows.map((x) => x.g)).toEqual(["viafrei_ingestor:SELECT"]);
+  });
+
+  it("its rollback note restores exactly the baseline's view and grant", async () => {
+    const file = readdirSync(join(REPO, "db", "migrations")).find((f) => f.startsWith("0298_"));
+    const text = readFileSync(join(REPO, "db", "migrations", file ?? "missing"), "utf8").split("\n");
+    const from = text.findIndex((l) => l.startsWith("-- rollback:"));
+    const note: string[] = [];
+    for (let i = from; i < text.length && (text[i] ?? "").startsWith("--"); i++) note.push((text[i] ?? "").replace(/^-- rollback:/, "").replace(/^--( {0,3})?/, ""));
+    const baseline = readFileSync(join(REPO, "db", "baseline", "0293_baseline.sql"), "utf8");
+    const view = /\nCREATE VIEW domains\.road_works_merged AS\n[^]*?WHERE \(rn = 1\);/.exec(baseline)?.[0].trim();
+    expect(view).toBeDefined();
+    await t.planted(async (c) => {
+      await c.query(note.join("\n"));
+      await c.query("set local search_path = ''");
+      const d = await c.query<{ d: string }>(`select pg_catalog.pg_get_viewdef('${W}_merged'::pg_catalog.regclass) as d`);
+      expect(`CREATE VIEW domains.road_works_merged AS\n${d.rows[0]?.d ?? ""}`).toBe(view);
+      const acl = await c.query<{ g: string }>(
+        `select g.grantee::pg_catalog.regrole::text || ':' || g.privilege_type as g
+           from pg_catalog.pg_class c, pg_catalog.aclexplode(c.relacl) g
+          where c.oid = '${W}_merged'::pg_catalog.regclass and g.grantee <> c.relowner`,
+      );
+      expect(acl.rows.map((x) => x.g)).toEqual(["viafrei_ingestor:SELECT"]);
+    });
   });
 
   it("takes a work through the ingestor's upsert, generates the anchor on the shape, and moves it with geom", async () => {

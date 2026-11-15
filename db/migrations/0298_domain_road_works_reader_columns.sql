@@ -34,8 +34,69 @@
 --   drop column link, drop column period_text, drop column day_precision,
 --   drop column answerable, drop column affects_traffic, drop column closure,
 --   drop column organisation, drop column place_text, drop column kind;
---   then create road_works_merged again as the baseline made it (0293) and
---   grant select on it to viafrei_ingestor;
+--   -- and the view exactly as the baseline made it (0293):
+--   CREATE VIEW domains.road_works_merged AS
+--    WITH live AS (
+--            SELECT r.id,
+--               r.source_id,
+--               r.feed,
+--               r.external_id,
+--               r.match_key,
+--               r.observed_at,
+--               r.first_seen_at,
+--               r.updated_at,
+--               r.closed_at,
+--               r.geom,
+--               r.extras,
+--               r.title,
+--               r.description,
+--               r.street,
+--               r.municipality,
+--               r.starts_at,
+--               r.ends_at,
+--               r.restriction,
+--               COALESCE(r.match_key, ((((r.source_id || '|'::text) || r.feed) || '|'::text) || r.external_id)) AS entity_key,
+--               s.trust,
+--               s.attribution,
+--               s.licence_id
+--              FROM (domains.road_works r
+--                LEFT JOIN ingestor.sources s ON ((s.id = r.source_id)))
+--             WHERE (r.closed_at IS NULL)
+--           ), ranked AS (
+--            SELECT l.*::record AS w,
+--               row_number() OVER (PARTITION BY l.entity_key ORDER BY l.trust DESC NULLS LAST, l.observed_at DESC, (num_nonnulls(l.title, l.description, l.street, l.municipality, l.starts_at, l.ends_at, l.restriction)) DESC, l.source_id, l.external_id) AS rn,
+--               jsonb_agg(jsonb_build_object('source_id', l.source_id, 'feed', l.feed, 'external_id', l.external_id, 'attribution', l.attribution, 'licence_id', l.licence_id, 'observed_at', l.observed_at)) OVER entity AS sources,
+--               count(*) OVER entity AS source_count
+--              FROM live l
+--             WINDOW entity AS (PARTITION BY l.entity_key ORDER BY l.source_id, l.feed, l.external_id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+--           )
+--    SELECT (w).id AS id,
+--       (w).source_id AS source_id,
+--       (w).feed AS feed,
+--       (w).external_id AS external_id,
+--       (w).match_key AS match_key,
+--       (w).observed_at AS observed_at,
+--       (w).first_seen_at AS first_seen_at,
+--       (w).updated_at AS updated_at,
+--       (w).closed_at AS closed_at,
+--       (w).geom AS geom,
+--       (w).extras AS extras,
+--       (w).title AS title,
+--       (w).description AS description,
+--       (w).street AS street,
+--       (w).municipality AS municipality,
+--       (w).starts_at AS starts_at,
+--       (w).ends_at AS ends_at,
+--       (w).restriction AS restriction,
+--       (w).entity_key AS entity_key,
+--       (w).trust AS trust,
+--       (w).attribution AS attribution,
+--       (w).licence_id AS licence_id,
+--       sources,
+--       (source_count)::integer AS source_count
+--      FROM ranked k
+--     WHERE (rn = 1);
+--   grant select on domains.road_works_merged to viafrei_ingestor;
 --   delete from schema_migrations where version = 298;
 
 drop view domains.road_works_merged;
@@ -74,8 +135,13 @@ comment on column domains.road_works.anchor is 'The point of geom nearest its ce
 
 create index road_works_anchor on domains.road_works using gist (anchor) where closed_at is null;
 
--- One merged entity per match key, the winner by source trust and then the
--- freshest, every contributing source attributed.
+-- One merged entity per match key, every contributing source attributed. The
+-- winner is the baseline's ranking: source trust, then the freshest, then the
+-- most complete row (num_nonnulls over what a reader shows), then source and
+-- external id. The completeness term is the baseline's seven columns and the
+-- reader columns added above that a publisher fills; answerable (our own
+-- decision), last_seen_at (bookkeeping) and anchor (derived from geom) are
+-- left out.
 create view domains.road_works_merged as
 with live as (
   select r.*, coalesce(r.match_key, r.source_id || '|' || r.feed || '|' || r.external_id) as entity_key,
@@ -84,7 +150,11 @@ with live as (
    where r.closed_at is null
 ), ranked as (
   select l as w,
-         row_number() over (partition by l.entity_key order by l.trust desc nulls last, l.observed_at desc, l.source_id, l.external_id) as rn,
+         row_number() over (partition by l.entity_key order by l.trust desc nulls last, l.observed_at desc,
+                                                          num_nonnulls(l.title, l.description, l.street, l.municipality, l.starts_at, l.ends_at, l.restriction,
+                                                                       l.kind, l.place_text, l.organisation, l.closure, l.affects_traffic, l.day_precision,
+                                                                       l.period_text, l.link, l.closure_starts_at, l.closure_ends_at) desc,
+                                                          l.source_id, l.external_id) as rn,
          jsonb_agg(jsonb_build_object('source_id', l.source_id, 'feed', l.feed, 'external_id', l.external_id,
                                       'attribution', l.attribution, 'licence_id', l.licence_id, 'observed_at', l.observed_at))
            over entity as sources,
