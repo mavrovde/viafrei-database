@@ -78,6 +78,62 @@ export function columnsOf(def: string, columns: readonly string[]): string[] {
 export type PlantResult = { readonly code: string | null; readonly constraint: string | null };
 
 /**
+ * Lifts every guard of `relation` but RLS, as the header says, for a row that
+ * names the columns `keep`: the primary key, user triggers (even those enabled
+ * ALWAYS), every check but `check` (all of them when null), every NOT NULL but
+ * the partition key's and `keep`'s; a partitioned relation without a default
+ * partition gets one. Returns the insert of such a row, a partition key it does
+ * not name filled with now(). The caller holds the transaction; nothing here
+ * commits.
+ */
+export type LiftOptions = {
+  /** Keep the primary key (for a test of it). */
+  readonly pk?: boolean;
+  /** Keep foreign keys firing: no session_replication_role = replica (user triggers are still disabled). */
+  readonly fks?: boolean;
+};
+
+export async function liftGuards(
+  c: pg.ClientBase,
+  relation: string,
+  keep: readonly string[],
+  check: string | null,
+  opts: LiftOptions = {},
+): Promise<(row: Readonly<Record<string, string | null>>) => { sql: string; values: (string | null)[] }> {
+  if (opts.fks !== true) await c.query("set local session_replication_role = replica");
+  const [schema = "", rel = ""] = relation.split(".");
+  const meta = await c.query<{ pk: string | null; parted: boolean; hasdefault: boolean; key: string[]; cols: { name: string; notnull: boolean; identity: boolean; always: boolean; generated: boolean; hasdefault: boolean }[] }>(
+    `select (select conname from pg_constraint where conrelid = c.oid and contype = 'p') as pk, c.relkind = 'p' as parted,
+            exists (select from pg_partitioned_table p where p.partrelid = c.oid and p.partdefid <> 0) as hasdefault,
+            coalesce((select array_agg(a.attname::text) from pg_partitioned_table p cross join unnest(p.partattrs) k(n) join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n where p.partrelid = c.oid), '{}') as key,
+            (select json_agg(json_build_object('name', a.attname, 'notnull', a.attnotnull, 'identity', a.attidentity <> '', 'always', a.attidentity = 'a', 'generated', a.attgenerated <> '', 'hasdefault', a.atthasdef))
+               from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped) as cols
+       from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = $1 and c.relname = $2`,
+    [schema, rel],
+  );
+  const m = meta.rows[0];
+  if (m === undefined) throw new Error(`${relation}: no such relation`);
+  if (m.pk !== null && opts.pk !== true) await c.query(`alter table ${relation} drop constraint ${pg.escapeIdentifier(m.pk)} cascade`);
+  await c.query(`alter table ${relation} disable trigger user`);
+  const others = await c.query<{ n: string }>("select conname as n from pg_constraint where conrelid = $1::regclass and contype = 'c' and (conname <> $2 or $3) and coninhcount = 0", [relation, check ?? "", check === null]);
+  for (const o of others.rows) await c.query(`alter table ${relation} drop constraint ${pg.escapeIdentifier(o.n)}`);
+  for (const col of m.cols) {
+    if (col.notnull && !col.identity && !col.generated && !m.key.includes(col.name) && !keep.includes(col.name)) {
+      await c.query(`alter table ${relation} alter column ${pg.escapeIdentifier(col.name)} drop not null`);
+    }
+  }
+  if (m.parted && !m.hasdefault) await c.query(`create table ${pg.escapeIdentifier(schema)}.zz_check_plant partition of ${relation} default`);
+  return (row) => {
+    const named = Object.keys(row);
+    const fill = m.cols.filter((x) => m.key.includes(x.name) && !x.hasdefault && !named.includes(x.name)).map((x) => x.name);
+    const cols = [...named, ...fill].map((x) => pg.escapeIdentifier(x)).join(", ");
+    const vals = [...named.map((_, i) => `$${String(i + 1)}`), ...fill.map(() => "now()")].join(", ");
+    const over = m.cols.some((x) => x.always && named.includes(x.name)) ? " overriding system value" : "";
+    return { sql: `insert into ${relation} (${cols})${over} values (${vals})`, values: Object.values(row) };
+  };
+}
+
+/**
  * One plant: the row `row` in `relation`, every other guard lifted as
  * the header says, inside a savepoint that is rolled back. The client must be
  * in a transaction. `lift` drops the check itself too: the control that the
@@ -86,35 +142,9 @@ export type PlantResult = { readonly code: string | null; readonly constraint: s
 export async function plant(c: pg.ClientBase, relation: string, row: Readonly<Record<string, string>>, check: string, lift = false): Promise<PlantResult> {
   await c.query("savepoint plant");
   try {
-    await c.query("set local session_replication_role = replica");
-    const [schema = "", rel = ""] = relation.split(".");
-    const meta = await c.query<{ pk: string | null; parted: boolean; hasdefault: boolean; key: string[]; cols: { name: string; notnull: boolean; identity: boolean; generated: boolean; hasdefault: boolean }[] }>(
-      `select (select conname from pg_constraint where conrelid = c.oid and contype = 'p') as pk, c.relkind = 'p' as parted,
-              exists (select from pg_partitioned_table p where p.partrelid = c.oid and p.partdefid <> 0) as hasdefault,
-              coalesce((select array_agg(a.attname::text) from pg_partitioned_table p cross join unnest(p.partattrs) k(n) join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n where p.partrelid = c.oid), '{}') as key,
-              (select json_agg(json_build_object('name', a.attname, 'notnull', a.attnotnull, 'identity', a.attidentity <> '', 'generated', a.attgenerated <> '', 'hasdefault', a.atthasdef))
-                 from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped) as cols
-         from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = $1 and c.relname = $2`,
-      [schema, rel],
-    );
-    const m = meta.rows[0];
-    if (m === undefined) throw new Error(`${relation}: no such relation`);
-    if (m.pk !== null) await c.query(`alter table ${relation} drop constraint ${pg.escapeIdentifier(m.pk)} cascade`);
-    await c.query(`alter table ${relation} disable trigger user`);
-    const others = await c.query<{ n: string }>("select conname as n from pg_constraint where conrelid = $1::regclass and contype = 'c' and (conname <> $2 or $3) and coninhcount = 0", [relation, check, lift]);
-    for (const o of others.rows) await c.query(`alter table ${relation} drop constraint ${pg.escapeIdentifier(o.n)}`);
-    for (const col of m.cols) {
-      if (col.notnull && !col.identity && !col.generated && !m.key.includes(col.name) && !(col.name in row)) {
-        await c.query(`alter table ${relation} alter column ${pg.escapeIdentifier(col.name)} drop not null`);
-      }
-    }
-    if (m.parted && !m.hasdefault) await c.query(`create table ${pg.escapeIdentifier(schema)}.zz_check_plant partition of ${relation} default`);
-    const named = Object.keys(row);
-    const fill = m.cols.filter((x) => m.key.includes(x.name) && !x.hasdefault && !named.includes(x.name)).map((x) => x.name);
-    const cols = [...named, ...fill].map((x) => pg.escapeIdentifier(x)).join(", ");
-    const vals = [...named.map((_, i) => `$${String(i + 1)}`), ...fill.map(() => "now()")].join(", ");
+    const insert = (await liftGuards(c, relation, Object.keys(row), lift ? null : check))(row);
     try {
-      await c.query(`insert into ${relation} (${cols}) values (${vals})`, Object.values(row));
+      await c.query(insert.sql, insert.values);
       return { code: null, constraint: null };
     } catch (e) {
       const err = e as { code?: string; constraint?: string };

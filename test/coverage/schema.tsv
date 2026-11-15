@@ -2110,3 +2110,819 @@ partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > every daily 
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > serve's boot covers today-3 … today+30 for every daily tick, one partition per UTC day named <table>_YYYYMMDD, and nothing else
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > every day partition carries each of its parent's indexes, the BRIN on observed_at included
 partitioned	public.vrn_transit_delays	test/partitioned.db.test.ts > the no-archive ticks of viafrei's TICK_DROP_KEEP_DAYS drop their oldest day in one transaction, detach and drop, and the window stays whole
+policy	domains.charging_point_status.charging_point_status_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.charging_point_status.charging_point_status_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.charging_point_status.charging_point_status_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.charging_point_status.charging_point_status_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.charging_points.charging_points_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.charging_points.charging_points_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.charging_points.charging_points_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.charging_points.charging_points_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.charging_points.charging_points_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.charging_points.charging_points_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.hydrogen_stations.hydrogen_stations_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.hydrogen_stations.hydrogen_stations_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.hydrogen_stations.hydrogen_stations_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.hydrogen_stations.hydrogen_stations_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.hydrogen_stations.hydrogen_stations_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.hydrogen_stations.hydrogen_stations_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_facilities.parking_facilities_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities.parking_facilities_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_facilities.parking_facilities_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities.parking_facilities_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.parking_facilities.parking_facilities_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities.parking_facilities_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.parking_facilities_sid.parking_facilities_sid_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_facilities_sid.parking_facilities_sid_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_occupancy.parking_occupancy_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy.parking_occupancy_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_occupancy.parking_occupancy_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy.parking_occupancy_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_context_feature_versions.road_context_feature_versions_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_context_feature_versions.road_context_feature_versions_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_context_feature_versions.road_context_feature_versions_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_context_feature_versions.road_context_feature_versions_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_context_features.road_context_features_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_context_features.road_context_features_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_context_features.road_context_features_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_context_features.road_context_features_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.road_context_features.road_context_features_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_context_features.road_context_features_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_events.road_events_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_events.road_events_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_events.road_events_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_events.road_events_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.road_events.road_events_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_events.road_events_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_weather_forecast.road_weather_forecast_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_weather_forecast.road_weather_forecast_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_weather_forecast.road_weather_forecast_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_weather_forecast.road_weather_forecast_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_weather_stations.road_weather_stations_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_weather_stations.road_weather_stations_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_weather_stations.road_weather_stations_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_weather_stations.road_weather_stations_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.road_weather_stations.road_weather_stations_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_weather_stations.road_weather_stations_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.road_works.road_works_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_works.road_works_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.road_works.road_works_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_works.road_works_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.road_works.road_works_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.road_works.road_works_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.route_recommendations.route_recommendations_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.route_recommendations.route_recommendations_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.route_recommendations.route_recommendations_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.route_recommendations.route_recommendations_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.route_recommendations.route_recommendations_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.route_recommendations.route_recommendations_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.speed_cameras.speed_cameras_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.speed_cameras.speed_cameras_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.speed_cameras.speed_cameras_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.speed_cameras.speed_cameras_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.speed_cameras.speed_cameras_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.speed_cameras.speed_cameras_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.street_bay_state.street_bay_state_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bay_state.street_bay_state_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.street_bay_state.street_bay_state_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bay_state.street_bay_state_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.street_bay_state.street_bay_state_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bay_state.street_bay_state_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.street_bays.street_bays_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bays.street_bays_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.street_bays.street_bays_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bays.street_bays_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.street_bays.street_bays_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.street_bays.street_bays_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_agencies_odbl.transit_agencies_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_routes_odbl.transit_routes_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_routes_odbl.transit_routes_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_routes_odbl.transit_routes_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_routes_odbl.transit_routes_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_routes_odbl.transit_routes_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_routes_odbl.transit_routes_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_service_dates_odbl.transit_service_dates_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stop_times_odbl.transit_stop_times_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_stops_odbl.transit_stops_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stops_odbl.transit_stops_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_stops_odbl.transit_stops_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stops_odbl.transit_stops_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_stops_odbl.transit_stops_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_stops_odbl.transit_stops_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.transit_trips_odbl.transit_trips_odbl_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trips_odbl.transit_trips_odbl_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.transit_trips_odbl.transit_trips_odbl_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trips_odbl.transit_trips_odbl_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.transit_trips_odbl.transit_trips_odbl_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.transit_trips_odbl.transit_trips_odbl_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.weather_warnings.weather_warnings_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings.weather_warnings_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.weather_warnings.weather_warnings_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings.weather_warnings_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.weather_warnings.weather_warnings_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings.weather_warnings_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.weather_warnings_en.weather_warnings_en_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings_en.weather_warnings_en_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.weather_warnings_en.weather_warnings_en_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings_en.weather_warnings_en_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.weather_warnings_en.weather_warnings_en_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.weather_warnings_en.weather_warnings_en_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+policy	domains.webcams.webcams_own_insert	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.webcams.webcams_own_insert	test/policies.db.test.ts > own insert: the ingestor writes its own source's row of the table's domain and is refused another source's, another domain's and a row with no source set
+policy	domains.webcams.webcams_own_update	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.webcams.webcams_own_update	test/policies.db.test.ts > own update: the ingestor updates its own rows and no other, and cannot move one to another source; with no update policy it updates nothing
+policy	domains.webcams.webcams_read	test/policies.db.test.ts > every policy of ours is a row of the table, and every row a policy the database holds
+policy	domains.webcams.webcams_read	test/policies.db.test.ts > read: the PUBLIC read policy lets the one role that may select (the ingestor) read every source's rows, as one source and with none set
+table	control.budget_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.budget_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.budget_state	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.budgets	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.budgets	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.budgets	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.callers	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.callers	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.callers	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.changes	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.changes	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.changes	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.feed_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.feed_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.feed_state	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.providers	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.providers	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.providers	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.refusals	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.refusals	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.refusals	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.shares	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.shares	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.shares	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.usage	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.usage	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.usage	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	control.usage_hourly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	control.usage_hourly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	control.usage_hourly	test/tables.db.test.ts > every table of schema control refuses each null, duplicate key and dangling reference by name
+table	domains.charging_point_status	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.charging_point_status	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.charging_point_status	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.charging_points	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.charging_points	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.charging_points	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.hydrogen_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.hydrogen_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.hydrogen_stations	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_facilities	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_facilities	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_facilities	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_facilities_bysa	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_facilities_bysa	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_facilities_bysa	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_facilities_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_facilities_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_facilities_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_facilities_sid	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_facilities_sid	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_facilities_sid	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_occupancy	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_occupancy	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_occupancy	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_occupancy_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_occupancy_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_occupancy_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.parking_occupancy_sid	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.parking_occupancy_sid	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.parking_occupancy_sid	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_context_feature_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_context_feature_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_context_feature_versions	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_context_features	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_context_features	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_context_features	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_events	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_events	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_events	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_weather_forecast	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_weather_forecast	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_weather_forecast	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_weather_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_weather_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_weather_stations	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.road_works	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.road_works	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.road_works	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.route_recommendations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.route_recommendations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.route_recommendations	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.speed_cameras	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.speed_cameras	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.speed_cameras	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.street_bay_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.street_bay_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.street_bay_state	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.street_bays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.street_bays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.street_bays	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_agencies_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_agencies_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_agencies_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_routes_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_routes_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_routes_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_service_dates_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_service_dates_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_service_dates_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_stop_times_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_stop_times_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_stop_times_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_stops_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_stops_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_stops_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_trip_updates_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_trip_updates_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_trip_updates_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.transit_trips_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.transit_trips_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.transit_trips_odbl	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.weather_warnings	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.weather_warnings	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.weather_warnings	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.weather_warnings_en	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.weather_warnings_en	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.weather_warnings_en	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	domains.webcams	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	domains.webcams	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	domains.webcams	test/tables.db.test.ts > every table of schema domains refuses each null, duplicate key and dangling reference by name
+table	ingestor.limit_claims	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.limit_claims	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.limit_claims	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	ingestor.run_errors	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.run_errors	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.run_errors	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	ingestor.runs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.runs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.runs	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	ingestor.source_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.source_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.source_state	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	ingestor.sources	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.sources	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.sources	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	ingestor.units	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	ingestor.units	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	ingestor.units	test/tables.db.test.ts > every table of schema ingestor refuses each null, duplicate key and dangling reference by name
+table	public.ags_regions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ags_regions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ags_regions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.alarm_episodes	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.alarm_episodes	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.alarm_episodes	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.autobahn_event_texts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.autobahn_event_texts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.autobahn_event_texts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.autobahn_events	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.autobahn_events	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.autobahn_events	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.autobahn_jam_hours	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.autobahn_jam_hours	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.autobahn_jam_hours	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.autobahn_roads	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.autobahn_roads	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.autobahn_roads	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.bfrk_stops	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.bfrk_stops	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.bfrk_stops	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.bw_detours	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.bw_detours	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.bw_detours	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_point_status	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.charging_point_status	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.charging_point_status	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_points	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.charging_points	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.charging_points	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_sites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.charging_sites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.charging_sites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_status_runs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.charging_status_runs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.charging_status_runs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.city_traffic_pulls	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.city_traffic_pulls	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.city_traffic_pulls	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.city_traffic_segments	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.city_traffic_segments	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.city_traffic_segments	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.city_traffic_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.city_traffic_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.city_traffic_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.city_traffic_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.city_traffic_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.city_traffic_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.connect_transit_delays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.connect_transit_delays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.connect_transit_delays	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.db_facilities	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.db_facilities	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.db_facilities	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.db_facility_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.db_facility_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.db_facility_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.db_station_boards	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.db_station_boards	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.db_station_boards	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.db_station_numbers	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.db_station_numbers	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.db_station_numbers	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.db_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.db_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.db_stations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.delfi_service_alerts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.delfi_service_alerts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.delfi_service_alerts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.delfi_siri_et_calls	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.delfi_siri_et_calls	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.delfi_siri_et_calls	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.delfi_siri_et_calls_latest	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.delfi_siri_et_calls_latest	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.delfi_siri_et_calls_latest	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.delfi_siri_et_stop_pairs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.delfi_siri_et_stop_pairs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.delfi_siri_et_stop_pairs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.deployments	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.deployments	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.deployments	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.energy_page_key_heads	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.energy_page_key_heads	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.energy_page_key_heads	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.energy_page_keys	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.energy_page_keys	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.energy_page_keys	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.energy_page_slug_history	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.energy_page_slug_history	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.energy_page_slug_history	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.energy_page_slugs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.energy_page_slugs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.energy_page_slugs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.error_events	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.error_events	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.error_events	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.feed_catalog	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.feed_catalog	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.feed_catalog	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.feed_run_extents	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.feed_run_extents	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.feed_run_extents	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.feed_runs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.feed_runs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.feed_runs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.feed_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.feed_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.feed_versions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.feeds	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.feeds	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.feeds	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_city_seed	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_city_seed	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_city_seed	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_price_latest	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_price_latest	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_price_latest	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_prices	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_prices	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_prices	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_products	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_products	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_products	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_sample_draws	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_sample_draws	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_sample_draws	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_sample_strata	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_sample_strata	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_sample_strata	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_station_watch	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_station_watch	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_station_watch	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.fuel_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.fuel_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.fuel_stations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gazetteer_places	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gazetteer_places	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gazetteer_places	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gbfs_station_status	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gbfs_station_status	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gbfs_station_status	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gbfs_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gbfs_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gbfs_stations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gbfs_systems	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gbfs_systems	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gbfs_systems	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gbfs_vehicles	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gbfs_vehicles	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gbfs_vehicles	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.growth_weekly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.growth_weekly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.growth_weekly	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gtfs_service_dates	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gtfs_service_dates	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gtfs_service_dates	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.gtfs_stale_trips	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.gtfs_stale_trips	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.gtfs_stale_trips	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.hh_cameras	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.hh_cameras	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.hh_cameras	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.hh_roadwork_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.hh_roadwork_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.hh_roadwork_versions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.hh_roadworks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.hh_roadworks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.hh_roadworks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.host_samples	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.host_samples	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.host_samples	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.hydrogen_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.hydrogen_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.hydrogen_stations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ingest_runs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ingest_runs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ingest_runs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.landing_collect_cursor	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.landing_collect_cursor	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.landing_collect_cursor	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.landing_error_hourly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.landing_error_hourly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.landing_error_hourly	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.landing_reloads	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.landing_reloads	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.landing_reloads	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.landing_status_hourly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.landing_status_hourly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.landing_status_hourly	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lez_zone_overlaps	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lez_zone_overlaps	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lez_zone_overlaps	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lez_zone_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lez_zone_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lez_zone_versions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lez_zones	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lez_zones	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lez_zones	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lorry_city	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lorry_city	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lorry_city	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lorry_hb	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lorry_hb	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lorry_hb	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lorry_ivm	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lorry_ivm	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lorry_ivm	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lorry_long_network	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lorry_long_network	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lorry_long_network	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.lorry_sevas	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lorry_sevas	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.lorry_sevas	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.los_lane_sites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.los_lane_sites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.los_lane_sites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.los_lane_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.los_lane_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.los_lane_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.los_sites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.los_sites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.los_sites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.los_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.los_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.los_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.los_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.los_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.los_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.mcp_usage	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.mcp_usage	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.mcp_usage	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.mcp_usage_exports	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.mcp_usage_exports	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.mcp_usage_exports	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.motorway_summary	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.motorway_summary	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.motorway_summary	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.mvv_bus_load	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.mvv_bus_load	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.mvv_bus_load	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.oom_kills	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.oom_kills	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.oom_kills	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.opendata_roadwork_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.opendata_roadwork_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.opendata_roadwork_versions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.opendata_roadworks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.opendata_roadworks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.opendata_roadworks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_audit	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_audit	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_audit	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_passkeys	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_passkeys	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_passkeys	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_requests	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_requests	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_requests	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_rollup_daily	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_rollup_daily	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_rollup_daily	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_rollup_feed	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_rollup_feed	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_rollup_feed	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_rollup_held	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_rollup_held	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_rollup_held	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.ops_rollup_usage	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.ops_rollup_usage	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.ops_rollup_usage	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_addresses	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_addresses	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_addresses	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_boundary_de	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_boundary_de	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_boundary_de	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_pois	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_pois	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_pois	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_replication_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_replication_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_replication_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_speed_cameras	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_speed_cameras	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_speed_cameras	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.osm_streets	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.osm_streets	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.osm_streets	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parkapi_stray_latch	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parkapi_stray_latch	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parkapi_stray_latch	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_facilities	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_facilities	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_facilities	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_facilities_bysa	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_facilities_bysa	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_facilities_bysa	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_facilities_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_facilities_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_facilities_odbl	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_facilities_sid	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_facilities_sid	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_facilities_sid	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_facility_refusals	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_facility_refusals	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_facility_refusals	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_forecast_profiles	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_forecast_profiles	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_forecast_profiles	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_occupancy	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_occupancy	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_occupancy	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_occupancy_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_occupancy_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_occupancy_odbl	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_occupancy_sid	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_occupancy_sid	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_occupancy_sid	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.parking_sites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.parking_sites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.parking_sites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.partition_archives	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.partition_archives	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.partition_archives	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.partition_retention	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.partition_retention	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.partition_retention	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.partition_settings	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.partition_settings	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.partition_settings	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.place_slugs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.place_slugs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.place_slugs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.place_website_checks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.place_website_checks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.place_website_checks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.place_websites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.place_websites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.place_websites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.provider_key_claims	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.provider_key_claims	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.provider_key_claims	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_context_feature_versions	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_context_feature_versions	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_context_feature_versions	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_context_features	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_context_features	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_context_features	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_event_locations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_event_locations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_event_locations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_event_record_types	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_event_record_types	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_event_record_types	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_event_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_event_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_event_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_event_twins	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_event_twins	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_event_twins	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_events	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_events	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_events	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_weather_forecast	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_weather_forecast	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_weather_forecast	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.road_weather_stations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.road_weather_stations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.road_weather_stations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.routes	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.routes	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.routes	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.runtime_config	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.runtime_config	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.runtime_config	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.schema_migrations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.schema_migrations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.schema_migrations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.search_console_weekly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.search_console_weekly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.search_console_weekly	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.search_console_weekly_parts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.search_console_weekly_parts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.search_console_weekly_parts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_daily	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_daily	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_daily	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_devices	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_devices	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_devices	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_entries	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_entries	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_entries	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_entry_referrers	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_entry_referrers	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_entry_referrers	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_hourly	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_hourly	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_hourly	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_pages_per_visit	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_pages_per_visit	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_pages_per_visit	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_referrers	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_referrers	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_referrers	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_routes	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_routes	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_routes	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.site_visits_search_engines	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.site_visits_search_engines	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.site_visits_search_engines	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_hosts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_hosts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_hosts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_schedule	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_schedule	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_schedule	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.speed_enforcement	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.speed_enforcement	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.speed_enforcement	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_accessibility	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_accessibility	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_accessibility	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_equipment	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_equipment	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_equipment	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_equipment_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_equipment_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_equipment_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_equipment_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_equipment_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_equipment_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_metro_osm	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_metro_osm	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_metro_osm	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.station_slugs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.station_slugs	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.station_slugs	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.stop_access_odbl	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.stop_access_odbl	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.stop_access_odbl	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.stop_times	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.stop_times	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.stop_times	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.stops	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.stops	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.stops	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.street_bay_state	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.street_bay_state	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.street_bay_state	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.street_bay_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.street_bay_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.street_bay_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.street_bays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.street_bays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.street_bays	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.tick_storage_days	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.tick_storage_days	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.tick_storage_days	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.tmc_locations	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.tmc_locations	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.tmc_locations	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.traffic_count_latest	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.traffic_count_latest	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.traffic_count_latest	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.traffic_count_profiles	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.traffic_count_profiles	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.traffic_count_profiles	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.traffic_count_sites	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.traffic_count_sites	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.traffic_count_sites	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.traffic_count_ticks	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.traffic_count_ticks	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.traffic_count_ticks	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.transit_delays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.transit_delays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.transit_delays	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.translation_cache	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.translation_cache	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.translation_cache	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.trips	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.trips	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.trips	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.validator_horizon	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.validator_horizon	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.validator_horizon	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.vbb_transit_delays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.vbb_transit_delays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.vbb_transit_delays	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.vbn_siri_et_calls	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.vbn_siri_et_calls	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.vbn_siri_et_calls	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.vrn_transit_delays	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.vrn_transit_delays	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.vrn_transit_delays	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.watch_events	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.watch_events	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.watch_events	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.watches	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.watches	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.watches	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.weather_warnings	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.weather_warnings	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.weather_warnings	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.weather_warnings_en	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.weather_warnings_en	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.weather_warnings_en	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.worker_boots	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.worker_boots	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.worker_boots	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name

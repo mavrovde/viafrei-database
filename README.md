@@ -98,6 +98,24 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | `version` | Prints `viafrei-database <version> schema-head <N>` |
 | `ledger-compare <file\|->` | Read-only, needs no database: compares an exported ledger (`version`, `name`, `checksum`, tab- or `\|`-separated, e.g. `psql -At -c "select version, name, checksum from schema_migrations order by version"`) with the baseline's `ledger.tsv` and names every version that differs. Exit 0 when all are equal |
 
+### Partition index names
+
+`partitions ensure` creates a day as `CREATE TABLE <table>_YYYYMMDD PARTITION OF <table>`,
+and PostgreSQL names each index it clones onto that day from the parent index alone
+(`test/index-names.ts`, held against every partition by `test/partitioned.db.test.ts`):
+`<partition>_pkey` for the primary key, `<partition>_<columns>_key` for a unique
+constraint, `<partition>_<columns>_idx` for any other index. `<columns>` is the key's
+column names joined by `_` (an expression by its function's name, `left`), and the whole
+is cut to 63 bytes by shortening the longer part. On a clash the label takes the first
+free number in the schema (`_idx1`).
+
+The names are a function of the day everywhere but four parent indexes of schema
+`domains` — `charging_point_status_owner_key`, `parking_occupancy_sid_owner_key`,
+`road_weather_forecast_owner_key` and `road_weather_forecast_station` — where the cut
+reaches the day, so every day's clone shares one base and is numbered in the order the
+days were made (`charging_point_status_2026111_source_id_feed_external_id_o_key3`).
+Name a partition's index by its parent (`pg_inherits`), never by the clone's name.
+
 ## The baseline
 
 The schema's first versions are one file: `db/baseline/0293_baseline.sql`,

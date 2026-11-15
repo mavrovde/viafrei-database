@@ -11,6 +11,30 @@
 -- The last statement is the one DATABASE-WIDE setting production holds
 -- (pg_db_role_setting with no role, measured 2026-11-15, test/roles/prod-settings.tsv):
 -- PostGIS's search_path. It is per database too, so it is applied the same way.
+--
+-- THE MEMORY BOUND (#855; main's migrations 0181_reader_memory_bound and
+-- 0191_owner_memory_bound, whose headers derive it — the derivation and the
+-- prod measurements behind `nodes` are there). The work_mem, multiplier and
+-- parallel settings below are its inputs, and test/memory-bound.test.ts
+-- re-derives every figure from these lines and holds the settings of this
+-- file equal to them, so a setting moved without the arithmetic is red.
+-- What decides `connections` (the pools) and the headroom (the db service's
+-- mem_limit and shared_buffers) lives in the consumers and the deploy, and
+-- is judged there.
+--
+--   per reader role, worst case = connections × work_mem × hash_mem_multiplier × nodes
+--   bound: viafrei_digest connections=7 work_mem_mb=16 hash_mem_multiplier=1 nodes=2
+--   bound: viafrei_mcp connections=18 work_mem_mb=16 hash_mem_multiplier=1 nodes=2
+--   readers ≤ 80 % of the headroom; everything ≤ cap_pct of it:
+--   bound: owner_role work_mem_mb=16 hash_mem_multiplier=1 parallel_per_gather=0 maintenance_work_mem_mb=64 parallel_maintenance=0
+--   bound: build budget_mb=82 floor_mb=16 hash_mem_multiplier=1 temp_file_limit_mb=6144
+--   bound: build_nodes gtfs_untimed_trips=1 gtfs_route_kreise=3 transit_stop_modes=5
+--   bound: owner_other connections=2 work_mem_mb=16 hash_mem_multiplier=1 nodes=2 processes=1
+--   bound: autovacuum workers=3 work_mem_mb=30
+--   bound: readers_mb=800
+--   bound: headroom_mb=1152 cap_pct=90
+--   the build budget = floor(cap − readers − owner_other − autovacuum); per build
+--   work_mem = max(floor_mb, floor(budget / nodes)).
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET work_mem TO ''16MB''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET hash_mem_multiplier TO ''1.0''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET max_parallel_workers_per_gather TO ''0''', current_database()); END $$;

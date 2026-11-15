@@ -1,0 +1,86 @@
+# Every row-level security policy of ours (test/policies.ts): relation, policy, command, roles, permissive, using, with check.
+# A migration that adds, changes or drops a policy changes its row here in the same commit.
+domains.charging_point_status	charging_point_status_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = charging_point_status.source_id) AND (s.domain = 'charging_point_status'::text)))))
+domains.charging_point_status	charging_point_status_read	SELECT	public	PERMISSIVE	true	-
+domains.charging_points	charging_points_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = charging_points.source_id) AND (s.domain = 'charging_points'::text)))))
+domains.charging_points	charging_points_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.charging_points	charging_points_read	SELECT	public	PERMISSIVE	true	-
+domains.hydrogen_stations	hydrogen_stations_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = hydrogen_stations.source_id) AND (s.domain = 'hydrogen_stations'::text)))))
+domains.hydrogen_stations	hydrogen_stations_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.hydrogen_stations	hydrogen_stations_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_facilities	parking_facilities_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_facilities.source_id) AND (s.domain = 'parking_facilities'::text)))))
+domains.parking_facilities	parking_facilities_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.parking_facilities	parking_facilities_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_facilities_bysa	parking_facilities_bysa_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_facilities_bysa.source_id) AND (s.domain = 'parking_facilities_bysa'::text)))))
+domains.parking_facilities_bysa	parking_facilities_bysa_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.parking_facilities_bysa	parking_facilities_bysa_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_facilities_odbl	parking_facilities_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_facilities_odbl.source_id) AND (s.domain = 'parking_facilities_odbl'::text)))))
+domains.parking_facilities_odbl	parking_facilities_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.parking_facilities_odbl	parking_facilities_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_facilities_sid	parking_facilities_sid_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_facilities_sid.source_id) AND (s.domain = 'parking_facilities_sid'::text)))))
+domains.parking_facilities_sid	parking_facilities_sid_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.parking_facilities_sid	parking_facilities_sid_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_occupancy	parking_occupancy_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_occupancy.source_id) AND (s.domain = 'parking_occupancy'::text)))))
+domains.parking_occupancy	parking_occupancy_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_occupancy_odbl	parking_occupancy_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_occupancy_odbl.source_id) AND (s.domain = 'parking_occupancy_odbl'::text)))))
+domains.parking_occupancy_odbl	parking_occupancy_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.parking_occupancy_sid	parking_occupancy_sid_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = parking_occupancy_sid.source_id) AND (s.domain = 'parking_occupancy_sid'::text)))))
+domains.parking_occupancy_sid	parking_occupancy_sid_read	SELECT	public	PERMISSIVE	true	-
+domains.road_context_feature_versions	road_context_feature_versions_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_context_feature_versions.source_id) AND (s.domain = 'road_context_features'::text)))))
+domains.road_context_feature_versions	road_context_feature_versions_read	SELECT	public	PERMISSIVE	true	-
+domains.road_context_features	road_context_features_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_context_features.source_id) AND (s.domain = 'road_context_features'::text)))))
+domains.road_context_features	road_context_features_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.road_context_features	road_context_features_read	SELECT	public	PERMISSIVE	true	-
+domains.road_events	road_events_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_events.source_id) AND (s.domain = 'road_events'::text)))))
+domains.road_events	road_events_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.road_events	road_events_read	SELECT	public	PERMISSIVE	true	-
+domains.road_weather_forecast	road_weather_forecast_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_weather_forecast.source_id) AND (s.domain = 'road_weather_forecast'::text)))))
+domains.road_weather_forecast	road_weather_forecast_read	SELECT	public	PERMISSIVE	true	-
+domains.road_weather_stations	road_weather_stations_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_weather_stations.source_id) AND (s.domain = 'road_weather_stations'::text)))))
+domains.road_weather_stations	road_weather_stations_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.road_weather_stations	road_weather_stations_read	SELECT	public	PERMISSIVE	true	-
+domains.road_works	road_works_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = road_works.source_id) AND (s.domain = 'road_works'::text)))))
+domains.road_works	road_works_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.road_works	road_works_read	SELECT	public	PERMISSIVE	true	-
+domains.route_recommendations	route_recommendations_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = route_recommendations.source_id) AND (s.domain = 'route_recommendations'::text)))))
+domains.route_recommendations	route_recommendations_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.route_recommendations	route_recommendations_read	SELECT	public	PERMISSIVE	true	-
+domains.speed_cameras	speed_cameras_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = speed_cameras.source_id) AND (s.domain = 'speed_cameras'::text)))))
+domains.speed_cameras	speed_cameras_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.speed_cameras	speed_cameras_read	SELECT	public	PERMISSIVE	true	-
+domains.street_bay_state	street_bay_state_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = street_bay_state.source_id) AND (s.domain = 'street_bay_state'::text)))))
+domains.street_bay_state	street_bay_state_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.street_bay_state	street_bay_state_read	SELECT	public	PERMISSIVE	true	-
+domains.street_bays	street_bays_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = street_bays.source_id) AND (s.domain = 'street_bays'::text)))))
+domains.street_bays	street_bays_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.street_bays	street_bays_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_agencies_odbl	transit_agencies_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_agencies_odbl.source_id) AND (s.domain = 'transit_agencies_odbl'::text)))))
+domains.transit_agencies_odbl	transit_agencies_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_agencies_odbl	transit_agencies_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_routes_odbl	transit_routes_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_routes_odbl.source_id) AND (s.domain = 'transit_routes_odbl'::text)))))
+domains.transit_routes_odbl	transit_routes_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_routes_odbl	transit_routes_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_service_dates_odbl	transit_service_dates_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_service_dates_odbl.source_id) AND (s.domain = 'transit_service_dates_odbl'::text)))))
+domains.transit_service_dates_odbl	transit_service_dates_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_service_dates_odbl	transit_service_dates_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_stop_times_odbl	transit_stop_times_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_stop_times_odbl.source_id) AND (s.domain = 'transit_stop_times_odbl'::text)))))
+domains.transit_stop_times_odbl	transit_stop_times_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_stop_times_odbl	transit_stop_times_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_stops_odbl	transit_stops_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_stops_odbl.source_id) AND (s.domain = 'transit_stops_odbl'::text)))))
+domains.transit_stops_odbl	transit_stops_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_stops_odbl	transit_stops_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_trip_updates_odbl.source_id) AND (s.domain = 'transit_trip_updates_odbl'::text)))))
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.transit_trips_odbl	transit_trips_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_trips_odbl.source_id) AND (s.domain = 'transit_trips_odbl'::text)))))
+domains.transit_trips_odbl	transit_trips_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.transit_trips_odbl	transit_trips_odbl_read	SELECT	public	PERMISSIVE	true	-
+domains.weather_warnings	weather_warnings_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = weather_warnings.source_id) AND (s.domain = 'weather_warnings'::text)))))
+domains.weather_warnings	weather_warnings_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.weather_warnings	weather_warnings_read	SELECT	public	PERMISSIVE	true	-
+domains.weather_warnings_en	weather_warnings_en_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = weather_warnings_en.source_id) AND (s.domain = 'weather_warnings_en'::text)))))
+domains.weather_warnings_en	weather_warnings_en_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.weather_warnings_en	weather_warnings_en_read	SELECT	public	PERMISSIVE	true	-
+domains.webcams	webcams_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = webcams.source_id) AND (s.domain = 'webcams'::text)))))
+domains.webcams	webcams_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
+domains.webcams	webcams_read	SELECT	public	PERMISSIVE	true	-

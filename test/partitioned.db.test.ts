@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { DomainDb } from "./domain-db.js";
 import { REPO } from "./helpers.js";
+import { type IndexKind, numbered, partitionIndexName } from "./index-names.js";
 
 type Row = { readonly table: string; readonly key: string; readonly brin: readonly string[]; readonly retention: string };
 
@@ -125,6 +126,55 @@ describe("the partitioned tables of schema public", () => {
     );
     expect(r.rows.filter((x) => x.missing > 0).map((x) => `${x.part}: ${String(x.missing)}`)).toEqual([]);
     expect(r.rows.length).toBe(daily().length * WINDOW);
+  });
+
+  it("every partition's index is named by the server's rule: <partition>_pkey, _<columns>_key, _<columns>_idx, the first free number after the label in the schema on a clash (test/index-names.ts)", async () => {
+    const r = await db.pool.query<{ schema: string; part: string; parent: string; name: string; kind: IndexKind; columns: string[] }>(
+      `select pc.relnamespace::regnamespace::text as schema, pc.relname as part, ii.inhparent::regclass::text as parent, ic.relname as name,
+              case k.contype when 'p' then 'pkey' when 'u' then 'key' when 'x' then 'excl' else 'idx' end as kind,
+              (select array_agg(case when o.attnum = 0 then coalesce(substring(pg_get_indexdef(x.indexrelid, o.n::int, true) from '^"?([a-z_][a-z_0-9]*)"?[(]'), 'expr') else a.attname::text end order by o.n)
+                 from unnest(x.indkey::int2[]) with ordinality o(attnum, n)
+                 left join pg_attribute a on a.attrelid = x.indrelid and a.attnum = o.attnum
+                where o.n <= x.indnkeyatts) as columns
+         from pg_index x
+         join pg_class ic on ic.oid = x.indexrelid
+         join pg_class pc on pc.oid = x.indrelid and pc.relispartition
+         join pg_inherits ii on ii.inhrelid = x.indexrelid
+         left join pg_constraint k on k.conindid = x.indexrelid and k.conrelid = x.indrelid
+        order by x.indexrelid`,
+    );
+    // Every other relation name of each schema is taken before the clones are named; the clones then in creation order.
+    const others = await db.pool.query<{ schema: string; name: string }>(
+      `select c.relnamespace::regnamespace::text as schema, c.relname as name from pg_class c
+        where not (c.relkind = 'i' and c.oid in (select ii.inhrelid from pg_inherits ii join pg_class t on t.oid = ii.inhrelid where t.relkind = 'i')
+                   and c.oid in (select x.indexrelid from pg_index x join pg_class pc on pc.oid = x.indrelid and pc.relispartition))`,
+    );
+    const taken = new Set(others.rows.map((x) => `${x.schema}.${x.name}`));
+    const wrong: string[] = [];
+    const dayless = new Set<string>();
+    for (const x of r.rows) {
+      let n = 0;
+      while (taken.has(`${x.schema}.${numbered(x.part, x.kind, x.columns, n)}`)) n += 1;
+      const want = numbered(x.part, x.kind, x.columns, n);
+      taken.add(`${x.schema}.${want}`);
+      if (!want.startsWith(`${x.part}_`)) dayless.add(x.parent);
+      if (x.name !== want) wrong.push(`${x.schema}.${x.part}: ${x.name}, the rule gives ${want}`);
+    }
+    expect(wrong).toEqual([]);
+    // Where a partition's name and its columns pass 63 bytes and the cut reaches the day, every day's clone shares one
+    // base and takes the first free number in the order the days were made: those names are NOT a function of the
+    // day. Exactly these four parent indexes, all of schema domains (README.md, Partitions); a reader names them by
+    // their parent (pg_inherits), never by the clone's name.
+    expect([...dayless].sort()).toEqual([
+      "domains.charging_point_status_owner_key",
+      "domains.parking_occupancy_sid_owner_key",
+      "domains.road_weather_forecast_owner_key",
+      "domains.road_weather_forecast_station",
+    ]);
+    expect(r.rows.length).toBeGreaterThanOrEqual(daily().length * WINDOW * 2);
+    // The rule's edges: a clash numbers the label, and 63 bytes are kept by shortening the longer part.
+    expect(numbered("fuel_prices_20261115", "idx", ["observed_at"], 1)).toBe("fuel_prices_20261115_observed_at_idx1");
+    expect(partitionIndexName("delfi_siri_et_calls_20261115", "idx", ["trip_id", "stop_point_ref", "observed_at", "line_ref"]).length).toBe(63);
   });
 });
 
