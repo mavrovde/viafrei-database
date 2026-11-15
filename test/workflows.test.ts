@@ -80,9 +80,20 @@ describe("an image only for a confirmed release", () => {
   });
 
   it("publishes nothing unless the gate said so, and verifies only what it published", () => {
-    expect(job(release, "publish")).toContain("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n");
+    expect(job(release, "publish")).toContain("\n    needs: [gate, mutants]\n    if: needs.gate.outputs.publish == 'true'\n");
     expect(job(release, "verify")).toContain("\n    needs: [gate, publish]\n");
     expect(job(release, "tag")).toContain("\n    needs: [gate, publish, verify]\n");
+  });
+
+  it("runs every mutant on the gate's commit before anything is built, and only here", () => {
+    expect(mutantsFaults(release)).toEqual([]);
+    expect(mutantsFaults(release.replace("    needs: [gate, mutants]\n", "    needs: gate\n"))).toEqual(["publish does not wait for the mutation check"]);
+    expect(mutantsFaults(release.replace("        run: npm run mutate\n", "        run: npm run mutate -- --only lint\n"))).toEqual(["the mutation check does not run every mutant"]);
+    expect(mutantsFaults(release.replace(/(\n {2}mutants:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
+    expect(mutantsFaults(release.replace("    timeout-minutes: 75\n", "    timeout-minutes: 75\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
+    expect(job(release, "mutants")).toContain("\n    timeout-minutes: 75\n");
+    // The full set runs in this file alone: no pull request, push or schedule runs it.
+    for (const n of workflows.filter((w) => w !== "release.yml")) expect(readFileSync(join(WF, n), "utf8"), n).not.toContain("npm run mutate");
   });
 
   it("verifies the attestation and smokes the digest in the verify job, which the tag job waits for", () => {
@@ -180,6 +191,7 @@ describe("permissions", () => {
   it("are read-only for the workflow and every job but publish, tag and release-page", () => {
     expect(release).toMatch(/\npermissions:\n {2}contents: read\n\n/);
     expect(permissions(job(release, "gate"))).toEqual(["contents: read", "actions: read"]);
+    expect(permissions(job(release, "mutants"))).toEqual(["contents: read"]);
     expect(permissions(job(release, "publish"))).toEqual(["contents: read", "packages: write", "id-token: write", "attestations: write"]);
     expect(permissions(job(release, "verify"))).toEqual(["contents: read", "packages: read", "attestations: read"]);
     expect(permissions(job(release, "tag"))).toEqual(["contents: read", "packages: write"]);
@@ -262,6 +274,17 @@ describe("pins", () => {
   });
 });
 
+/** The mutation check: every mutant, on the gate's say-so, gating publish, never optional (its checkout: checkoutFaults). */
+export function mutantsFaults(release: string): string[] {
+  const m = job(release, "mutants");
+  const faults: string[] = [];
+  if (!job(release, "publish").includes("\n    needs: [gate, mutants]\n")) faults.push("publish does not wait for the mutation check");
+  if (!/\n {6}- name: Every mutant\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {8}run: npm run mutate\n/.test(m)) faults.push("the mutation check does not run every mutant");
+  if (!m.includes("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n")) faults.push("the mutation check does not run on the gate's say-so");
+  if (m.includes("continue-on-error")) faults.push("the mutation check may fail without failing the release");
+  return faults;
+}
+
 /**
  * What the verify job must do to the pushed digest before the tag job may
  * point a tag at it: the provenance attestation checked and the image smoked.
@@ -315,7 +338,7 @@ export function thresholdFaults(config: string): string[] {
  */
 export function checkoutFaults(release: string): string[] {
   const faults: string[] = [];
-  for (const id of ["publish", "verify", "tag"]) {
+  for (const id of ["mutants", "publish", "verify", "tag"]) {
     const j = job(release, id);
     if (!j.includes("\n        with:\n          ref: ${{ needs.gate.outputs.commit }}\n")) faults.push(`${id} does not check out the gate's commit`);
     if (j.includes("ref: refs/tags/")) faults.push(`${id} checks out the tag ref`);
@@ -486,12 +509,12 @@ export function triggerFaults(security: string, wf: (name: string) => string): s
 
 describe("the release's checkouts and concurrency", () => {
   const release = readFileSync(join(WF, "release.yml"), "utf8");
-  it("publish, verify and tag build from the gate's commit; the gate pins the tag to github.sha", () => {
+  it("mutants, publish, verify and tag build from the gate's commit; the gate pins the tag to github.sha", () => {
     expect(checkoutFaults(release)).toEqual([]);
   });
   it("a checkout of the tag ref, a missing sha check or a per-tag group goes red", () => {
     const tagRef = release.replace("          ref: ${{ needs.gate.outputs.commit }}\n          persist-credentials: false\n", "          ref: refs/tags/${{ env.TAG }}\n          persist-credentials: false\n");
-    expect(checkoutFaults(tagRef)).toEqual(["publish does not check out the gate's commit", "publish checks out the tag ref"]);
+    expect(checkoutFaults(tagRef)).toEqual(["mutants does not check out the gate's commit", "mutants checks out the tag ref"]);
     expect(checkoutFaults(release.replace(/ {10}\[\[ \$commit == "\$GITHUB_SHA" \]\][^\n]*\n/, ""))).toEqual(["the gate does not refuse a tag that has moved off github.sha"]);
     expect(checkoutFaults(release.replace("  group: release\n", "  group: release-${{ github.ref_name }}\n"))).toEqual(["releases are not serialised in one group"]);
   });
@@ -636,6 +659,7 @@ describe("the checks the README names", () => {
     ...jobNames(read("security.yml")).map((j) => `Security | ${j}`),
     ...jobNames(read("scorecard.yml")).map((j) => `Scorecard | ${j}`),
     "Release | Release gate",
+    "Release | Mutation check",
   ];
 
   it("the job names are pinned, so a renamed job is red here and in the README", () => {
@@ -651,8 +675,9 @@ describe("the checks the README names", () => {
       "Security | DAST (OWASP ZAP against the container)",
       "Scorecard | Scorecard analysis",
       "Release | Release gate",
+      "Release | Mutation check",
     ]);
-    expect(jobNames(release)).toContain("Release gate");
+    expect(jobNames(release).slice(0, 2)).toEqual(["Release gate", "Mutation check"]);
   });
 
   it("the README's Checks table lists exactly those jobs, in that order", () => {

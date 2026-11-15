@@ -109,11 +109,20 @@ nothing, and `release-please.yml` is the only workflow granted
 running release is never cancelled, but a release still pending behind it is
 replaced by a newer pending one, so start one release at a time.
 
+**The mutation tally.** The release workflow's Mutation check job runs every
+mutant of `npm run mutate` on the tagged commit, after the gate and before
+anything is built, and a survivor, a mutant whose pattern no longer matches or
+a test that fails unmutated stops the release. That run is the tally: there is
+no separate local run of the full set before a release, and no pull request or
+push runs it. A pull request that adds or changes a mutant proves it with
+`npm run mutate -- --only <text>`. A release stopped by a survivor is the last
+case below: the fault is in the tagged commit.
+
 **When a release stops.** A version tag is never reused, moved or deleted, so
 which recovery applies depends on how far the release got:
 
-- **Nothing published yet** (no `:X.Y.Z` image tag; the gate, the build, the
-  push or the verification failed for a reason outside the tagged commit,
+- **Nothing published yet** (no `:X.Y.Z` image tag; the gate, the mutation check
+  (a timeout, not a survivor), the build, the push or the verification failed for a reason outside the tagged commit,
   such as a registry or runner outage): start the release again on its tag,
   `gh workflow run release.yml --ref vX.Y.Z`. The gate runs again in full.
 - **The image is tagged but the release page is not published** (the
