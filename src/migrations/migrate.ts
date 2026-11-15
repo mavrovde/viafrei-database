@@ -20,7 +20,7 @@
  * `lockAttempts` times per file with `lockPauseS` between, and on the last one
  * the run stops with 75 (EX_TEMPFAIL).
  */
-import type { MigrationFile } from "./files.js";
+import { acceptsChecksum, type MigrationFile } from "./files.js";
 import type { PsqlRunner } from "../psql.js";
 import { compare, type AppliedRow, type SchemaState } from "./plan.js";
 import { baselineScript, type Baseline } from "./baseline.js";
@@ -149,7 +149,7 @@ export async function migrate(o: MigrateOptions): Promise<MigrateResult> {
   const pending: MigrationFile[] = [];
   for (const e of b?.entries ?? []) {
     const sum = appliedSums.get(e.version);
-    if (sum !== undefined && sum !== e.checksum) return stop(1, `✗ ${e.name} is applied with a different checksum than the baseline's ledger.tsv — never edit an applied migration`, before);
+    if (sum !== undefined && !acceptsChecksum(e, sum)) return stop(1, `✗ ${e.name} is applied with a different checksum than the baseline's ledger.tsv or a recorded alias — never edit an applied migration`, before);
   }
 
   if (b !== null) {

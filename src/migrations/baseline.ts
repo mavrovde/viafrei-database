@@ -23,13 +23,25 @@
  * ledger.tsv becomes an entry with `baseline: true` and the original
  * checksum, so a database whose ledger disagrees with the baseline is a
  * MISMATCH, exactly as an edited file would be.
+ *
+ * ALIASES (db/baseline/aliases.tsv, optional): a version whose file was
+ * edited after the baseline was cut, in its comments only, and applied in
+ * that edited form by a database migrated file by file. ledger.tsv stays the
+ * frozen record of the bytes the baseline was cut from (what a database the
+ * baseline starts writes), and an alias row names the other checksum a ledger
+ * may hold for the same version, with the reason. A ledger holding either is
+ * at that version; any third checksum is still a mismatch.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MIGRATION_FILE, readMigrations, sha256Hex, versionOf, type MigrationFile } from "./files.js";
+import { acceptsChecksum, MIGRATION_FILE, readMigrations, sha256Hex, versionOf, type MigrationFile } from "./files.js";
 
 export const LEDGER_TSV = "ledger.tsv";
 export const LEDGER_HEADER = "version\tname\tchecksum";
+export const ALIASES_TSV = "aliases.tsv";
+export const ALIASES_HEADER = "version\tname\tchecksum\treason";
+/** The files db/baseline may hold besides the one NNNN_baseline.sql. */
+export const BASELINE_COMPANIONS: readonly string[] = [LEDGER_TSV, ALIASES_TSV];
 export const BASELINE_FILE = /^[0-9]{4}_baseline\.sql$/;
 
 export class BaselineError extends Error {}
@@ -80,9 +92,38 @@ export function parseLedgerTsv(text: string): LedgerRow[] {
   return rows;
 }
 
+/**
+ * aliases.tsv → version → the other checksums its ledger row may hold. Each
+ * row must name a version of ledger.tsv under ledger.tsv's name, a checksum
+ * that is neither ledger.tsv's own nor already listed, and a reason.
+ */
+export function parseAliasesTsv(text: string, rows: readonly LedgerRow[]): Map<number, string[]> {
+  const lines = text.split("\n");
+  if (lines[lines.length - 1] === "") lines.pop();
+  if (lines[0] !== ALIASES_HEADER) throw new BaselineError(`${ALIASES_TSV}: the first line must be '${ALIASES_HEADER.replace(/\t/g, "\\t")}'`);
+  const out = new Map<number, string[]>();
+  for (let i = 1; i < lines.length; i += 1) {
+    const cols = (lines[i] ?? "").split("\t");
+    const where = `${ALIASES_TSV} line ${String(i + 1)}`;
+    if (cols.length !== 4) throw new BaselineError(`${where}: expected 4 tab-separated columns, got ${String(cols.length)}`);
+    const [v = "", name = "", checksum = "", reason = ""] = cols;
+    const row = /^[1-9][0-9]*$/.test(v) ? rows[Number(v) - 1] : undefined;
+    if (row === undefined) throw new BaselineError(`${where}: '${v.slice(0, 20)}' is not a version of ${LEDGER_TSV}`);
+    if (name !== row.name) throw new BaselineError(`${where}: version ${v} is ${row.name} in ${LEDGER_TSV}, not '${name.slice(0, 80)}'`);
+    if (!/^[0-9a-f]{64}$/.test(checksum)) throw new BaselineError(`${where}: the checksum must be 64 lower-case hex characters`);
+    const seen = out.get(row.version) ?? [];
+    if (checksum === row.checksum || seen.includes(checksum)) throw new BaselineError(`${where}: version ${v} already stands for that checksum`);
+    if (reason.trim() === "") throw new BaselineError(`${where}: an alias needs its reason`);
+    out.set(row.version, [...seen, checksum]);
+  }
+  if (out.size === 0) throw new BaselineError(`${ALIASES_TSV}: no rows; delete the file instead`);
+  return out;
+}
+
 /** A ledger row as an entry readiness can compare: the original name and checksum, no bytes of its own. */
-export function baselineEntry(r: LedgerRow): MigrationFile {
-  return { name: r.name, version: r.version, checksum: r.checksum, noTransaction: false, bytes: Buffer.alloc(0), baseline: true };
+export function baselineEntry(r: LedgerRow, aliases: readonly string[] = []): MigrationFile {
+  const e: MigrationFile = { name: r.name, version: r.version, checksum: r.checksum, noTransaction: false, bytes: Buffer.alloc(0), baseline: true };
+  return aliases.length === 0 ? e : { ...e, aliases };
 }
 
 /** The baseline in `dir`, or null when the directory does not exist (an image built without one). */
@@ -90,8 +131,8 @@ export function readBaseline(dir: string): Baseline | null {
   if (!existsSync(dir)) return null;
   const names = readdirSync(dir);
   const sql = names.filter((n) => BASELINE_FILE.test(n));
-  const stray = names.filter((n) => n !== LEDGER_TSV && !BASELINE_FILE.test(n) && !n.startsWith("."));
-  if (stray.length > 0) throw new BaselineError(`${dir}: unexpected file(s) ${stray.join(", ")}; only ${LEDGER_TSV} and one NNNN_baseline.sql belong here`);
+  const stray = names.filter((n) => !BASELINE_COMPANIONS.includes(n) && !BASELINE_FILE.test(n) && !n.startsWith("."));
+  if (stray.length > 0) throw new BaselineError(`${dir}: unexpected file(s) ${stray.join(", ")}; only ${BASELINE_COMPANIONS.join(", ")} and one NNNN_baseline.sql belong here`);
   if (sql.length !== 1) throw new BaselineError(`${dir}: expected exactly one NNNN_baseline.sql, found ${String(sql.length)}`);
   if (!names.includes(LEDGER_TSV)) throw new BaselineError(`${dir}: ${LEDGER_TSV} is missing`);
   const rows = parseLedgerTsv(readFileSync(join(dir, LEDGER_TSV), "utf8"));
@@ -100,7 +141,8 @@ export function readBaseline(dir: string): Baseline | null {
   if (versionOf(name) !== head) throw new BaselineError(`${dir}: ${name} must be numbered ${String(head).padStart(4, "0")}, the last version in ${LEDGER_TSV}`);
   const bytes = readFileSync(join(dir, name));
   if (bytes.length === 0) throw new BaselineError(`${dir}: ${name} is empty`);
-  return { head, name, bytes, checksum: sha256Hex(bytes), entries: rows.map(baselineEntry), carried: [] };
+  const aliases = names.includes(ALIASES_TSV) ? parseAliasesTsv(readFileSync(join(dir, ALIASES_TSV), "utf8"), rows) : new Map<number, string[]>();
+  return { head, name, bytes, checksum: sha256Hex(bytes), entries: rows.map((r) => baselineEntry(r, aliases.get(r.version))), carried: [] };
 }
 
 /**
@@ -180,19 +222,32 @@ export function compareLedgerExport(b: Baseline, exportText: string): { exitCode
   if (rows.size === 0) throw new BaselineError("the export holds no ledger row — it read nothing");
   const out: string[] = [];
   let diffs = 0;
+  let aliased = 0;
+  // A missing tail the image carries as files is pending, not a difference:
+  // migrate finishes such a ledger (see the header). Anything else missing is.
+  const carried = new Set((b.carried ?? []).map((f) => f.version));
+  const held = Math.max(0, ...[...rows.keys()].filter((v) => v <= b.head));
+  const pending = b.entries.filter((e) => e.version > held);
+  const finishes = pending.every((e) => carried.has(e.version));
   for (const e of b.entries) {
     const r = rows.get(e.version);
+    if (r === undefined && finishes && e.version > held) continue;
     if (r === undefined) out.push(`  ✗ version ${String(e.version)} (${e.name}): not in the export`);
     else if (r.name !== e.name) out.push(`  ✗ version ${String(e.version)}: the export names ${r.name}, ledger.tsv ${e.name}`);
-    else if (r.checksum !== e.checksum) out.push(`  ✗ version ${String(e.version)} (${e.name}): the checksum differs (export ${r.checksum.slice(0, 12)}…, ledger.tsv ${e.checksum.slice(0, 12)}…)`);
-    else continue;
+    else if (!acceptsChecksum(e, r.checksum)) out.push(`  ✗ version ${String(e.version)} (${e.name}): the checksum differs (export ${r.checksum.slice(0, 12)}…, ledger.tsv ${e.checksum.slice(0, 12)}…)`);
+    else {
+      if (r.checksum !== e.checksum) aliased += 1;
+      continue;
+    }
     diffs += 1;
   }
   const after = [...rows.keys()].filter((v) => v > b.head).length;
-  const tail = after > 0 ? `; ${String(after)} version(s) after the baseline, not compared` : "";
+  const via = aliased > 0 ? ` (${String(aliased)} by a recorded alias in ${ALIASES_TSV})` : "";
+  const left = finishes && pending.length > 0 ? `; ${pending.map((e) => e.name).join(", ")} pending, carried as file(s) that migrate applies` : "";
+  const tail = `${via}${left}${after > 0 ? `; ${String(after)} version(s) after the baseline, not compared` : ""}`;
   out.push(
     diffs === 0
-      ? `✓ the export holds all ${String(b.head)} versions of ledger.tsv with equal names and checksums${tail}`
+      ? `✓ the export holds ${finishes && pending.length > 0 ? `versions 1..${String(held)}` : `all ${String(b.head)} versions`} of ledger.tsv with equal names and checksums${tail}`
       : `✗ ${String(diffs)} of the baseline's ${String(b.head)} versions differ from the export${tail}`,
   );
   return { exitCode: diffs === 0 ? 0 : 1, lines: out };

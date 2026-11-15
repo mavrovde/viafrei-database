@@ -1,12 +1,16 @@
 /**
- * The cutover path: a database migrated by the shell migrator up to 0292 (its
- * ledger holds exactly 1..292 under ledger.tsv's names and checksums) reaches
- * the head through this service's migrate — the carried 0293, then every file
- * after it, the no-transaction index of 0294 included.
+ * The cutover path: a database migrated file by file by the shell migrator up
+ * to 0292 reaches the head through this service's migrate — the carried 0293,
+ * then every file after it, the no-transaction index of 0294 included. Its
+ * ledger is test/ledger-at-0292.tsv, an export of such a database
+ * (version, name, checksum): 1..287 equal to ledger.tsv, 0288..0292 under the
+ * checksums of their comment-edited files, which db/baseline/aliases.tsv
+ * records.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
  *
- * The 0292 database is made from the baseline with ledger row 293 forgotten.
+ * The 0292 database is made from the baseline, its ledger then replaced by
+ * the export.
  * The carried 0293 only replaces functions by their reworded definitions and
  * sets two notes, so applying it over its own result is the same statement
  * run twice; what this test proves is the ledger path, which is the part a
@@ -48,13 +52,25 @@ describe.skipIf(url === undefined)("the cutover from a shell-migrated 0292", () 
     return pool;
   };
   let lines: readonly string[] = [];
+  const svc0 = (): DatabaseService => {
+    const x = services[1];
+    if (x === undefined) throw new Error("no service");
+    return x;
+  };
   let shell: (string | number)[][] = [];
+  const exported = readFileSync(join(REPO, "test", "ledger-at-0292.tsv"), "utf8")
+    .split("\n")
+    .filter((l) => l !== "")
+    .map((l) => {
+      const [v = "", n = "", c = ""] = l.split("\t");
+      return [Number(v), n, c];
+    });
 
   beforeAll(async () => {
     await admin.query(`drop database if exists ${name} with (force)`);
     await admin.query(`create database ${name}`);
     pool = new pg.Pool({ connectionString: own.toString(), max: 1 });
-    // The baseline alone (its carried 0293, no file after it), then 293 forgotten: the shell ledger at 0292.
+    // The baseline alone (its carried 0293, no file after it), then its ledger replaced by the export.
     const b = readBaseline(config.baselineDir);
     if (b === null) throw new Error("no baseline");
     const carriedOnly = assembleSchema(b, full.baseline?.carried ?? []);
@@ -62,7 +78,11 @@ describe.skipIf(url === undefined)("the cutover from a shell-migrated 0292", () 
     services.push(first);
     const r = await first.migrate("cli");
     expect(r.ok, r.lines.join("\n")).toBe(true);
-    await pool.query("delete from schema_migrations where version = 293");
+    await pool.query("delete from schema_migrations");
+    await pool.query(
+      "insert into schema_migrations (version, name, checksum) select (r->>0)::int, r->>1, r->>2 from jsonb_array_elements($1::jsonb) r",
+      [JSON.stringify(exported)],
+    );
     shell = (await pool.query<{ version: number; name: string; checksum: string }>("select version, name, checksum from schema_migrations order by version")).rows.map((x) => [x.version, x.name, x.checksum]);
     const svc = new DatabaseService({ config, log, schema: full });
     services.push(svc);
@@ -78,11 +98,15 @@ describe.skipIf(url === undefined)("the cutover from a shell-migrated 0292", () 
     await admin.end();
   });
 
-  it("started from exactly the shell ledger: 1..292 with ledger.tsv's names and checksums", () => {
+  it("started from exactly the export: 1..292, ledger.tsv's names, five checksums that are aliases", () => {
     const tsv = parseLedgerTsv(readFileSync(join(REPO, "db", "baseline", "ledger.tsv"), "utf8"));
     expect(tsv.length).toBe(293);
-    expect(shell).toEqual(tsv.filter((x) => x.version <= 292).map((x) => [x.version, x.name, x.checksum]));
-    expect(shell.length).toBe(292);
+    expect(shell).toEqual(exported);
+    expect(shell.map((x) => x[0])).toEqual(Array.from({ length: 292 }, (_, i) => i + 1));
+    expect(shell.map((x) => x[1])).toEqual(tsv.filter((x) => x.version <= 292).map((x) => x.name));
+    const differ = shell.filter((x) => x[2] !== tsv[Number(x[0]) - 1]?.checksum).map((x) => x[0]);
+    expect(differ).toEqual([288, 289, 290, 291, 292]);
+    for (const v of differ) expect(full.baseline?.entries[Number(v) - 1]?.aliases).toEqual([shell[Number(v) - 1]?.[2]]);
     expect(full.baseline?.carried?.map((f) => f.name)).toEqual(["0293_neutral_texts.sql"]);
   });
 
@@ -95,7 +119,9 @@ describe.skipIf(url === undefined)("the cutover from a shell-migrated 0292", () 
 
   it("ends at head with the ledger the image expects: every version, name and checksum", async () => {
     const rows = (await db().query<{ version: number; name: string; checksum: string }>("select version, name, checksum from schema_migrations order by version")).rows;
-    expect(rows.map((x) => [x.version, x.name, x.checksum])).toEqual(full.all.map((f) => [f.version, f.name, f.checksum]));
+    expect(rows.map((x) => [x.version, x.name, x.checksum])).toEqual([...exported, ...full.all.filter((f) => f.version > 292).map((f) => [f.version, f.name, f.checksum])]);
+    expect(svc0().snapshot().schemaReadiness).toEqual({ ready: true, reason: "at-head", head: full.all.length });
+    expect(svc0().snapshot().schema?.mismatches).toEqual([]);
     const svc = services[1];
     if (svc === undefined) throw new Error("no service");
     await svc.ensurePartitions("cli", 1);

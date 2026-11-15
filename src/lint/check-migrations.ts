@@ -10,7 +10,10 @@
  *      run without a gap up to the head — see src/migrations/baseline.ts)
  *   B. db/baseline, when present: a valid ledger.tsv (contiguous from 1) and
  *      exactly one NNNN_baseline.sql numbered at its last version; under
- *      rule 4 both are frozen once on origin/main, like an applied file
+ *      rule 4 both are frozen once on origin/main, like an applied file;
+ *      an optional aliases.tsv must parse against that ledger (it is not
+ *      frozen: a row is added when a database is found holding an edited
+ *      file's checksum)
  *   3. every file has a `-- rollback:` note
  *   4. a file already present on origin/main is byte-identical (never edited)
  *   5. a rollback note naming `schema_migrations where version = N` names THIS file's number
@@ -35,7 +38,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASELINE_FILE, BaselineError, carriedFault, LEDGER_TSV, parseLedgerTsv, type LedgerRow } from "../migrations/baseline.js";
+import { ALIASES_TSV, BASELINE_COMPANIONS, BASELINE_FILE, BaselineError, carriedFault, LEDGER_TSV, parseAliasesTsv, parseLedgerTsv, type LedgerRow } from "../migrations/baseline.js";
 import { sha256Hex } from "../migrations/files.js";
 
 export const LEDGER_GRANDFATHERED = new Set(["0003_fuel_watch_asked.sql", "0004_fuel_health.sql", "0005_fuel_detail.sql", "0008_transit_delays_licence.sql", "0019_status_role.sql"]);
@@ -98,13 +101,21 @@ export function lint(io: LintIo): LintResult {
   let ledgerRows: LedgerRow[] = [];
   if (baselineNames !== null) {
     const sqls = baselineNames.filter((n) => BASELINE_FILE.test(n));
-    const stray = baselineNames.filter((n) => n !== LEDGER_TSV && !BASELINE_FILE.test(n) && !n.startsWith("."));
-    for (const n of stray) fail(`db/baseline/${n}: only ${LEDGER_TSV} and one NNNN_baseline.sql belong in db/baseline`);
+    const stray = baselineNames.filter((n) => !BASELINE_COMPANIONS.includes(n) && !BASELINE_FILE.test(n) && !n.startsWith("."));
+    for (const n of stray) fail(`db/baseline/${n}: only ${BASELINE_COMPANIONS.join(", ")} and one NNNN_baseline.sql belong in db/baseline`);
     if (!baselineNames.includes(LEDGER_TSV)) fail(`db/baseline: ${LEDGER_TSV} is missing`);
     else {
       try {
         ledgerRows = parseLedgerTsv(io.read("baseline", LEDGER_TSV).toString("utf8"));
         baselineHead = ledgerRows.length;
+      } catch (e) {
+        if (!(e instanceof BaselineError)) throw e;
+        fail(`db/baseline/${e.message}`);
+      }
+    }
+    if (baselineNames.includes(ALIASES_TSV) && ledgerRows.length > 0) {
+      try {
+        parseAliasesTsv(io.read("baseline", ALIASES_TSV).toString("utf8"), ledgerRows);
       } catch (e) {
         if (!(e instanceof BaselineError)) throw e;
         fail(`db/baseline/${e.message}`);

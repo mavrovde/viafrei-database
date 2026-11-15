@@ -120,7 +120,7 @@ describe("rule B: the baseline", () => {
 
   it("a missing ledger, a second baseline file and a stray file are each named", () => {
     expect(fails(planted({ "0003_baseline.sql": "x;\n", "0004_baseline.sql": "y;\n", "notes.md": "" }, null))).toEqual([
-      "  ✗ db/baseline/notes.md: only ledger.tsv and one NNNN_baseline.sql belong in db/baseline",
+      "  ✗ db/baseline/notes.md: only ledger.tsv, aliases.tsv and one NNNN_baseline.sql belong in db/baseline",
       "  ✗ db/baseline: ledger.tsv is missing",
       "  ✗ db/baseline: expected exactly one NNNN_baseline.sql, found 2",
     ]);

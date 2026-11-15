@@ -1,0 +1,6 @@
+version	name	checksum	reason
+288	0288_ingestor_domain_road_works.sql	d12c2b04e92d82af4b0132c0fd054f8dd5419c560225b2b9aced80c8ed36bd9b	the file was edited in its comments only after the baseline was cut, and applied in that form by a database migrated file by file
+289	0289_ingestor_domain_speed_cameras.sql	da99b9b669f3ba922568799a3977f526e4028df9ab206cccebf5d1c3847cf94d	the file was edited in its comments only after the baseline was cut, and applied in that form by a database migrated file by file
+290	0290_ingestor_domain_route_recommendations.sql	fb912e998bfcdf14437aa070d7427084b9b4d1219051ccc08d5e645cfebdd3ea	the file was edited in its comments only after the baseline was cut, and applied in that form by a database migrated file by file
+291	0291_ingestor_domains_transit_odbl.sql	657e644d8efb4fc0db6799cba7fd9c793c91200f84f6459967e07e2b7cc3ddf6	the file was edited in its comments only after the baseline was cut, and applied in that form by a database migrated file by file
+292	0292_transit_odbl_readers.sql	49540cb81cc7860ac04bfb7cd5f97a86dd576e3e0f33b2c61989c6f16f6aeada	the file was edited in its comments only after the baseline was cut, and applied in that form by a database migrated file by file

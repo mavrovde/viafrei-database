@@ -34,6 +34,13 @@ the baseline (`db/baseline/0293_baseline.sql`): the next is `0294`.
 carried as a file so a database at 0292 can reach the head; its name and
 bytes must stay those `ledger.tsv` records. `db/baseline/` (the baseline and
 its `ledger.tsv`) is frozen; a change to the schema is always a new migration.
+`db/baseline/aliases.tsv` is the one exception that grows: a version whose
+file was edited in its comments only after the baseline was cut, and applied
+in that form by a database migrated file by file, is listed there with the
+checksum that database holds and the reason. `migrate`, readiness and
+`ledger-compare` accept either checksum for that version; any other is still a
+mismatch. `ledger.tsv` keeps the bytes the baseline was cut from, which is what
+a database the baseline starts writes.
 `npm run lint:migrations` enforces the rules below on every pull request:
 
 1. **The next number, no gap.** The prefix is four digits and the slug starts

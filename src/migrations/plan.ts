@@ -16,7 +16,7 @@
  *   * READY means: the ledger could be read, nothing is pending, nothing
  *     mismatches, and the image carries at least one migration. Nothing else.
  */
-import type { MigrationFile } from "./files.js";
+import { acceptsChecksum, type MigrationFile } from "./files.js";
 
 export type AppliedRow = { readonly version: number; readonly checksum: string };
 
@@ -44,7 +44,7 @@ export function compare(files: readonly MigrationFile[], rows: readonly AppliedR
     const got = byVersion.get(f.version);
     if (got === undefined) {
       pending.push(f);
-    } else if (got !== f.checksum) {
+    } else if (!acceptsChecksum(f, got)) {
       mismatches.push({ name: f.name, version: f.version, applied: got, file: f.checksum });
     } else {
       applied += 1;
