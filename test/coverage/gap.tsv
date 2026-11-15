@@ -2,13 +2,6 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-function	public.autobahn_event_raw(p_ext_id text, p_observed_at timestamp with time zone)
-function	public.autobahn_event_texts_backfill(since timestamp with time zone)
-function	public.autobahn_jam_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
-function	public.autobahn_raw_resolve(p_raw jsonb, p_raw_hash bytea, p_ext_id text, p_observed_at timestamp with time zone)
-function	public.autobahn_validity_date(d text, mo text, y text)
-function	public.autobahn_validity_overlaps(description jsonb, from_at timestamp with time zone, to_at timestamp with time zone)
-function	public.autobahn_validity_time(h text, mi text)
 function	public.charging_house_key(street text, house_number text)
 function	public.charging_operator_tokens(name text)
 function	public.charging_register_free_of_charge(extras jsonb)
@@ -37,12 +30,6 @@ function	public.ops_requests_source_guard()
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
 function	public.ops_rollup_usage_fold(b_from date, b_to date)
 function	public.place_slugs_frozen()
-function	public.road_event_in_force(overall_start timestamp with time zone, overall_end timestamp with time zone, payload jsonb, at timestamp with time zone)
-function	public.road_event_in_force(overall_start timestamp with time zone, overall_end timestamp with time zone, payload jsonb, valid_windows tstzmultirange, at timestamp with time zone)
-function	public.road_event_in_force_known(overall_start timestamp with time zone, overall_end timestamp with time zone, suspended boolean, payload jsonb, valid_windows tstzmultirange, at timestamp with time zone)
-function	public.road_event_suspended(payload jsonb)
-function	public.road_events_note_suspended()
-function	public.road_ref_key(road text)
 function	public.search_console_weekly_load(doc jsonb)
 function	public.station_slugs_frozen()
 function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)
@@ -67,7 +54,6 @@ trigger	public.ops_passkeys.ops_passkeys_counter
 trigger	public.ops_requests.ops_requests_rate_limit
 trigger	public.ops_requests.ops_requests_source_guard
 trigger	public.place_slugs.place_slugs_frozen
-trigger	public.road_events.road_events_suspended
 trigger	public.station_slugs.station_slugs_frozen
 trigger	public.street_bays.street_bays_postcode
 trigger	public.watch_events.watch_events_notify_insert
@@ -137,8 +123,6 @@ view	public.parking_occupancy_odbl_live
 view	public.parking_occupancy_sid_live
 view	public.parking_sites_live
 view	public.road_context_live
-view	public.road_event_locations_live
-view	public.road_events_current
 view	public.road_events_live
 view	public.road_weather_forecast_live
 view	public.road_weather_stations_live
