@@ -28,9 +28,17 @@
 -- road_weather_forecast is a series: append-only, day-partitioned on
 -- observed_at, no default partition. Its old twin holds the latest run only
 -- and is replaced whole by each run, so its row in public.partition_retention
--- keeps one day, the shortest window the retention job allows, with no
--- archive: every run is in the raw archive. A reader takes the newest run of
--- a station. A writer stamps one observed_at, or one source_run_id, per run.
+-- keeps one day, the shortest window, with no archive: every run is in the
+-- raw archive. A reader takes the newest run of a station.
+--
+-- The writer contract, because "the newest run" is read off observed_at:
+--   * one run writes ONE observed_at, the run's own instant, on every row it
+--     appends (and the same source_run_id on each, when it carries one);
+--   * the writer always sets observed_at itself and never relies on the
+--     column's clock_timestamp() default, which differs row by row inside one
+--     statement, so a run written on the default is not one run but many, and
+--     "the newest run" would be its last row only;
+--   * a repeat of a run (same owner key, same observed_at) is a no-op.
 --
 -- Not carried, because no reader uses them: raw (the one key a reader took
 -- from it is event_code_ii / event_ii), and the old
