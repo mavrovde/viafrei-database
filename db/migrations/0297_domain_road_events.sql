@@ -10,7 +10,12 @@
 -- within its creator. Here source_id is the ingestor source, the creator is
 -- publication_creator, and external_id is <publication_creator>:<publication_id>,
 -- held equal to the two columns by a check, so two creators in one feed cannot
--- collide on one id.
+-- collide on one id. A creator may hold no ':' (road_events_publication_creator_no_colon):
+-- otherwise creator 'a:b' with id 'c' and creator 'a' with id 'b:c' would both
+-- be 'a:b:c'. With the creator colon-free, the first ':' of external_id is the
+-- split, and the pair is recovered from it. The table is empty when this
+-- migration runs, so the check refuses nothing then; a writer folding an old
+-- public.road_events row in must first find none whose source_id holds a ':'.
 --
 -- The old child table public.road_event_locations becomes the locations array
 -- (one object per stretch, in published order); the situation record types of
@@ -72,6 +77,7 @@ create table domains.road_events (
   constraint road_events_owner_key unique (source_id, feed, external_id),
   constraint road_events_external_id_shape check (external_id = publication_creator || ':' || publication_id),
   constraint road_events_publication_creator check (publication_creator <> ''),
+  constraint road_events_publication_creator_no_colon check (position(':' in publication_creator) = 0),
   constraint road_events_publication_id check (publication_id <> ''),
   constraint road_events_payload_object check (jsonb_typeof(payload) = 'object'),
   constraint road_events_valid_windows_array check (valid_windows is null or jsonb_typeof(valid_windows) = 'array'),

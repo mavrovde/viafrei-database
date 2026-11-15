@@ -120,7 +120,7 @@ describe.skipIf(url === undefined)("domains.road_events", () => {
   });
 
   it("has the constraints and indexes of the convention, and its own", async () => {
-    const own = /T_(external_id_shape|publication_creator|publication_id|payload_object|valid_windows_array|locations_array|record_types_array|open|ref_key) /;
+    const own = /T_(external_id_shape|publication_creator|publication_creator_no_colon|publication_id|payload_object|valid_windows_array|locations_array|record_types_array|open|ref_key) /;
     const shape = await t.shape("road_events");
     expect(shape.filter((d) => own.test(d))).toEqual([
       "CREATE INDEX T_open ON domains.T USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)",
@@ -129,6 +129,7 @@ describe.skipIf(url === undefined)("domains.road_events", () => {
       "c T_locations_array CHECK ((jsonb_typeof(locations) = 'array'::text))",
       "c T_payload_object CHECK ((jsonb_typeof(payload) = 'object'::text))",
       "c T_publication_creator CHECK ((publication_creator <> ''::text))",
+      "c T_publication_creator_no_colon CHECK ((POSITION((':'::text) IN (publication_creator)) = 0))",
       "c T_publication_id CHECK ((publication_id <> ''::text))",
       "c T_record_types_array CHECK ((jsonb_typeof(record_types) = 'array'::text))",
       "c T_valid_windows_array CHECK (((valid_windows IS NULL) OR (jsonb_typeof(valid_windows) = 'array'::text)))",
@@ -199,11 +200,15 @@ describe.skipIf(url === undefined)("domains.road_events", () => {
       expect((await upsert(c, "roads-high", [EVENT, other])).rows).toEqual([{ inserted: true }, { inserted: true }]);
       const n = await c.query<{ n: number }>(`select count(*)::int as n from ${E} where publication_id = 'RW-1'`);
       expect(n.rows[0]?.n).toBe(2);
+      // a publication id may hold a ':' — the creator cannot, so the first ':' of the key is the split
+      expect((await upsert(c, "roads-high", [{ ...EVENT, external_id: "DE-OTHER:RW:1", publication_creator: "DE-OTHER", publication_id: "RW:1" }])).rows).toEqual([{ inserted: true }]);
       for (const [row, code, word] of [
         [{ ...EVENT, external_id: "RW-1" }, "23514", "road_events_external_id_shape"],
         [{ ...EVENT, external_id: "", publication_creator: "", publication_id: "" }, "23514", "road_events_external_id_check"],
         [{ ...EVENT, external_id: ":RW-1", publication_creator: "" }, "23514", "road_events_publication_creator"],
         [{ ...EVENT, external_id: "DE-MDM-AUTOBAHN:", publication_id: "" }, "23514", "road_events_publication_id"],
+        // creator "DE-OTHER:RW" with id "1" would be the key of creator "DE-OTHER" with id "RW:1"
+        [{ ...EVENT, external_id: "DE-OTHER:RW:1", publication_creator: "DE-OTHER:RW", publication_id: "1" }, "23514", "road_events_publication_creator_no_colon"],
         [{ ...EVENT, payload: null }, "23502", "payload"],
         [{ ...EVENT, payload: [] }, "23514", "road_events_payload_object"],
         [{ ...EVENT, version: null }, "23502", "version"],
