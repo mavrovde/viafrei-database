@@ -48,6 +48,7 @@ const HYDROGEN: Readonly<Record<string, string>> = {
   opening: "jsonb",
   source_publisher: "text",
   provider_updated_at: "timestamp with time zone",
+  last_seen_at: "timestamp with time zone",
 };
 
 type Row = { external_id: string; match_key?: string | null; observed_at?: string | null; geom_wkt?: string | null; extras?: unknown } & Record<string, unknown>;
@@ -101,6 +102,7 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
     opening: { always: true },
     source_publisher: "Ein Verbund",
     provider_updated_at: "2026-11-10T08:00:00Z",
+    last_seen_at: "2026-11-14T08:00:00Z",
   };
 
   it("is at head with the migration applied", async () => {
@@ -177,6 +179,36 @@ describe.skipIf(url === undefined)("domains.charging_point_status and domains.hy
       expect(e?.code).toBe("P0001");
       expect(e?.message).toMatch(/^ensure_daily_partitions: range-partitioned table\(s\) outside the daily schedule in schema domains: vf_probe partitioned by RANGE \(k\)\. /);
     });
+  });
+
+  it("records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one", async () => {
+    const r = await t.pool.query<{ schema_name: string; table_name: string; keep_days: number; archive: boolean }>("select schema_name, table_name, keep_days, archive from partition_retention order by 1, 2");
+    expect(r.rows).toEqual([{ schema_name: "domains", table_name: "charging_point_status", keep_days: 14, archive: true }]);
+    // Every domains tick table has its row.
+    const missing = await t.pool.query<{ t: string }>(
+      `select c.relname as t from pg_partitioned_table p join pg_class c on c.oid = p.partrelid
+        where c.relnamespace = 'domains'::regnamespace and not exists (select 1 from partition_retention r where r.schema_name = 'domains' and r.table_name = c.relname)`,
+    );
+    expect(missing.rows).toEqual([]);
+    await t.planted(async (c) => {
+      await c.query("create table domains.vf_ticks (observed_at timestamptz not null) partition by range (observed_at)");
+      const e = await refusal(c.query("select ensure_daily_partitions()"));
+      expect(e?.message).toBe(
+        "ensure_daily_partitions: tick table(s) of schema domains without a row in partition_retention: vf_ticks. Add the row (how many days a day partition is kept, and whether it is archived first) in the migration that creates the table.",
+      );
+    });
+    await t.planted(async (c) => {
+      for (const [sql, word] of [
+        ["insert into partition_retention values ('domains', 'x', 0, true, 'r')", "partition_retention_keep_days"],
+        ["insert into partition_retention values ('domains', 'x', 1, true, '')", "partition_retention_reason"],
+        ["insert into partition_retention values ('domains', 'charging_point_status', 1, true, 'r')", "partition_retention_pkey"],
+      ] as const) {
+        await c.query("savepoint s");
+        expect((await refusal(c.query(sql)))?.message, word).toContain(word);
+        await c.query("rollback to savepoint s");
+      }
+    });
+    expect((await t.readable(["public.partition_retention"])).open).toEqual([]);
   });
 
   it("the partition helper still refuses a public schema below its floor", async () => {

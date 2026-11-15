@@ -19,6 +19,13 @@
 -- see this table covered. The floor in partition_settings still counts the
 -- current schema's tick tables only.
 --
+-- public.partition_retention: how long each day partition of a tick table is
+-- kept and whether it is archived to the cold store before it is dropped,
+-- read by the partition retention job. A tick table of schema domains must
+-- have its row: ensure_daily_partitions refuses one that has none.
+-- domains.charging_point_status keeps 14 days, then the cold store, as its old
+-- twin public.charging_point_status does.
+--
 -- domains.hydrogen_stations: hydrogen refuelling stations, one row per station
 -- and source, a state table with the trust-ranked _merged view.
 --
@@ -30,6 +37,7 @@
 -- and their data are not touched.
 --
 -- rollback: drop view domains.hydrogen_stations_merged; drop table domains.hydrogen_stations;
+--   drop table public.partition_retention;
 --   drop table domains.charging_point_status; (its day partitions go with it)
 --   restore ensure_daily_partitions from db/baseline/0293_baseline.sql;
 --   delete from schema_migrations where version = 296;
@@ -89,6 +97,16 @@ begin
         s, stray;
     end if;
 
+    if s = 'domains' then
+      select string_agg(x, ', ' order by x) into stray
+        from unnest(covered) x
+       where not exists (select 1 from partition_retention r where r.schema_name = s and r.table_name = x);
+      if stray is not null then
+        raise exception 'ensure_daily_partitions: tick table(s) of schema % without a row in partition_retention: %. Add the row (how many days a day partition is kept, and whether it is archived first) in the migration that creates the table.',
+          s, stray;
+      end if;
+    end if;
+
     foreach t in array covered loop
       for i in -days_back..days_ahead loop
         d := (current_date + i);
@@ -108,6 +126,21 @@ begin
   raise notice 'ensure_daily_partitions: % table(s) on the daily schedule in schema(s) %, days % .. %, % partition(s) created, % BRIN index(es) set to autosummarize',
     total, array_to_string(schemas, ', '), current_date - days_back, current_date + days_ahead, made, summarized;
 end $$;
+
+create table public.partition_retention (
+  schema_name text not null,
+  table_name text not null,
+  keep_days integer not null,
+  archive boolean not null,
+  reason text not null,
+  primary key (schema_name, table_name),
+  constraint partition_retention_keep_days check (keep_days >= 1),
+  constraint partition_retention_reason check (reason <> '')
+);
+
+comment on table public.partition_retention is 'How long the day partitions of a tick table are kept, and whether each is archived to the cold store before it is dropped. Read by the partition retention job; a tick table of schema domains must have its row.';
+comment on column public.partition_retention.keep_days is 'Day partitions older than this many days are retired.';
+comment on column public.partition_retention.archive is 'True: dumped to the cold store and verified before the drop. False: dropped without a dump.';
 
 create table domains.charging_point_status (
   id bigint generated always as identity,
@@ -167,6 +200,9 @@ create policy charging_point_status_own_insert on domains.charging_point_status 
               and exists (select 1 from ingestor.sources s where s.id = source_id and s.domain = 'charging_point_status'));
 grant select, insert on domains.charging_point_status to viafrei_ingestor;
 
+insert into public.partition_retention (schema_name, table_name, keep_days, archive, reason)
+values ('domains', 'charging_point_status', 14, true, 'as its old twin public.charging_point_status: 14 days, then the cold store, because a delta feed''s status cannot be fetched again');
+
 create table domains.hydrogen_stations (
   id bigint generated always as identity,
   source_id text not null check (source_id ~ '^[a-z][a-z0-9_-]{2,62}$'),
@@ -187,6 +223,7 @@ create table domains.hydrogen_stations (
   opening jsonb,
   source_publisher text,
   provider_updated_at timestamptz,
+  last_seen_at timestamptz,
   primary key (id),
   constraint hydrogen_stations_owner_key unique (source_id, feed, external_id),
   constraint hydrogen_stations_geom_point check (geom is null or GeometryType(geom) = 'POINT'),
@@ -200,6 +237,7 @@ comment on column domains.hydrogen_stations.refill is 'A non-empty JSON array of
 comment on column domains.hydrogen_stations.opening is 'The opening times as published, JSON.';
 comment on column domains.hydrogen_stations.source_publisher is 'The publisher behind the source, when the source relays another''s data.';
 comment on column domains.hydrogen_stations.provider_updated_at is 'When the publisher says the station''s data last changed, verbatim.';
+comment on column domains.hydrogen_stations.last_seen_at is 'The last run that saw the station in its source, set by the writer on every run (observed_at moves only when the row changes).';
 
 create index hydrogen_stations_match on domains.hydrogen_stations (match_key) where closed_at is null;
 create index hydrogen_stations_owner_open on domains.hydrogen_stations (source_id, feed) where closed_at is null;
