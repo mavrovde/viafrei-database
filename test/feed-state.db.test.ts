@@ -9,6 +9,7 @@
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
  */
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type pg from "pg";
 import { DomainDb } from "./domain-db.js";
@@ -167,7 +168,7 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
           const status = statuses[Math.floor(r() * statuses.length)] ?? "ok";
           return {
             key: ["fa", "fb", "fc"][Math.floor(r() * 3)] ?? "fa",
-            min: status === "pending" ? null : i + 1,
+            min: status === "pending" && r() < 0.5 ? null : i + 1,
             status,
             hit: r() < 0.35 ? (hits[Math.floor(r() * hits.length)] ?? null) : null,
             seen: r() < 0.6 ? Math.floor(r() * 9) : null,
@@ -182,9 +183,8 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
           await c.query("select control.recompute_feed_state('feed', array['fa', 'fb', 'fc'])");
           expect([seed, folded]).toEqual([seed, await state(c, "feed")]);
         });
-        // a running ingest row is unfinished, as the writer leaves it: running with a finished_at and rows is read differently by
-        // the fold (skipped) and the recompute (a change) — reported, not pinned here
-        const ingest: IngestRun[] = runs.map((x) => ({ key: x.key === "fa" ? "p_plain" : `p_plain:${x.key}`, min: x.status === "held" ? null : x.min, status: x.status === "unchanged" ? "interrupted" : x.status === "held" ? "running" : x.status === "pending" || x.status === "skipped" ? "ok" : x.status, hit: x.hit ?? null, rows: x.seen ?? null }));
+        // a held feed run becomes a finished running ingest run and a pending one a pending ingest run, finished or not (#32 finding, 0310)
+        const ingest: IngestRun[] = runs.map((x) => ({ key: x.key === "fa" ? "p_plain" : `p_plain:${x.key}`, min: x.min, status: x.status === "unchanged" ? "interrupted" : x.status === "held" ? "running" : x.status === "skipped" ? "ok" : x.status, hit: x.hit ?? null, rows: x.seen ?? null }));
         await t.planted(async (c) => {
           const sh = [...ingest].sort(() => r() - 0.5);
           for (let i = 0; i < sh.length; i += 9) await insertIngest(c, sh.slice(i, i + 9));
@@ -204,6 +204,55 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
         expect((await state(c, "feed"))[0]?.chg).toBe(m(3));
         await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_inserted, items_updated, items_closed) values ('fa', $1, $1, 'ok', 0, 0, 0)", [at(4)]);
         expect((await state(c, "feed"))[0]).toMatchObject({ suc: m(4), chg: m(3) });
+      });
+    });
+
+    it("a finished pending run that closed items is a change and nothing else, in the fold as in the recompute (the #844 close pass)", async () => {
+      await t.planted(async (c) => {
+        await insertFeed(c, [{ key: "fa", min: 1, status: "ok", seen: 4 }]);
+        await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fa', $1, $1, 'pending', 3)", [at(2)]);
+        await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fb', $1, $1, 'pending', 1)", [at(2)]);
+        await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fb', $1, $1, 'skipped', 2)", [at(3)]);
+        const folded = await state(c, "feed");
+        expect(folded).toEqual([
+          { key: "fa", budget_key: "plain", cadence_s: 60, att: m(1), status: "ok", suc: m(1), chg: m(2), ref: null, hit: null, since: null, due: null },
+          { key: "fb", budget_key: "plain", cadence_s: 120, att: null, status: null, suc: null, chg: m(3), ref: null, hit: null, since: null, due: null },
+        ]);
+        await c.query("select control.recompute_feed_state('feed', array['fa', 'fb'])");
+        expect(await state(c, "feed")).toEqual(folded);
+      });
+    });
+
+    it("a finished running or pending ingest run that wrote rows is a change and nothing else, in the fold as in the recompute", async () => {
+      await t.planted(async (c) => {
+        await insertIngest(c, [{ key: "p_plain", min: 1, status: "ok", rows: 0 }]);
+        await insertIngest(c, [{ key: "p_plain", min: 2, status: "pending", rows: 2 }]);
+        await insertIngest(c, [{ key: "p_plain:x", min: 3, status: "running", rows: 5 }]);
+        await insertIngest(c, [{ key: "p_plain:y", min: null, status: "running", rows: 5 }]);
+        const folded = await state(c, "ingest");
+        expect(folded).toEqual([
+          { key: "p_plain", budget_key: "plain", cadence_s: null, att: m(1), status: "ok", suc: m(1), chg: m(2), ref: null, hit: null, since: null, due: null },
+          { key: "p_plain:x", budget_key: "plain", cadence_s: null, att: null, status: null, suc: null, chg: m(3), ref: null, hit: null, since: null, due: null },
+        ]);
+        await c.query("select control.recompute_feed_state('ingest', array['p_plain', 'p_plain:x', 'p_plain:y'])");
+        expect(await state(c, "ingest")).toEqual(folded);
+      });
+    });
+
+    it("migration 0310 recomputes a key the old fold left behind and no other", async () => {
+      const sql = readFileSync(new URL("../db/migrations/0310_feed_state_fold_counts_every_finished_change.sql", import.meta.url), "utf8");
+      await t.planted(async (c) => {
+        await insertFeed(c, [{ key: "fa", min: 1, status: "ok", ins: 1 }]);
+        await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fa', $1, $1, 'pending', 3)", [at(2)]);
+        await insertFeed(c, [{ key: "fb", min: 1, status: "ok", ins: 1 }]);
+        await insertIngest(c, [{ key: "p_plain", min: 1, status: "pending", rows: 4 }]);
+        // the state the old fold held: the pending change unseen. fb is stale on purpose and has no pending change, so it is left alone
+        await c.query("update control.feed_state set last_changed_at = $1 where ledger = 'feed'", [at(1)]);
+        await c.query("delete from control.feed_state where ledger = 'ingest'");
+        await c.query("update control.feed_state set last_changed_at = $1 where ledger = 'feed' and key = 'fb'", [at(0)]);
+        await c.query(sql);
+        expect((await state(c, "feed")).map((x) => [x.key, x.chg])).toEqual([["fa", m(2)], ["fb", m(0)]]);
+        expect((await state(c, "ingest")).map((x) => [x.key, x.chg])).toEqual([["p_plain", m(1)]]);
       });
     });
 
