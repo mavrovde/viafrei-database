@@ -552,6 +552,7 @@ function	control.audit_change()	test/control-plane.db.test.ts > the actor defaul
 function	control.bucket_width(p_window_s integer, p_burst_window_s integer)	test/control-plane.db.test.ts > bucket_width: a minute of the shorter window, never below one second
 function	control.changes_append_only()	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
 function	control.check_budget_shape()	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
+function	control.check_budget_shape()	test/replays.db.test.ts > 0285's bound: a cap that takes the other callers' floors, a caller with no floor, floors over the ceiling and a cap over it are refused, each by name
 function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a key planted as before #1221 (no floors, each cap the whole key) comes out inside the bound, and a second run changes nothing
 function	control.fit_shares(p_budget_key text)	test/control-plane.db.test.ts > a ceiling below the callers switched on is refused by name; a paused key and a key of one caller are fitted to the ceiling
 function	control.hold(p_provider text, p_reason text)	test/control-plane.db.test.ts > hold: a 5xx holds a key with a hold for its hold_s and admit refuses it; a key without one is never held; a reason outside the list is refused
@@ -571,6 +572,7 @@ trigger	control.callers.callers_audit	test/control-plane.db.test.ts > a change t
 trigger	control.changes.changes_append_only	test/control-plane.db.test.ts > control.changes is append-only: an update and a delete are refused
 trigger	control.shares.shares_audit	test/control-plane.db.test.ts > a change to budgets, callers or shares without a reason is refused; with one, each changed field is a row, an insert or delete one '*' row
 trigger	control.shares.shares_shape	test/control-plane.db.test.ts > the shape is checked at commit, however the row is written: cap over ceiling, floors over ceiling, no floor, a cap that takes the others' floors
+trigger	control.shares.shares_shape	test/replays.db.test.ts > 0285's bound: a cap that takes the other callers' floors, a caller with no floor, floors over the ceiling and a cap over it are refused, each by name
 function	control.feed_state_after_change()	test/feed-state.db.test.ts > an attempt, a success and a change set their times; a budget refusal is no attempt and starts the pause; the next real run ends it
 function	control.feed_state_after_change()	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing
 function	control.feed_state_after_change()	test/feed-state.db.test.ts > an update of a run the row holds recomputes that key; an update that changes nothing it reads leaves it
@@ -591,6 +593,7 @@ function	public.feed_versions_bump()	test/feed-state.db.test.ts > an update bump
 function	public.feed_versions_bump()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
 function	public.feed_versions_forget()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
 function	public.runtime_config_source_bounds()	test/feed-state.db.test.ts > a source key names a declared source; an interval is within its floor and four times its declared cadence; other keys pass untouched
+function	public.runtime_config_source_bounds()	test/replays.db.test.ts > source.<k>.*: an unknown source refused; an interval at the floor (catalogue, schedule or 60 s) admitted, below refused; four times the declared admitted, above refused
 trigger	public.feed_runs.feed_runs_feed_state_delete	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing
 trigger	public.feed_runs.feed_runs_feed_state_delete	test/feed-state.db.test.ts > every feed_state trigger fires always: session_replication_role = replica skips none
 trigger	public.feed_runs.feed_runs_feed_state_insert	test/feed-state.db.test.ts > an attempt, a success and a change set their times; a budget refusal is no attempt and starts the pause; the next real run ends it
@@ -613,6 +616,7 @@ trigger	public.ingest_runs.feed_versions_bump_insert	test/feed-state.db.test.ts 
 trigger	public.ingest_runs.feed_versions_bump_update	test/feed-state.db.test.ts > an update bumps only when the finish, the status or the count moved
 trigger	public.feed_runs.feed_versions_forget	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
 trigger	public.runtime_config.runtime_config_source_bounds	test/feed-state.db.test.ts > a source key names a declared source; an interval is within its floor and four times its declared cadence; other keys pass untouched
+trigger	public.runtime_config.runtime_config_source_bounds	test/replays.db.test.ts > source.<k>.*: an unknown source refused; an interval at the floor (catalogue, schedule or 60 s) admitted, below refused; four times the declared admitted, above refused
 view	control.data_status	test/feed-state.db.test.ts > a success older than three cadences is stale; the same age with a budget refusal after it is paused and never stale, with the hit, the pause's start and its resume
 view	control.data_status	test/feed-state.db.test.ts > a hold in force pauses the feed from the hold's start; the owner's pause, by the schedule or by runtime_config, comes first
 view	public.feed_checks	test/feed-state.db.test.ts > feed_checks: one row per open catalogue feed, checked_at the held success, paused_at the pause, a feed with no state not paused
@@ -632,6 +636,7 @@ function	public.road_ref_key(road text)	test/road-functions.db.test.ts > road_re
 function	public.road_events_note_suspended()	test/road-functions.db.test.ts > the suspended flag is derived from the payload on insert and on a payload update, whatever the writer sets
 trigger	public.road_events.road_events_suspended	test/road-functions.db.test.ts > the suspended flag is derived from the payload on insert and on a payload update, whatever the writer sets
 view	public.road_events_current	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
+view	public.road_events_current	test/replays.db.test.ts > road_events_current withholds a row marked anything but noRestriction, and keeps an absent and a free one
 view	public.road_event_locations_live	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 function	public.ops_audit_append_only()	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
 trigger	public.ops_audit.ops_audit_append_only	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
@@ -643,7 +648,9 @@ trigger	public.ops_passkeys.ops_passkeys_counter	test/ops-functions.db.test.ts >
 function	public.ops_requests_rate_limit()	test/ops-functions.db.test.ts > one restart per worker per five minutes; a refused one does not count; another worker is free
 trigger	public.ops_requests.ops_requests_rate_limit	test/ops-functions.db.test.ts > one restart per worker per five minutes; a refused one does not count; another worker is free
 function	public.ops_requests_source_guard()	test/ops-functions.db.test.ts > a run-now names a scheduled source, waits out its floor (the catalogue's licence floor if higher) and is one pending at a time
+function	public.ops_requests_source_guard()	test/replays.db.test.ts > run-now: unknown-source, below-floor from the last request, already-pending; a restart keeps its five-minute rule and run-now neither trips nor counts against it
 trigger	public.ops_requests.ops_requests_source_guard	test/ops-functions.db.test.ts > a run-now names a scheduled source, waits out its floor (the catalogue's licence floor if higher) and is one pending at a time
+trigger	public.ops_requests.ops_requests_source_guard	test/replays.db.test.ts > run-now: unknown-source, below-floor from the last request, already-pending; a restart keeps its five-minute rule and run-now neither trips nor counts against it
 function	public.place_slugs_frozen()	test/ops-functions.db.test.ts > a place slug is never changed, re-pointed or freed; its name may change
 trigger	public.place_slugs.place_slugs_frozen	test/ops-functions.db.test.ts > a place slug is never changed, re-pointed or freed; its name may change
 function	public.station_slugs_frozen()	test/ops-functions.db.test.ts > a station slug likewise
@@ -653,6 +660,7 @@ trigger	public.watches.watches_limit_per_session	test/ops-functions.db.test.ts >
 function	public.watch_events_notify()	test/ops-functions.db.test.ts > an event notifies viafrei_watch with its watch and its id, once committed
 trigger	public.watch_events.watch_events_notify_insert	test/ops-functions.db.test.ts > an event notifies viafrei_watch with its watch and its id, once committed
 function	public.vf_ledger_mask(t text)	test/ops-functions.db.test.ts > vf_ledger_mask masks IPv4 and IPv6 addresses and leaves versions, times, ids and words alone
+function	public.vf_ledger_mask(t text)	test/replays.db.test.ts > vf_ledger_mask equals main's ledgerText on every case of the shared fixture, and keeps a null
 function	public.vf_page_key(identity text)	test/ops-functions.db.test.ts > vf_page_key: ten lower-case letters from the identity's sha256, the same for the same identity
 function	public.mcp_usage_traffic_class(client text)	test/ops-functions.db.test.ts > mcp_usage_traffic_class: our own probes are own, unknown and stateless are scanners, the rest real
 function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)	test/ops-functions.db.test.ts > transit_odbl_departs_at counts GTFS seconds from noon minus twelve hours, across the clock change
@@ -785,6 +793,8 @@ view	public.transit_punctuality_area_live	test/views-complex.db.test.ts > public
 view	public.transit_punctuality_live	test/views-complex.db.test.ts > public.transit_punctuality_live: per Land, the trips with a DELFI delay in the last half hour and the late ones
 view	public.transit_station_live	test/views-complex.db.test.ts > public.transit_station_live: the eight main stations, their stops and platforms and the last half hour of their delays
 view	public.transit_stop_modes	test/views-complex.db.test.ts > public.transit_stop_modes: per stop family, its modes and lines from live trips, routes and stops
+view	public.transit_stop_modes	test/replays.db.test.ts > transit_stop_modes: one row per family under the parent's name, sbahn only for 109, the lines trimmed and sorted; a family of 'other' only is left out
+view	public.transit_stop_modes	test/replays.db.test.ts > transit_stop_modes is keyed (gtfs_feed_key, root_id) and searchable by its point
 view	public.weather_warnings_area_live	test/views-complex.db.test.ts > public.weather_warnings_area_live: every live warning with its English text, when there is one
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
@@ -1470,6 +1480,7 @@ role	viafrei_ingestor	test/consumer.db.test.ts > sets every role's password from
 check	control.budget_state.budget_state_held_reason_check	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
 check	control.budget_state.budget_state_owed_by_check	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
 check	control.budget_state.budget_state_owed_pair	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
+check	control.budget_state.budget_state_owed_pair	test/replays.db.test.ts > 0285's owed pair: owed_by and owed_at together or not at all, owed_by a caller-shaped name
 check	control.budgets.budgets_budget_key_check	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
 check	control.budgets.budgets_burst_group	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
 check	control.budgets.budgets_burst_licence	test/checks.db.test.ts > every check of schema control refuses its plant with its own name
