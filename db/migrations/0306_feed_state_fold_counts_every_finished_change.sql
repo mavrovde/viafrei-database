@@ -30,7 +30,7 @@
 --   as db/baseline/0293_baseline.sql defines them (the two "and n.status not in
 --   ('running', 'pending')" filters back; the change no longer keeps a row);
 --   the recomputed feed_state rows stay, they equal the recompute's answer;
---   delete from schema_migrations where version = 310;
+--   delete from schema_migrations where version = 306;
 
 CREATE OR REPLACE FUNCTION control.feed_state_after_change()
  RETURNS trigger

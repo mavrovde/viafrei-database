@@ -183,7 +183,7 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
           await c.query("select control.recompute_feed_state('feed', array['fa', 'fb', 'fc'])");
           expect([seed, folded]).toEqual([seed, await state(c, "feed")]);
         });
-        // a held feed run becomes a finished running ingest run and a pending one a pending ingest run, finished or not (#32 finding, 0310)
+        // a held feed run becomes a finished running ingest run and a pending one a pending ingest run, finished or not (#32 finding, 0306)
         const ingest: IngestRun[] = runs.map((x) => ({ key: x.key === "fa" ? "p_plain" : `p_plain:${x.key}`, min: x.min, status: x.status === "unchanged" ? "interrupted" : x.status === "held" ? "running" : x.status === "skipped" ? "ok" : x.status, hit: x.hit ?? null, rows: x.seen ?? null }));
         await t.planted(async (c) => {
           const sh = [...ingest].sort(() => r() - 0.5);
@@ -239,8 +239,8 @@ describe.skipIf(url === undefined)("the run ledgers", () => {
       });
     });
 
-    it("migration 0310 recomputes a key the old fold left behind and no other", async () => {
-      const sql = readFileSync(new URL("../db/migrations/0310_feed_state_fold_counts_every_finished_change.sql", import.meta.url), "utf8");
+    it("migration 0306 recomputes a key the old fold left behind and no other", async () => {
+      const sql = readFileSync(new URL("../db/migrations/0306_feed_state_fold_counts_every_finished_change.sql", import.meta.url), "utf8");
       await t.planted(async (c) => {
         await insertFeed(c, [{ key: "fa", min: 1, status: "ok", ins: 1 }]);
         await c.query("insert into feed_runs (feed_key, started_at, finished_at, status, items_closed) values ('fa', $1, $1, 'pending', 3)", [at(2)]);

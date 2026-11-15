@@ -462,16 +462,16 @@ const loads: SchemaMutant[] = [
   { name: "loads: refresh keeps the old held rows", from: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
 ].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
 
-const M0310 = join(ROOT, "db", "migrations", "0310_feed_state_fold_counts_every_finished_change.sql");
+const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_finished_change.sql");
 
-/** Migration 0310: the fold and the recompute agree on a finished run's change, whatever its status (#32 finding). */
-const fold0310: SchemaMutant[] = [
-  { name: "0310: the fold skips a finished pending feed run again", from: "where n.finished_at is not null and not (n.feed_key = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.feed_key = any(v_recompute))));" },
-  { name: "0310: the fold skips a finished running or pending ingest run again", from: "where n.finished_at is not null and not (n.provider = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.provider = any(v_recompute))));" },
-  { name: "0310: the feed recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  else", to: "     where a.finished_at is not null or h.finished_at is not null;\n  else" },
-  { name: "0310: the ingest recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  end if;", to: "     where a.finished_at is not null or h.finished_at is not null;\n  end if;" },
-  { name: "0310: the backfill recomputes no feed key", from: "r.budget_hit is null and r.status = 'pending'", to: "r.budget_hit is null and false" },
-  { name: "0310: the backfill recomputes no ingest key", from: "r.budget_hit is null and r.status in ('running', 'pending')", to: "r.budget_hit is null and false" },
-].map((m) => ({ ...m, file: M0310, tests: LEDGERS }));
+/** Migration 0306: the fold and the recompute agree on a finished run's change, whatever its status (#32 finding). */
+const fold0306: SchemaMutant[] = [
+  { name: "0306: the fold skips a finished pending feed run again", from: "where n.finished_at is not null and not (n.feed_key = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.feed_key = any(v_recompute))));" },
+  { name: "0306: the fold skips a finished running or pending ingest run again", from: "where n.finished_at is not null and not (n.provider = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.provider = any(v_recompute))));" },
+  { name: "0306: the feed recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  else", to: "     where a.finished_at is not null or h.finished_at is not null;\n  else" },
+  { name: "0306: the ingest recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  end if;", to: "     where a.finished_at is not null or h.finished_at is not null;\n  end if;" },
+  { name: "0306: the backfill recomputes no feed key", from: "r.budget_hit is null and r.status = 'pending'", to: "r.budget_hit is null and false" },
+  { name: "0306: the backfill recomputes no ingest key", from: "r.budget_hit is null and r.status in ('running', 'pending')", to: "r.budget_hit is null and false" },
+].map((m) => ({ ...m, file: M0306, tests: LEDGERS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0310];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306];
