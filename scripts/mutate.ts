@@ -72,6 +72,13 @@ const MUTANTS: readonly Mutant[] = [
   { name: "db: a migration grants a forbidden relation", config: DB, file: at("db", "migrations", "0304_partitions_days_back.sql"), tests: ["test/roles-grants.db.test.ts"], from: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\n", to: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\ngrant select on public.deployments to viafrei_digest;\n" },
   { name: "db: the ACL read leaves out column grants", config: DB, file: at("test", "acl.ts"), tests: ["test/roles-grants.db.test.ts"], from: "cross join lateral aclexplode(att.attacl) a", to: "cross join lateral aclexplode(att.attacl) a where false" },
   { name: "db: the consumer list claims a write the role has not", config: DB, file: at("test", "acl", "consumers.tsv"), tests: ["test/roles-grants.db.test.ts"], from: "viafrei_status\tpublic.deployments\tselect\t", to: "viafrei_status\tpublic.deployments\tinsert:id\t" },
+  // #32 checks: the table both ways, and each plant refused by its own check alone.
+  { name: "db: constraints.tsv loses a check the catalogue holds", config: DB, file: at("test", "checks", "constraints.tsv"), tests: ["test/checks.db.test.ts"], from: 'control.shares\tshares_floor_cap\tCHECK ((floor <= cap))\t{"floor":"5","cap":"4"}\n', to: "" },
+  { name: "db: a plant the check allows", config: DB, file: at("test", "checks", "constraints.tsv"), tests: ["test/checks.db.test.ts"], from: '\tCHECK ((floor <= cap))\t{"floor":"5","cap":"4"}', to: '\tCHECK ((floor <= cap))\t{"floor":"4","cap":"5"}' },
+  { name: "db: a migration loosens a check", config: DB, file: at("db", "migrations", "0304_partitions_days_back.sql"), tests: ["test/checks.db.test.ts"], from: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\n", to: "  perform public.ensure_daily_partitions(days_ahead, 3);\nend $$;\nalter table control.shares drop constraint shares_floor_cap;\nalter table control.shares add constraint shares_floor_cap check (floor <= cap + 1);\n" },
+  { name: "db: a plant keeps the other checks", config: DB, file: at("test", "checks.ts"), tests: ["test/checks.db.test.ts"], from: "and (conname <> $2 or $3) and coninhcount = 0", to: "and false and coninhcount = 0" },
+  { name: "db: a plant keeps the triggers enabled ALWAYS", config: DB, file: at("test", "checks.ts"), tests: ["test/checks.db.test.ts"], from: "    await c.query(`alter table ${relation} disable trigger user`);\n", to: "" },
+  { name: "db: the lifted control keeps the check", config: DB, file: at("test", "checks.ts"), tests: ["test/checks.db.test.ts"], from: "[relation, check, lift]", to: "[relation, check, false]" },
 ];
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;

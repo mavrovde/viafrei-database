@@ -1,0 +1,791 @@
+# Every CHECK constraint of ours (test/checks.ts): relation, constraint, definition, a plant row that breaks it alone (JSON) or -.
+# A migration that adds, changes or drops a check changes its row here in the same commit.
+control.budget_state	budget_state_held_reason_check	CHECK ((held_reason = ANY (ARRAY['429'::text, '5xx'::text, 'owner'::text])))	{"held_reason":""}
+control.budget_state	budget_state_owed_by_check	CHECK (((owed_by IS NULL) OR (owed_by ~ '^[a-z][a-z0-9_]{0,31}$'::text)))	{"owed_by":""}
+control.budget_state	budget_state_owed_pair	CHECK (((owed_by IS NULL) = (owed_at IS NULL)))	{"owed_by":""}
+control.budgets	budgets_budget_key_check	CHECK ((budget_key ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"budget_key":""}
+control.budgets	budgets_burst_group	CHECK ((((burst_window_s IS NULL) AND (burst_licence_max IS NULL) AND (burst_max IS NULL)) OR ((burst_window_s IS NOT NULL) AND (burst_licence_max IS NOT NULL) AND (burst_max IS NOT NULL))))	{"burst_window_s":"-1"}
+control.budgets	budgets_burst_licence	CHECK (((burst_max IS NULL) OR ((burst_window_s >= 1) AND (burst_window_s < window_s) AND (burst_licence_max >= 1) AND ((burst_max >= 0) AND (burst_max <= burst_licence_max)))))	{"burst_max":"-1"}
+control.budgets	budgets_ceiling_licence	CHECK (((ceiling >= 0) AND (ceiling <= licence_max)))	{"ceiling":"-1"}
+control.budgets	budgets_hold_s_check	CHECK (((hold_s >= 0) AND (hold_s <= 3600)))	{"hold_s":"-1"}
+control.budgets	budgets_licence_max_check	CHECK ((licence_max >= 1))	{"licence_max":"0"}
+control.budgets	budgets_licence_source_check	CHECK (((length(licence_source) >= 3) AND (length(licence_source) <= 300)))	{"licence_source":"2"}
+control.budgets	budgets_reserve_pct_check	CHECK (((reserve_pct >= (0)::numeric) AND (reserve_pct < 0.5)))	{"reserve_pct":"-1"}
+control.budgets	budgets_spacing_group	CHECK (((spacing_licence_ms IS NULL) = (spacing_ms IS NULL)))	{"spacing_licence_ms":"-1"}
+control.budgets	budgets_spacing_licence	CHECK (((spacing_ms IS NULL) OR ((spacing_licence_ms >= 1) AND (spacing_ms >= spacing_licence_ms) AND (spacing_ms <= 3600000))))	{"spacing_ms":"100000000"}
+control.budgets	budgets_window_s_check	CHECK (((window_s >= 1) AND (window_s <= 86400)))	{"window_s":"0"}
+control.callers	callers_caller_check	CHECK ((caller ~ '^[a-z][a-z0-9_]{0,31}$'::text))	{"caller":""}
+control.callers	callers_process_check	CHECK ((process = ANY (ARRAY['worker'::text, 'mcp'::text, 'cli'::text])))	{"process":""}
+control.callers	callers_purpose_check	CHECK (((length(purpose) >= 3) AND (length(purpose) <= 200)))	{"purpose":"2"}
+control.feed_state	feed_state_ledger_check	CHECK ((ledger = ANY (ARRAY['feed'::text, 'ingest'::text])))	{"ledger":""}
+control.providers	providers_max_concurrent_check	CHECK (((max_concurrent >= 1) AND (max_concurrent <= 8)))	{"max_concurrent":"0"}
+control.providers	providers_min_interval_ms_check	CHECK ((min_interval_ms >= 1))	{"min_interval_ms":"0"}
+control.providers	providers_provider_check	CHECK ((provider ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"provider":""}
+control.refusals	refusals_budget_key_check	CHECK ((budget_key ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"budget_key":""}
+control.refusals	refusals_caller_check	CHECK ((caller ~ '^[a-z][a-z0-9_]{0,31}$'::text))	{"caller":""}
+control.refusals	refusals_outcome_check	CHECK ((outcome = ANY (ARRAY['ceiling'::text, 'share'::text, 'reserved'::text, 'burst'::text, 'spacing'::text, 'yield'::text, 'hold'::text, 'no-budget'::text, 'no-share'::text])))	{"outcome":""}
+control.refusals	refusals_provider_check	CHECK ((provider ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"provider":""}
+control.refusals	refusals_subject_check	CHECK (((subject IS NULL) OR ((length(subject) >= 1) AND (length(subject) <= 200))))	{"subject":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+control.refusals	refusals_wait_ms_check	CHECK (((wait_ms IS NULL) OR (wait_ms >= 0)))	{"wait_ms":"-1"}
+control.shares	shares_floor_cap	CHECK ((floor <= cap))	{"floor":"5","cap":"4"}
+control.shares	shares_floor_check	CHECK ((floor >= 0))	{"floor":"-1"}
+control.usage	usage_admitted_check	CHECK ((admitted > 0))	{"admitted":"-1"}
+control.usage	usage_not_sent	CHECK (((not_sent >= 0) AND (not_sent <= admitted)))	{"admitted":"-1"}
+domains.charging_point_status	charging_point_status_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.charging_point_status	charging_point_status_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.charging_point_status	charging_point_status_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.charging_points	charging_points_connector_types_array	CHECK (((connector_types IS NULL) OR (jsonb_typeof(connector_types) = 'array'::text)))	{"connector_types":"\"x\""}
+domains.charging_points	charging_points_current_type	CHECK (((current_type IS NULL) OR (current_type = ANY (ARRAY['ac'::text, 'dc'::text, 'both'::text]))))	{"current_type":""}
+domains.charging_points	charging_points_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.charging_points	charging_points_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.charging_points	charging_points_max_power_kw	CHECK (((max_power_kw IS NULL) OR (max_power_kw >= (0)::double precision)))	{"max_power_kw":"-1"}
+domains.charging_points	charging_points_plugs_array	CHECK (((plugs IS NULL) OR (jsonb_typeof(plugs) = 'array'::text)))	{"plugs":"\"x\""}
+domains.charging_points	charging_points_point_no	CHECK ((point_no >= 1))	{"point_no":"0"}
+domains.charging_points	charging_points_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.hydrogen_stations	hydrogen_stations_address_object	CHECK (((address IS NULL) OR (jsonb_typeof(address) = 'object'::text)))	{"address":"\"x\""}
+domains.hydrogen_stations	hydrogen_stations_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.hydrogen_stations	hydrogen_stations_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.hydrogen_stations	hydrogen_stations_refill_nonempty	CHECK (((jsonb_typeof(refill) = 'array'::text) AND (jsonb_array_length(refill) > 0)))	{"refill":"\"x\""}
+domains.hydrogen_stations	hydrogen_stations_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_facilities	parking_facilities_address_object	CHECK (((address IS NULL) OR (jsonb_typeof(address) = 'object'::text)))	{"address":"\"x\""}
+domains.parking_facilities	parking_facilities_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+domains.parking_facilities	parking_facilities_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_facilities	parking_facilities_facilities_absent_vocabulary	CHECK (((jsonb_typeof(facilities_absent) = 'array'::text) AND (facilities_absent <@ jsonb_build_array('toilet', 'accessible_toilet', 'shower', 'restaurant', 'snack', 'cafe', 'shop', 'fuel', 'charging', 'drinking_water', 'picnic', 'playground', 'wifi', 'security'))))	{"facilities_absent":"\"x\""}
+domains.parking_facilities	parking_facilities_facilities_disjoint	CHECK ((NOT (facilities ?| domains.jsonb_texts(facilities_absent))))	{"facilities":"[\"toilet\"]","facilities_absent":"[\"toilet\"]"}
+domains.parking_facilities	parking_facilities_facilities_source	CHECK (((facilities_source IS NULL) = ((facilities = '[]'::jsonb) AND (facilities_absent = '[]'::jsonb))))	{"facilities":"\"x\""}
+domains.parking_facilities	parking_facilities_facilities_source_nonempty	CHECK (((facilities_source IS NULL) OR (facilities_source <> ''::text)))	{"facilities_source":""}
+domains.parking_facilities	parking_facilities_facilities_vocabulary	CHECK (((jsonb_typeof(facilities) = 'array'::text) AND (facilities <@ jsonb_build_array('toilet', 'accessible_toilet', 'shower', 'restaurant', 'snack', 'cafe', 'shop', 'fuel', 'charging', 'drinking_water', 'picnic', 'playground', 'wifi', 'security'))))	{"facilities":"\"x\""}
+domains.parking_facilities	parking_facilities_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_facilities	parking_facilities_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+domains.parking_facilities	parking_facilities_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_facilities_bysa	parking_facilities_bysa_address_object	CHECK (((address IS NULL) OR (jsonb_typeof(address) = 'object'::text)))	{"address":"\"x\""}
+domains.parking_facilities_bysa	parking_facilities_bysa_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+domains.parking_facilities_bysa	parking_facilities_bysa_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_facilities_bysa	parking_facilities_bysa_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_facilities_bysa	parking_facilities_bysa_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+domains.parking_facilities_bysa	parking_facilities_bysa_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_facilities_odbl	parking_facilities_odbl_address_object	CHECK (((address IS NULL) OR (jsonb_typeof(address) = 'object'::text)))	{"address":"\"x\""}
+domains.parking_facilities_odbl	parking_facilities_odbl_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+domains.parking_facilities_odbl	parking_facilities_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_facilities_odbl	parking_facilities_odbl_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_facilities_odbl	parking_facilities_odbl_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+domains.parking_facilities_odbl	parking_facilities_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_facilities_sid	parking_facilities_sid_address_object	CHECK (((address IS NULL) OR (jsonb_typeof(address) = 'object'::text)))	{"address":"\"x\""}
+domains.parking_facilities_sid	parking_facilities_sid_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0)))	{"capacity_total":"-1"}
+domains.parking_facilities_sid	parking_facilities_sid_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_facilities_sid	parking_facilities_sid_facilities_absent_vocabulary	CHECK (((jsonb_typeof(facilities_absent) = 'array'::text) AND (facilities_absent <@ jsonb_build_array('toilet', 'accessible_toilet', 'shower', 'restaurant', 'snack', 'cafe', 'shop', 'fuel', 'charging', 'drinking_water', 'picnic', 'playground', 'wifi', 'security'))))	{"facilities_absent":"\"x\""}
+domains.parking_facilities_sid	parking_facilities_sid_facilities_disjoint	CHECK ((NOT (facilities ?| domains.jsonb_texts(facilities_absent))))	{"facilities":"[\"toilet\"]","facilities_absent":"[\"toilet\"]"}
+domains.parking_facilities_sid	parking_facilities_sid_facilities_source	CHECK (((facilities_source IS NULL) = ((facilities = '[]'::jsonb) AND (facilities_absent = '[]'::jsonb))))	{"facilities":"\"x\""}
+domains.parking_facilities_sid	parking_facilities_sid_facilities_source_nonempty	CHECK (((facilities_source IS NULL) OR (facilities_source <> ''::text)))	{"facilities_source":""}
+domains.parking_facilities_sid	parking_facilities_sid_facilities_vocabulary	CHECK (((jsonb_typeof(facilities) = 'array'::text) AND (facilities <@ jsonb_build_array('toilet', 'accessible_toilet', 'shower', 'restaurant', 'snack', 'cafe', 'shop', 'fuel', 'charging', 'drinking_water', 'picnic', 'playground', 'wifi', 'security'))))	{"facilities":"\"x\""}
+domains.parking_facilities_sid	parking_facilities_sid_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_facilities_sid	parking_facilities_sid_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+domains.parking_facilities_sid	parking_facilities_sid_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_occupancy	parking_occupancy_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+domains.parking_occupancy	parking_occupancy_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_occupancy	parking_occupancy_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_occupancy	parking_occupancy_implausible	CHECK (((implausible_fields IS NULL) OR ((jsonb_typeof(implausible_fields) = 'array'::text) AND (jsonb_array_length(implausible_fields) > 0) AND (implausible_fields <@ jsonb_build_array('occupancy_pct', 'spaces_free', 'spaces_total', 'feed_ts')))))	{"implausible_fields":"\"x\""}
+domains.parking_occupancy	parking_occupancy_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric)))	{"occupancy_pct":"-1"}
+domains.parking_occupancy	parking_occupancy_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_implausible	CHECK (((implausible_fields IS NULL) OR ((jsonb_typeof(implausible_fields) = 'array'::text) AND (jsonb_array_length(implausible_fields) > 0) AND (implausible_fields <@ jsonb_build_array('occupancy_pct', 'spaces_free', 'spaces_total', 'feed_ts')))))	{"implausible_fields":"\"x\""}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric)))	{"occupancy_pct":"-1"}
+domains.parking_occupancy_odbl	parking_occupancy_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.parking_occupancy_sid	parking_occupancy_sid_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+domains.parking_occupancy_sid	parking_occupancy_sid_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.parking_occupancy_sid	parking_occupancy_sid_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.parking_occupancy_sid	parking_occupancy_sid_implausible	CHECK (((implausible_fields IS NULL) OR ((jsonb_typeof(implausible_fields) = 'array'::text) AND (jsonb_array_length(implausible_fields) > 0) AND (implausible_fields <@ jsonb_build_array('occupancy_pct', 'spaces_free', 'spaces_total', 'feed_ts')))))	{"implausible_fields":"\"x\""}
+domains.parking_occupancy_sid	parking_occupancy_sid_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric)))	{"occupancy_pct":"-1"}
+domains.parking_occupancy_sid	parking_occupancy_sid_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_context_feature_versions	road_context_feature_versions_content_hash	CHECK ((content_hash <> ''::text))	{"content_hash":""}
+domains.road_context_feature_versions	road_context_feature_versions_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_context_feature_versions	road_context_feature_versions_props_object	CHECK ((jsonb_typeof(props) = 'object'::text))	{"props":"\"x\""}
+domains.road_context_feature_versions	road_context_feature_versions_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_context_features	road_context_features_content_hash	CHECK ((content_hash <> ''::text))	{"content_hash":""}
+domains.road_context_features	road_context_features_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_context_features	road_context_features_kind	CHECK ((kind = ANY (ARRAY['border_crossing'::text, 'traffic_signal'::text, 'winter_service'::text, 'pedestrian_zone_access'::text, 'detour'::text, 'loading_zone'::text, 'coach_parking'::text, 'motorway_detour'::text, 'street_parking'::text, 'signal_installation'::text])))	{"kind":""}
+domains.road_context_features	road_context_features_props_object	CHECK ((jsonb_typeof(props) = 'object'::text))	{"props":"\"x\""}
+domains.road_context_features	road_context_features_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_context_features	road_context_features_variant	CHECK ((((kind = 'border_crossing'::text) AND (variant = ANY (ARRAY['motorway'::text, 'federal'::text, 'state'::text, 'district'::text, 'ferry'::text, 'other'::text]))) OR ((kind = 'traffic_signal'::text) AND (variant = ANY (ARRAY['acoustic'::text, 'plain'::text]))) OR ((kind = 'winter_service'::text) AND (variant = ANY (ARRAY['priority_1'::text, 'priority_2'::text, 'priority_3'::text, 'unranked'::text]))) OR ((kind = 'pedestrian_zone_access'::text) AND (variant = ANY (ARRAY['pedestrian_zone'::text, 'no_motor_vehicles'::text, 'no_entry'::text, 'no_cycling'::text, 'sign_not_listed'::text]))) OR ((kind = 'detour'::text) AND (variant = ANY (ARRAY['motor_vehicles'::text, 'lorries'::text, 'cars'::text, 'cycles'::text, 'all_traffic'::text, 'other'::text]))) OR ((kind = 'loading_zone'::text) AND (variant = ANY (ARRAY['load_deliver'::text, 'load_deliver_work'::text, 'alternating'::text, 'other'::text]))) OR ((kind = 'coach_parking'::text) AND (variant = ANY (ARRAY['parking'::text, 'stop_only'::text]))) OR ((kind = 'motorway_detour'::text) AND (variant = 'signed'::text)) OR ((kind = 'street_parking'::text) AND (variant = ANY (ARRAY['ticket'::text, 'disc'::text, 'unmanaged'::text, 'disabled'::text, 'ev_charging'::text, 'loading'::text, 'sharing'::text, 'disabled_personal'::text, 'restricted_stopping'::text, 'no_stopping'::text, 'unresolved'::text, 'other'::text]))) OR ((kind = 'signal_installation'::text) AND (variant = ANY (ARRAY['junction'::text, 'pedestrian_crossing'::text, 'other'::text])))))	{"kind":""}
+domains.road_events	road_events_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_events	road_events_external_id_shape	CHECK ((external_id = ((publication_creator || ':'::text) || publication_id)))	{"external_id":"a:b","publication_creator":"a","publication_id":"c"}
+domains.road_events	road_events_locations_array	CHECK ((jsonb_typeof(locations) = 'array'::text))	{"locations":"\"x\""}
+domains.road_events	road_events_payload_object	CHECK ((jsonb_typeof(payload) = 'object'::text))	{"payload":"\"x\""}
+domains.road_events	road_events_publication_creator	CHECK ((publication_creator <> ''::text))	{"publication_creator":""}
+domains.road_events	road_events_publication_creator_no_colon	CHECK ((POSITION((':'::text) IN (publication_creator)) = 0))	{"publication_creator":"a:b","external_id":"a:b:c","publication_id":"c"}
+domains.road_events	road_events_publication_id	CHECK ((publication_id <> ''::text))	{"publication_id":""}
+domains.road_events	road_events_record_types_array	CHECK ((jsonb_typeof(record_types) = 'array'::text))	{"record_types":"\"x\""}
+domains.road_events	road_events_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_events	road_events_valid_windows_array	CHECK (((valid_windows IS NULL) OR (jsonb_typeof(valid_windows) = 'array'::text)))	{"valid_windows":"\"x\""}
+domains.road_weather_forecast	road_weather_forecast_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_weather_forecast	road_weather_forecast_geom_none	CHECK ((geom IS NULL))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.road_weather_forecast	road_weather_forecast_rc	CHECK (((rc IS NULL) OR ((rc >= 1) AND (rc <= 6))))	{"rc":"0"}
+domains.road_weather_forecast	road_weather_forecast_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_weather_stations	road_weather_stations_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_weather_stations	road_weather_stations_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.road_weather_stations	road_weather_stations_segment	CHECK (((segment_type IS NULL) OR (segment_type = ANY (ARRAY[1, 2]))))	{"segment_type":"-1"}
+domains.road_weather_stations	road_weather_stations_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_weather_stations	road_weather_stations_surface	CHECK (((surface IS NULL) OR (surface = ANY (ARRAY[1, 2]))))	{"surface":"-1"}
+domains.road_works	road_works_closure_window_ordered	CHECK (((closure_starts_at IS NULL) OR (closure_ends_at IS NULL) OR (closure_starts_at < closure_ends_at)))	{"closure_starts_at":"2026-01-02 00:00:00+00","closure_ends_at":"2026-01-01 00:00:00+00"}
+domains.road_works	road_works_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.road_works	road_works_kind	CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['roadworks'::text, 'event'::text, 'message'::text]))))	{"kind":""}
+domains.road_works	road_works_period_ordered	CHECK (((starts_at IS NULL) OR (ends_at IS NULL) OR (starts_at <= ends_at)))	{"starts_at":"2026-01-02 00:00:00+00","ends_at":"2026-01-01 00:00:00+00"}
+domains.road_works	road_works_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.road_works	road_works_title_nonempty	CHECK ((title <> ''::text))	{"title":""}
+domains.route_recommendations	route_recommendations_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.route_recommendations	route_recommendations_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.speed_cameras	speed_cameras_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.speed_cameras	speed_cameras_kind_nonempty	CHECK ((kind <> ''::text))	{"kind":""}
+domains.speed_cameras	speed_cameras_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.street_bay_state	street_bay_state_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.street_bay_state	street_bay_state_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.street_bay_state	street_bay_state_known	CHECK ((state = ANY (ARRAY['free'::text, 'occupied'::text])))	{"state":""}
+domains.street_bay_state	street_bay_state_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.street_bays	street_bays_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.street_bays	street_bays_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.street_bays	street_bays_kind	CHECK ((kind = ANY (ARRAY['disabled'::text, 'ev_charging'::text, 'loading'::text, 'regular'::text, 'unspecified'::text])))	{"kind":""}
+domains.street_bays	street_bays_postcode	CHECK (((postcode IS NULL) OR (postcode ~ '^[0-9]{5}$'::text)))	{"postcode":""}
+domains.street_bays	street_bays_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.street_bays	street_bays_spaces	CHECK (((spaces IS NULL) OR ((spaces >= 1) AND (spaces <= 99))))	{"spaces":"0"}
+domains.transit_agencies_odbl	transit_agencies_odbl_agency_name_nonempty	CHECK ((agency_name <> ''::text))	{"agency_name":""}
+domains.transit_agencies_odbl	transit_agencies_odbl_agency_timezone_nonempty	CHECK ((agency_timezone <> ''::text))	{"agency_timezone":""}
+domains.transit_agencies_odbl	transit_agencies_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_agencies_odbl	transit_agencies_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_agencies_odbl	transit_agencies_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_routes_odbl	transit_routes_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_routes_odbl	transit_routes_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_routes_odbl	transit_routes_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_service_dates_odbl	transit_service_dates_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_service_dates_odbl	transit_service_dates_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_service_dates_odbl	transit_service_dates_odbl_service_id_nonempty	CHECK ((service_id <> ''::text))	{"service_id":""}
+domains.transit_service_dates_odbl	transit_service_dates_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_stop_times_odbl	transit_stop_times_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_stop_times_odbl	transit_stop_times_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_stop_times_odbl	transit_stop_times_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_stop_times_odbl	transit_stop_times_odbl_stop_id_nonempty	CHECK ((stop_id <> ''::text))	{"stop_id":""}
+domains.transit_stop_times_odbl	transit_stop_times_odbl_trip_id_nonempty	CHECK ((trip_id <> ''::text))	{"trip_id":""}
+domains.transit_stops_odbl	transit_stops_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_stops_odbl	transit_stops_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_stops_odbl	transit_stops_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_stops_odbl	transit_stops_odbl_stop_name_nonempty	CHECK ((stop_name <> ''::text))	{"stop_name":""}
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_entity_id_nonempty	CHECK ((entity_id <> ''::text))	{"entity_id":""}
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_trip_updates_odbl	transit_trip_updates_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.transit_trips_odbl	transit_trips_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.transit_trips_odbl	transit_trips_odbl_feed_version_nonempty	CHECK ((feed_version <> ''::text))	{"feed_version":""}
+domains.transit_trips_odbl	transit_trips_odbl_route_id_nonempty	CHECK ((route_id <> ''::text))	{"route_id":""}
+domains.transit_trips_odbl	transit_trips_odbl_service_id_nonempty	CHECK ((service_id <> ''::text))	{"service_id":""}
+domains.transit_trips_odbl	transit_trips_odbl_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.weather_warnings	weather_warnings_area_hash	CHECK ((area_sha256 ~ '^[0-9a-f]{64}$'::text))	{"area_sha256":""}
+domains.weather_warnings	weather_warnings_closed_reason	CHECK (((closed_reason IS NULL) OR ((closed_at IS NOT NULL) AND (closed_reason = ANY (ARRAY['withdrawn'::text, 'superseded'::text])))))	{"closed_reason":""}
+domains.weather_warnings	weather_warnings_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.weather_warnings	weather_warnings_external_id_shape	CHECK ((external_id = ((((identifier || ':'::text) || warncell_id) || ':'::text) || version)))	{"external_id":"x","identifier":"i","warncell_id":"1","version":"1"}
+domains.weather_warnings	weather_warnings_geom_area	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'MULTIPOLYGON'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.weather_warnings	weather_warnings_hash	CHECK ((official_sha256 ~ '^[0-9a-f]{64}$'::text))	{"official_sha256":""}
+domains.weather_warnings	weather_warnings_level	CHECK (((level >= 0) AND (level <= 4)))	{"level":"-1"}
+domains.weather_warnings	weather_warnings_level_source	CHECK (((level_source IS NULL) OR (level_source = ANY (ARRAY['published'::text, 'derived_from_severity'::text]))))	{"level_source":""}
+domains.weather_warnings	weather_warnings_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.weather_warnings	weather_warnings_window	CHECK (((valid_to IS NULL) OR (valid_to >= valid_from)))	{"valid_from":"2026-01-02 00:00:00+00","valid_to":"2026-01-01 00:00:00+00"}
+domains.weather_warnings_en	weather_warnings_en_closed_reason	CHECK (((closed_reason IS NULL) OR ((closed_at IS NOT NULL) AND (closed_reason = ANY (ARRAY['withdrawn'::text, 'superseded'::text])))))	{"closed_reason":""}
+domains.weather_warnings_en	weather_warnings_en_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.weather_warnings_en	weather_warnings_en_external_id_shape	CHECK ((external_id = ((identifier || ':'::text) || content_sha256)))	{"external_id":"x","identifier":"i","content_sha256":"c"}
+domains.weather_warnings_en	weather_warnings_en_geom_none	CHECK ((geom IS NULL))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.weather_warnings_en	weather_warnings_en_hash	CHECK ((content_sha256 ~ '^[0-9a-f]{64}$'::text))	{"content_sha256":""}
+domains.weather_warnings_en	weather_warnings_en_language	CHECK ((language <> ''::text))	{"language":""}
+domains.weather_warnings_en	weather_warnings_en_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+domains.weather_warnings_en	weather_warnings_en_warncell_ids_array	CHECK ((jsonb_typeof(warncell_ids) = 'array'::text))	{"warncell_ids":"\"x\""}
+domains.weather_warnings_en	weather_warnings_en_window	CHECK (((valid_to IS NULL) OR (valid_from IS NULL) OR (valid_to >= valid_from)))	{"valid_from":"2026-01-02 00:00:00+00","valid_to":"2026-01-01 00:00:00+00"}
+domains.webcams	webcams_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
+domains.webcams	webcams_geom_point	CHECK (((geom IS NULL) OR (public.geometrytype(geom) = 'POINT'::text)))	{"geom":"SRID=4326;LINESTRING(0 0,1 1)"}
+domains.webcams	webcams_link_url	CHECK (((link_url IS NULL) OR (link_url ~ '^https://'::text)))	{"link_url":""}
+domains.webcams	webcams_location_label	CHECK ((location_label <> ''::text))	{"location_label":""}
+domains.webcams	webcams_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
+ingestor.limit_claims	limit_claims_limit_key_check	CHECK ((limit_key ~ '^(provider|source):[A-Za-z0-9_:-]+$'::text))	{"limit_key":""}
+ingestor.limit_claims	limit_claims_min_interval_ms_check	CHECK ((min_interval_ms >= 0))	{"min_interval_ms":"-1"}
+ingestor.limit_claims	limit_claims_per_day_check	CHECK ((per_day > 0))	{"per_day":"-1"}
+ingestor.limit_claims	limit_claims_per_hour_check	CHECK ((per_hour > 0))	{"per_hour":"-1"}
+ingestor.run_errors	run_errors_reason_check	CHECK ((length(reason) <= 1000))	{"reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+ingestor.run_errors	run_errors_sample_check	CHECK ((octet_length((sample)::text) <= 4096))	{"sample":"\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\""}
+ingestor.run_errors	run_errors_stage_check	CHECK ((stage = ANY (ARRAY['config'::text, 'limit'::text, 'fetch'::text, 'decode'::text, 'extract'::text, 'transform'::text, 'validate'::text, 'write'::text, 'ledger'::text, 'run'::text])))	{"stage":""}
+ingestor.runs	runs_error_message_check	CHECK ((length(error_message) <= 2000))	{"error_message":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+ingestor.runs	runs_error_stack_check	CHECK ((length(error_stack) <= 4000))	{"error_stack":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+ingestor.runs	runs_status_check	CHECK ((status = ANY (ARRAY['running'::text, 'ok'::text, 'unchanged'::text, 'partial'::text, 'error'::text, 'skipped'::text, 'limited'::text])))	{"status":""}
+ingestor.sources	sources_added_in_check	CHECK ((added_in ~ '^[0-9]+\\.[0-9]+\\.[0-9]+$'::text))	{"added_in":""}
+ingestor.sources	sources_attribution_check	CHECK ((btrim(attribution) <> ''::text))	{"attribution":""}
+ingestor.sources	sources_config_sha256_check	CHECK ((config_sha256 ~ '^[0-9a-f]{64}$'::text))	{"config_sha256":""}
+ingestor.sources	sources_country_check	CHECK ((country ~ '^[A-Z]{2}$'::text))	{"country":""}
+ingestor.sources	sources_id_check	CHECK ((id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"id":""}
+ingestor.sources	sources_licence_id_check	CHECK ((btrim(licence_id) <> ''::text))	{"licence_id":""}
+ingestor.sources	sources_status_check	CHECK ((status = ANY (ARRAY['enabled'::text, 'disabled'::text])))	{"status":""}
+ingestor.sources	sources_trust_check	CHECK (((trust >= 0) AND (trust <= 100)))	{"trust":"-1"}
+ingestor.units	units_config_sha256_check	CHECK ((config_sha256 ~ '^[0-9a-f]{64}$'::text))	{"config_sha256":""}
+ingestor.units	units_members_check	CHECK ((cardinality(members) >= 1))	{"members":"{}"}
+ingestor.units	units_mode_check	CHECK ((mode = ANY (ARRAY['cron'::text, 'service'::text, 'stream'::text])))	{"mode":""}
+ingestor.units	units_name_check	CHECK ((name ~ '^[a-z][a-z0-9-]{1,40}$'::text))	{"name":""}
+public.ags_regions	ags_regions_code_shape	CHECK (((ags ~ '^[0-9]{2}$'::text) OR (ags ~ '^[0-9]{5}$'::text)))	{"ags":""}
+public.ags_regions	ags_regions_level_matches_code	CHECK ((((level = 'land'::text) AND (length(ags) = 2)) OR ((level = 'kreis'::text) AND (length(ags) = 5))))	{"ags":""}
+public.ags_regions	ags_regions_name_en_paired	CHECK (((name_en IS NULL) = (name_en_norm IS NULL)))	{"name_en":""}
+public.ags_regions	ags_regions_parent_is_prefix	CHECK ((((level = 'land'::text) AND (parent_ags IS NULL)) OR ((level = 'kreis'::text) AND (parent_ags = "left"(ags, 2)))))	{"level":""}
+public.ags_regions	ags_regions_source_known	CHECK ((source_id = ANY (ARRAY['destatis_gv'::text, 'bkg_gvisys'::text])))	{"source_id":""}
+public.alarm_episodes	alarm_episodes_check	CHECK ((last_seen_at >= opened_at))	{"opened_at":"2026-01-02 00:00:00+00","last_seen_at":"2026-01-01 00:00:00+00"}
+public.alarm_episodes	alarm_episodes_check1	CHECK (((cleared_at IS NULL) OR (cleared_at >= opened_at)))	{"opened_at":"2026-01-02 00:00:00+00","cleared_at":"2026-01-01 00:00:00+00"}
+public.autobahn_event_texts	autobahn_event_texts_seen_order	CHECK ((last_seen_at >= first_seen_at))	{"first_seen_at":"2026-01-02 00:00:00+00","last_seen_at":"2026-01-01 00:00:00+00"}
+public.autobahn_jam_hours	autobahn_jam_hours_check	CHECK ((cardinality(jam_titles) = cardinality(jam_subtitles)))	{"jam_titles":"{zz-not-allowed}"}
+public.autobahn_jam_hours	autobahn_jam_hours_hour_start_check	CHECK (((EXTRACT(epoch FROM hour_start) % (3600)::numeric) = (0)::numeric))	{"hour_start":"2026-01-01 00:30:17.5+00"}
+public.autobahn_jam_hours	autobahn_jam_hours_jam_titles_check	CHECK ((array_position(jam_titles, NULL::text) IS NULL))	{"jam_titles":"{NULL}"}
+public.autobahn_jam_hours	autobahn_jam_hours_road_check	CHECK (((road <> ''::text) AND (length(road) <= 16)))	{"road":"xxxxxxxxxxxxxxxxx"}
+public.autobahn_roads	autobahn_roads_listed_order	CHECK (((last_listed_at IS NULL) OR ((last_listed_at >= first_seen_at) AND (last_listed_at <= last_seen_at))))	{"last_listed_at":"2026-01-01 00:30:17.5+00"}
+public.autobahn_roads	autobahn_roads_number_shape	CHECK ((road ~ '^A[0-9]{1,3}$'::text))	{"road":""}
+public.autobahn_roads	autobahn_roads_seen_order	CHECK ((last_seen_at >= first_seen_at))	{"first_seen_at":"2999-01-01 00:00:00+00"}
+public.bfrk_stops	bfrk_stops_boarding	CHECK (((platforms_level_boarding >= 0) AND (platforms_ramp_boarding >= 0) AND (platforms_limited_boarding >= 0) AND (platforms_no_step_free >= 0) AND ((((platforms_level_boarding + platforms_ramp_boarding) + platforms_limited_boarding) + platforms_no_step_free) <= platforms)))	{"platforms":"-1"}
+public.bfrk_stops	bfrk_stops_counts	CHECK (((platforms >= 0) AND ((platforms_height_known >= 0) AND (platforms_height_known <= platforms)) AND ((platforms_guidance >= 0) AND (platforms_guidance <= platforms)) AND (lifts >= 0) AND (ramps >= 0) AND (stairs >= 0) AND (escalators >= 0)))	{"platforms":"-1"}
+public.bfrk_stops	bfrk_stops_entrances	CHECK (((entrances >= 0) AND (entrances_lift >= 0) AND (entrances_lift <= entrances)))	{"entrances":"-1"}
+public.bfrk_stops	bfrk_stops_feed	CHECK ((source_feed = ANY (ARRAY['bfrk_spnv'::text, 'bfrk_oepnv'::text, 'dresden_bf_haltestellen'::text, 'muenster_bf_haltestellen'::text, 'vbb_haltestellenzugaenge'::text])))	{"source_feed":""}
+public.bfrk_stops	bfrk_stops_step_free	CHECK (((step_free IS NULL) OR (step_free = ANY (ARRAY['yes'::text, 'partial'::text]))))	{"step_free":""}
+public.bw_detours	bw_detours_autobahn_shape	CHECK ((autobahn ~ '^A[0-9]{1,3}$'::text))	{"autobahn":""}
+public.bw_detours	bw_detours_sheet_row_body	CHECK ((sheet_row >= 2))	{"sheet_row":"1"}
+public.bw_detours	bw_detours_source_registered	CHECK ((source_feed = 'bw_bedarfsumleitungen'::text))	{"source_feed":""}
+public.charging_sites	charging_sites_point_count	CHECK ((COALESCE(point_count, 0) >= 0))	{"point_count":"-1"}
+public.charging_sites	charging_sites_postcode_five_digits	CHECK ((postcode ~ '^[0-9]{5}$'::text))	{"postcode":""}
+public.charging_status_runs	charging_status_runs_ticks_check	CHECK ((ticks > 0))	{"ticks":"-1"}
+public.city_traffic_pulls	city_traffic_pulls_feed_registered	CHECK ((feed_key = ANY (ARRAY['hh_verkehrslage'::text, 'bonn_verkehrslage'::text])))	{"feed_key":""}
+public.city_traffic_pulls	city_traffic_pulls_listing	CHECK ((listing = ANY (ARRAY['all'::text, 'not_free'::text])))	{"listing":""}
+public.city_traffic_pulls	city_traffic_pulls_segments	CHECK ((segments >= 0))	{"segments":"-1"}
+public.city_traffic_segments	city_traffic_segments_feed_registered	CHECK ((source_feed = ANY (ARRAY['hh_verkehrslage'::text, 'bonn_verkehrslage'::text])))	{"source_feed":""}
+public.city_traffic_segments	city_traffic_segments_line	CHECK ((public.geometrytype((geom)::public.geometry) = ANY (ARRAY['LINESTRING'::text, 'MULTILINESTRING'::text])))	{"geom":"SRID=4326;POINT(0 0)"}
+public.city_traffic_state	city_traffic_state_feed_registered	CHECK ((source_feed = ANY (ARRAY['hh_verkehrslage'::text, 'bonn_verkehrslage'::text])))	{"source_feed":""}
+public.city_traffic_state	city_traffic_state_level_has_status	CHECK (((level IS NULL) OR (status IS NOT NULL)))	{"level":""}
+public.city_traffic_state	city_traffic_state_level_known	CHECK (((level IS NULL) OR (level = ANY (ARRAY['freeFlow'::text, 'heavy'::text, 'congested'::text, 'impossible'::text]))))	{"level":""}
+public.connect_transit_delays	connect_transit_delays_licence	CHECK ((source = 'mobilithek_connect_gtfs_rt'::text))	{"source":""}
+public.db_facilities	db_facilities_equipment_digits	CHECK ((equipment_no ~ '^[0-9]{1,12}$'::text))	{"equipment_no":""}
+public.db_facilities	db_facilities_kind_known	CHECK ((kind = ANY (ARRAY['elevator'::text, 'escalator'::text, 'other'::text])))	{"kind":""}
+public.db_facilities	db_facilities_source_registered	CHECK ((source_feed = 'db_fasta'::text))	{"source_feed":""}
+public.db_facilities	db_facilities_state_known	CHECK ((state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text])))	{"state":""}
+public.db_facilities	db_facilities_station_digits	CHECK ((station_no ~ '^[0-9]{1,9}$'::text))	{"station_no":""}
+public.db_facility_ticks	db_facility_ticks_previous_known	CHECK (((previous_state IS NULL) OR (previous_state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text]))))	{"previous_state":""}
+public.db_facility_ticks	db_facility_ticks_state_known	CHECK ((state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text, 'gone'::text])))	{"state":""}
+public.db_station_boards	db_station_boards_covers	CHECK (((covers_until >= read_at) AND (covers_until <= (read_at + '01:30:00'::interval))))	{"read_at":"2026-01-02 00:00:00+00","covers_until":"2026-01-01 00:00:00+00"}
+public.db_station_boards	db_station_boards_departures_bounded	CHECK (((jsonb_typeof(departures) = 'array'::text) AND (jsonb_array_length(departures) <= 120)))	{"departures":"\"x\""}
+public.db_station_boards	db_station_boards_evas	CHECK (((cardinality(eva_nos) >= 1) AND (cardinality(eva_nos) <= 4) AND (array_position(eva_nos, NULL::text) IS NULL)))	{"eva_nos":"{}"}
+public.db_station_boards	db_station_boards_source_registered	CHECK ((source_feed = 'db_timetables'::text))	{"source_feed":""}
+public.db_station_boards	db_station_boards_station_digits	CHECK ((station_no ~ '^[0-9]{1,9}$'::text))	{"station_no":""}
+public.db_station_numbers	db_station_numbers_category_known	CHECK (((category >= 1) AND (category <= 7)))	{"category":"0"}
+public.db_station_numbers	db_station_numbers_eva_digits	CHECK ((eva_no ~ '^[0-9]{5,9}$'::text))	{"eva_no":""}
+public.db_station_numbers	db_station_numbers_municipality_digits	CHECK ((municipality_code ~ '^[0-9]{8}$'::text))	{"municipality_code":""}
+public.db_station_numbers	db_station_numbers_part_evas_digits	CHECK ((array_to_string(part_eva_nos, ','::text) ~ '^([0-9]{5,9}(,[0-9]{5,9})*)?$'::text))	{"part_eva_nos":"{zz-not-allowed}"}
+public.db_station_numbers	db_station_numbers_part_evas_not_main	CHECK ((NOT (eva_no = ANY (part_eva_nos))))	{"eva_no":"8000001","part_eva_nos":"{8000001}"}
+public.db_station_numbers	db_station_numbers_source_registered	CHECK ((source_id = 'db_stada'::text))	{"source_id":""}
+public.db_station_numbers	db_station_numbers_station_digits	CHECK ((station_no ~ '^[0-9]{1,9}$'::text))	{"station_no":""}
+public.db_stations	db_stations_category_check	CHECK (((category >= 1) AND (category <= 7)))	{"category":"0"}
+public.db_stations	db_stations_eva_no_check	CHECK ((eva_no ~ '^[0-9]{5,9}$'::text))	{"eva_no":""}
+public.db_stations	db_stations_key_matches_source	CHECK ((((source_id = 'db_stada'::text) AND (station_no ~ '^[0-9]{1,9}$'::text)) OR ((source_id = 'delfi_static'::text) AND (station_no ~ '^de:'::text) AND (ifopt = station_no))))	{"station_no":""}
+public.db_stations	db_stations_municipality_code_check	CHECK ((municipality_code ~ '^[0-9]{8}$'::text))	{"municipality_code":""}
+public.db_stations	db_stations_name_check	CHECK (((length(name) >= 1) AND (length(name) <= 200)))	{"name":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.db_stations	db_stations_price_category_check	CHECK (((price_category >= 1) AND (price_category <= 7)))	{"price_category":"0"}
+public.db_stations	db_stations_source_id_check	CHECK ((source_id = ANY (ARRAY['db_stada'::text, 'delfi_static'::text])))	{"source_id":""}
+public.db_stations	db_stations_station_no_check	CHECK (((station_no ~ '^[0-9]{1,9}$'::text) OR (station_no ~ '^de:[0-9]{5}:[^:_ ]{1,40}$'::text)))	{"station_no":""}
+public.db_stations	db_stations_stepless_access_check	CHECK ((stepless_access = ANY (ARRAY['yes'::text, 'partial'::text, 'no'::text])))	{"stepless_access":""}
+public.delfi_service_alerts	delfi_service_alerts_licence	CHECK ((source_id = ANY (ARRAY['delfi_rt_sa'::text, 'delfi_siri_sx'::text])))	{"source_id":""}
+public.delfi_service_alerts	delfi_service_alerts_placed_by_check	CHECK ((placed_by = ANY (ARRAY['stop'::text, 'route'::text, 'network'::text, 'none'::text])))	{"placed_by":""}
+public.delfi_siri_et_calls	delfi_siri_et_calls_delay	CHECK (((delay_s IS NULL) OR (abs(delay_s) <= 21600)))	{"delay_s":"21601"}
+public.delfi_siri_et_calls	delfi_siri_et_calls_licence	CHECK ((source_id = 'delfi_siri_et'::text))	{"source_id":""}
+public.delfi_siri_et_calls	delfi_siri_et_calls_visit	CHECK ((visit >= 1))	{"visit":"0"}
+public.delfi_siri_et_calls_latest	delfi_siri_et_calls_latest_visit	CHECK ((visit >= 1))	{"visit":"0"}
+public.delfi_siri_et_stop_pairs	delfi_siri_et_stop_pairs_dhid_shape	CHECK (((dhid ~ '^de:'::text) AND (station_dhid ~ '^de:'::text)))	{"dhid":""}
+public.delfi_siri_et_stop_pairs	delfi_siri_et_stop_pairs_eva_shape	CHECK ((eva !~ '^de:'::text))	{"eva":"de:08111:6115"}
+public.delfi_siri_et_stop_pairs	delfi_siri_et_stop_pairs_matches	CHECK ((matches > 0))	{"matches":"-1"}
+public.delfi_siri_et_stop_pairs	delfi_siri_et_stop_pairs_source	CHECK ((source_id = 'delfi_siri_et'::text))	{"source_id":""}
+public.deployments	deployments_app_digest_is_a_digest	CHECK (((app_digest IS NULL) OR (app_digest ~ '^sha256:[0-9a-f]{64}$'::text)))	{"app_digest":""}
+public.deployments	deployments_duration_is_sane	CHECK (((deploy_duration_s IS NULL) OR ((deploy_duration_s >= 0) AND (deploy_duration_s <= 86400))))	{"deploy_duration_s":"-1"}
+public.deployments	deployments_git_sha_is_hex	CHECK ((git_sha ~ '^[0-9a-f]{7,40}$'::text))	{"git_sha":""}
+public.deployments	deployments_migration_head_is_sane	CHECK (((migration_head IS NULL) OR (migration_head >= 0)))	{"migration_head":"-1"}
+public.deployments	deployments_note_is_short	CHECK (((note IS NULL) OR (length(note) <= 200)))	{"note":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.deployments	deployments_previous_git_sha_is_hex	CHECK (((previous_git_sha IS NULL) OR (previous_git_sha ~ '^[0-9a-f]{7,40}$'::text)))	{"previous_git_sha":""}
+public.deployments	deployments_translator_digest_is_a_digest	CHECK (((translator_digest IS NULL) OR (translator_digest ~ '^sha256:[0-9a-f]{64}$'::text)))	{"translator_digest":""}
+public.deployments	deployments_version_is_a_version	CHECK ((version ~ '^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.\\-]+)?$'::text))	{"version":""}
+public.energy_page_key_heads	energy_page_key_heads_build_ms_check	CHECK ((build_ms >= 0))	{"build_ms":"-1"}
+public.energy_page_key_heads	energy_page_key_heads_feed_counts_check	CHECK ((jsonb_typeof(feed_counts) = 'object'::text))	{"feed_counts":"\"x\""}
+public.energy_page_key_heads	energy_page_key_heads_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
+public.energy_page_key_heads	energy_page_key_heads_total_check	CHECK ((total >= 0))	{"total":"-1"}
+public.energy_page_keys	energy_page_keys_check	CHECK (((kind = 'fuel'::text) = (source_feed IS NULL)))	{"kind":""}
+public.energy_page_keys	energy_page_keys_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
+public.energy_page_keys	energy_page_keys_ord_check	CHECK ((ord >= 1))	{"ord":"0"}
+public.energy_page_slug_history	energy_page_slug_history_check	CHECK (((kind = 'fuel'::text) = (source_feed = ''::text)))	{"kind":"fuel","source_feed":"x"}
+public.energy_page_slug_history	energy_page_slug_history_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
+public.energy_page_slugs	energy_page_slugs_check	CHECK (((kind = 'fuel'::text) = (source_feed = ''::text)))	{"kind":"fuel","source_feed":"x"}
+public.energy_page_slugs	energy_page_slugs_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
+public.energy_page_slugs	energy_page_slugs_slug_check	CHECK (((length(slug) >= 1) AND (length(slug) <= 80) AND (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (slug !~ '[0-9]{5}'::text)))	{"slug":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.error_events	error_events_check	CHECK ((last_at >= first_at))	{"first_at":"2026-01-02 00:00:00+00","last_at":"2026-01-01 00:00:00+00"}
+public.error_events	error_events_check1	CHECK (((stack_sample IS NULL) = (stack_sha IS NULL)))	{"stack_sha":""}
+public.error_events	error_events_container_check	CHECK ((container ~ '^viafrei-[a-z0-9][a-z0-9-]{0,62}$'::text))	{"container":""}
+public.error_events	error_events_count_check	CHECK ((count >= 1))	{"count":"0"}
+public.error_events	error_events_err_class_check	CHECK ((err_class ~ '^[A-Za-z0-9_.-]{1,64}$'::text))	{"err_class":""}
+public.error_events	error_events_hour_check	CHECK ((((EXTRACT(epoch FROM hour))::bigint % (3600)::bigint) = 0))	{"hour":"2026-01-01 00:30:17.5+00"}
+public.error_events	error_events_key_check	CHECK (((key ~ '^[A-Za-z0-9/_.:<>-]{1,64}$'::text) AND (key !~ '\\m\\d{1,3}(\\.\\d{1,3}){3}\\M'::text) AND (key !~ '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}'::text) AND (key !~ 'pt:-?[0-9]'::text)))	{"key":""}
+public.error_events	error_events_kind_check	CHECK ((kind ~ '^[a-z][a-z0-9_]{0,47}$'::text))	{"kind":""}
+public.error_events	error_events_level_check	CHECK ((level = ANY (ARRAY[40, 50, 60])))	{"level":"-1"}
+public.error_events	error_events_line_sha_check	CHECK ((line_sha ~ '^[0-9a-f]{64}$'::text))	{"line_sha":""}
+public.error_events	error_events_message_check	CHECK (((char_length(message) <= 300) AND (message !~ '\\m\\d{1,3}(\\.\\d{1,3}){3}\\M'::text) AND (message !~ '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}'::text) AND (message !~ 'pt:-?[0-9]'::text)))	{"message":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.error_events	error_events_ms_check	CHECK ((ms >= 0))	{"ms":"-1"}
+public.error_events	error_events_provider_check	CHECK ((provider ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"provider":""}
+public.error_events	error_events_service_check	CHECK ((service ~ '^[a-z][a-z0-9-]{0,62}$'::text))	{"service":""}
+public.error_events	error_events_sqlstate_check	CHECK ((sqlstate ~ '^[0-9A-Z]{5}$'::text))	{"sqlstate":""}
+public.error_events	error_events_stack_sample_check	CHECK (((octet_length(stack_sample) <= 2048) AND (stack_sample !~ '\\m\\d{1,3}(\\.\\d{1,3}){3}\\M'::text) AND (stack_sample !~ '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}'::text) AND (stack_sample !~ 'pt:-?[0-9]'::text)))	{"stack_sample":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.error_events	error_events_stack_sha_check	CHECK ((stack_sha ~ '^[0-9a-f]{64}$'::text))	{"stack_sha":""}
+public.error_events	error_events_status_check	CHECK (((status >= 0) AND (status <= 999)))	{"status":"-1"}
+public.feed_catalog	feed_catalog_cadence_s_check	CHECK (((cadence_s IS NULL) OR (cadence_s > 0)))	{"cadence_s":"-1"}
+public.feed_catalog	feed_catalog_declared_cadence_s_check	CHECK (((declared_cadence_s IS NULL) OR (declared_cadence_s > 0)))	{"declared_cadence_s":"-1"}
+public.feed_catalog	feed_catalog_min_interval_s_check	CHECK (((min_interval_s IS NULL) OR (min_interval_s > 0)))	{"min_interval_s":"-1"}
+public.feed_catalog	feed_catalog_offer_id_is_public	CHECK (((offer_id IS NULL) OR (offer_id ~ '^-?[0-9]{1,19}$'::text)))	{"offer_id":""}
+public.feed_catalog	feed_catalog_published_by_check	CHECK (((published_by IS NULL) OR (btrim(published_by) <> ''::text)))	{"published_by":""}
+public.feed_catalog	feed_catalog_subscription_var_is_a_name	CHECK (((subscription_var IS NULL) OR (subscription_var ~ '^[A-Z][A-Z0-9_]*$'::text)))	{"subscription_var":""}
+public.feed_runs	feed_runs_budget_hit	CHECK (((budget_hit IS NULL) OR (budget_hit = ANY (ARRAY['ceiling'::text, 'share'::text, 'reserved'::text, 'burst'::text, 'spacing'::text, 'yield'::text, 'hold'::text, 'no-budget'::text, 'no-share'::text, 'unavailable'::text])))) NOT VALID	{"budget_hit":""}
+public.feed_runs	feed_runs_status_check	CHECK ((status = ANY (ARRAY['ok'::text, 'unchanged'::text, 'pending'::text, 'held'::text, 'skipped'::text, 'degraded'::text, 'error'::text])))	{"status":""}
+public.feed_versions	feed_versions_ledger_check	CHECK ((ledger = ANY (ARRAY['feed'::text, 'ingest'::text])))	{"ledger":""}
+public.feed_versions	feed_versions_version_check	CHECK ((version > 0))	{"version":"-1"}
+public.fuel_city_seed	fuel_city_seed_ags_check	CHECK ((ags ~ '^[0-9]{8}$'::text))	{"ags":""}
+public.fuel_city_seed	fuel_city_seed_radius_km_check	CHECK (((radius_km > (0)::numeric) AND (radius_km <= (25)::numeric)))	{"radius_km":"-1"}
+public.fuel_city_seed	fuel_city_seed_stations_check	CHECK ((stations >= 0))	{"stations":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_basis_sums	CHECK (((history_basis + brand_basis) = drawn_total))	{"history_basis":"1","brand_basis":"1","drawn_total":"3"}
+public.fuel_sample_draws	fuel_sample_draws_brand_basis_check	CHECK ((brand_basis >= 0))	{"brand_basis":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_capacity_check	CHECK ((capacity >= 0))	{"capacity":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_core_share_check	CHECK (((core_share > (0)::numeric) AND (core_share <= (1)::numeric)))	{"core_share":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_drawn_total_check	CHECK ((drawn_total >= 0))	{"drawn_total":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_history_basis_check	CHECK ((history_basis >= 0))	{"history_basis":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_history_days_check	CHECK ((history_days > 0))	{"history_days":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_interval_s_check	CHECK ((interval_s >= 300))	{"interval_s":"299"}
+public.fuel_sample_draws	fuel_sample_draws_land_floor_check	CHECK ((land_floor >= 0))	{"land_floor":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_target_total_check	CHECK ((target_total >= 0))	{"target_total":"-1"}
+public.fuel_sample_draws	fuel_sample_draws_within_capacity	CHECK (((target_total <= capacity) AND (drawn_total <= target_total)))	{"target_total":"5","capacity":"4","drawn_total":"1"}
+public.fuel_sample_strata	fuel_sample_strata_achieved_check	CHECK ((achieved >= 0))	{"achieved":"-1"}
+public.fuel_sample_strata	fuel_sample_strata_brand_class_check	CHECK ((brand_class = ANY (ARRAY['major'::text, 'independent'::text])))	{"brand_class":""}
+public.fuel_sample_strata	fuel_sample_strata_core_check	CHECK ((core >= 0))	{"core":"-1"}
+public.fuel_sample_strata	fuel_sample_strata_held_check	CHECK ((held >= 0))	{"held":"-1"}
+public.fuel_sample_strata	fuel_sample_strata_key_parts	CHECK ((stratum = ((((land_ags || ':'::text) || settlement_class) || ':'::text) || brand_class)))	{"stratum":"x","land_ags":"01","settlement_class":"a","brand_class":"b"}
+public.fuel_sample_strata	fuel_sample_strata_land_ags_check	CHECK ((land_ags ~ '^[0-9]{2}$'::text))	{"land_ags":""}
+public.fuel_sample_strata	fuel_sample_strata_roles_sum	CHECK (((core + rotating) = achieved))	{"core":"1","rotating":"1","achieved":"3"}
+public.fuel_sample_strata	fuel_sample_strata_rotating_check	CHECK ((rotating >= 0))	{"rotating":"-1"}
+public.fuel_sample_strata	fuel_sample_strata_settlement_class_check	CHECK ((settlement_class = ANY (ARRAY['motorway'::text, 'large_city'::text, 'small_city'::text, 'town'::text, 'rural'::text])))	{"settlement_class":""}
+public.fuel_sample_strata	fuel_sample_strata_target_check	CHECK ((target >= 0))	{"target":"-1"}
+public.fuel_sample_strata	fuel_sample_strata_within_held	CHECK ((achieved <= held))	{"achieved":"3","held":"2"}
+public.fuel_station_watch	fuel_station_watch_city_ags_check	CHECK ((city_ags ~ '^[0-9]{8}$'::text))	{"city_ags":""}
+public.fuel_station_watch	fuel_station_watch_city_pair	CHECK (((city_tier IS NULL) = (city_ags IS NULL)))	{"city_tier":"-1"}
+public.fuel_station_watch	fuel_station_watch_city_tier_check	CHECK ((city_tier = ANY (ARRAY[1, 2])))	{"city_tier":"-1"}
+public.fuel_station_watch	fuel_station_watch_reason_check	CHECK ((reason = ANY (ARRAY['seed'::text, 'user'::text, 'region'::text, 'city'::text])))	{"reason":""}
+public.fuel_station_watch	fuel_station_watch_refresh_interval_s_check	CHECK ((refresh_interval_s >= 300))	{"refresh_interval_s":"299"}
+public.fuel_station_watch	fuel_station_watch_sample_role_check	CHECK ((sample_role = ANY (ARRAY['core'::text, 'rotating'::text, 'explorer'::text, 'complete'::text])))	{"sample_role":""}
+public.fuel_station_watch	fuel_station_watch_tier_check	CHECK ((tier = ANY (ARRAY['live'::text, 'hourly'::text, 'daily'::text])))	{"tier":""}
+public.fuel_stations	fuel_stations_postcode_five_digits	CHECK ((postcode ~ '^[0-9]{5}$'::text))	{"postcode":""}
+public.gazetteer_places	gazetteer_places_kind_known	CHECK ((kind = ANY (ARRAY['city'::text, 'district'::text, 'admin'::text, 'station'::text, 'stop'::text, 'motorway'::text, 'junction'::text, 'island'::text])))	{"kind":""}
+public.gazetteer_places	gazetteer_places_locatable	CHECK (((geom IS NOT NULL) OR (road IS NOT NULL)))	{"name":"x"}
+public.gazetteer_places	gazetteer_places_no_odbl	CHECK ((source_id <> 'osm'::text))	{"source_id":"osm"}
+public.gazetteer_places	gazetteer_places_part_of_ags	CHECK (((part_of IS NULL) OR (part_of ~ '^[0-9]{8}$'::text)))	{"part_of":""}
+public.gazetteer_places	gazetteer_places_part_pair	CHECK (((part_of IS NULL) = (part_type IS NULL)))	{"part_of":""}
+public.gazetteer_places	gazetteer_places_part_type	CHECK (((part_type IS NULL) OR (part_type = ANY (ARRAY['stadtteil'::text, 'ortsteil'::text]))))	{"part_type":""}
+public.gazetteer_places	gazetteer_places_source_registered	CHECK ((source_id = ANY (ARRAY['geonames'::text, 'bkg_gvisys'::text, 'db_stada'::text, 'delfi_zhv'::text, 'autobahn'::text])))	{"source_id":""}
+public.gbfs_station_status	gbfs_station_status_counts	CHECK (((vehicles_available >= 0) AND ((electric_available IS NULL) OR ((electric_available >= 0) AND (electric_available <= vehicles_available))) AND ((docks_available IS NULL) OR (docks_available >= 0))))	{"vehicles_available":"-1"}
+public.gbfs_stations	gbfs_stations_source_known	CHECK ((source_feed = ANY (ARRAY['gbfs_nextbike'::text, 'gbfs_donkey'::text])))	{"source_feed":""}
+public.gbfs_systems	gbfs_systems_admitted_licence	CHECK (((NOT admitted) OR COALESCE((license_id = 'CC0-1.0'::text), false) OR ((license_id IS NULL) AND (licence_basis = 'gbfs_3_default'::text) AND COALESCE((gbfs_version ~ '^3\\.[0-9]{1,2}$'::text), false))))	{"admitted":"true"}
+public.gbfs_systems	gbfs_systems_basis_iff_admitted	CHECK ((admitted = (licence_basis IS NOT NULL)))	{"admitted":"true"}
+public.gbfs_systems	gbfs_systems_licence_basis_known	CHECK ((licence_basis = ANY (ARRAY['stated'::text, 'gbfs_3_default'::text])))	{"licence_basis":""}
+public.gbfs_systems	gbfs_systems_publisher_known	CHECK ((publisher = ANY (ARRAY['gbfs_nextbike'::text, 'gbfs_donkey'::text])))	{"publisher":""}
+public.gbfs_systems	gbfs_systems_refusal_reasoned	CHECK ((admitted OR (refused_reason IS NOT NULL)))	{"admitted":"false"}
+public.gbfs_systems	gbfs_systems_source_is_publisher	CHECK ((source_feed = publisher))	{"source_feed":"a","publisher":"b"}
+public.gbfs_vehicles	gbfs_vehicles_source_known	CHECK ((source_feed = ANY (ARRAY['gbfs_nextbike'::text, 'gbfs_donkey'::text])))	{"source_feed":""}
+public.growth_weekly	growth_weekly_check	CHECK (((search_state = 'read'::text) = (search_impressions IS NOT NULL)))	{"search_state":"read"}
+public.growth_weekly	growth_weekly_check1	CHECK (((site_state = 'unread'::text) = (people_views IS NULL)))	{"site_state":""}
+public.growth_weekly	growth_weekly_check2	CHECK (((mcp_state = 'read'::text) = (mcp_calls_ext IS NOT NULL)))	{"mcp_state":"read"}
+public.growth_weekly	growth_weekly_mcp_state_check	CHECK ((mcp_state = ANY (ARRAY['read'::text, 'unread'::text])))	{"mcp_state":""}
+public.growth_weekly	growth_weekly_search_state_check	CHECK ((search_state = ANY (ARRAY['read'::text, 'unread'::text])))	{"search_state":""}
+public.growth_weekly	growth_weekly_site_days_check	CHECK (((site_days >= 0) AND (site_days <= 7)))	{"site_days":"-1"}
+public.growth_weekly	growth_weekly_site_state_check	CHECK ((site_state = ANY (ARRAY['read'::text, 'partial'::text, 'unread'::text])))	{"site_state":""}
+public.growth_weekly	growth_weekly_week_check	CHECK ((EXTRACT(isodow FROM week) = (1)::numeric))	{"week":"2026-01-01 00:30:17.5+00"}
+public.hh_cameras	hh_cameras_source_known	CHECK ((source_feed = 'hh_verkehrskameras'::text))	{"source_feed":""}
+public.hh_roadworks	hh_roadworks_dates_ordered	CHECK (((starts_on IS NULL) OR (ends_on IS NULL) OR (starts_on <= ends_on)))	{"starts_on":"2026-01-02","ends_on":"2026-01-01"}
+public.hh_roadworks	hh_roadworks_source_known	CHECK ((source_feed = 'hh_bauweiser'::text))	{"source_feed":""}
+public.host_samples	host_samples_containers_check	CHECK ((jsonb_typeof(containers) = 'array'::text))	{"containers":"\"x\""}
+public.host_samples	host_samples_db_size_b_check	CHECK ((db_size_b >= 0))	{"db_size_b":"-1"}
+public.host_samples	host_samples_disk_avail_b_check	CHECK ((disk_avail_b >= 0))	{"disk_avail_b":"-1"}
+public.host_samples	host_samples_disk_total_b_check	CHECK ((disk_total_b > 0))	{"disk_total_b":"-1"}
+public.host_samples	host_samples_disk_used_b_check	CHECK ((disk_used_b >= 0))	{"disk_used_b":"-1"}
+public.host_samples	host_samples_mem_available_b_check	CHECK ((mem_available_b >= 0))	{"mem_available_b":"-1"}
+public.host_samples	host_samples_mem_total_b_check	CHECK ((mem_total_b > 0))	{"mem_total_b":"-1"}
+public.hydrogen_stations	hydrogen_stations_licence	CHECK ((attribution_id = 'mobilithek_h2_stations'::text))	{"attribution_id":""}
+public.hydrogen_stations	hydrogen_stations_refill_nonempty	CHECK (((jsonb_typeof(refill) = 'array'::text) AND (jsonb_array_length(refill) > 0)))	{"refill":"\"x\""}
+public.ingest_runs	ingest_runs_budget_hit	CHECK (((budget_hit IS NULL) OR (budget_hit = ANY (ARRAY['ceiling'::text, 'share'::text, 'reserved'::text, 'burst'::text, 'spacing'::text, 'yield'::text, 'hold'::text, 'no-budget'::text, 'no-share'::text, 'unavailable'::text])))) NOT VALID	{"budget_hit":""}
+public.landing_collect_cursor	landing_collect_cursor_byte_offset_check	CHECK ((byte_offset >= 0))	{"byte_offset":"-1"}
+public.landing_collect_cursor	landing_collect_cursor_signature_check	CHECK ((signature ~ '^[0-9T:/ +-]{0,32}$'::text))	{"signature":"zz-not-allowed"}
+public.landing_collect_cursor	landing_collect_cursor_stream_check	CHECK ((stream = ANY (ARRAY['access'::text, 'error'::text])))	{"stream":""}
+public.landing_error_hourly	landing_error_hourly_check	CHECK (((zone ~ '^[a-z0-9_]{0,32}$'::text) AND ((kind = 'limit'::text) OR (zone = ''::text))))	{"zone":"zz-not-allowed"}
+public.landing_error_hourly	landing_error_hourly_hour_check	CHECK (((EXTRACT(minute FROM (hour AT TIME ZONE 'UTC'::text)) = (0)::numeric) AND (EXTRACT(second FROM (hour AT TIME ZONE 'UTC'::text)) = (0)::numeric)))	{"hour":"2026-01-01 00:30:17.5+00"}
+public.landing_error_hourly	landing_error_hourly_kind_check	CHECK ((kind = ANY (ARRAY['limit'::text, 'upstream_timeout'::text, 'upstream_connect'::text, 'upstream_resolve'::text, 'upstream_header'::text, 'upstream_asset'::text, 'upstream_other'::text, 'error'::text, 'warn'::text])))	{"kind":""}
+public.landing_error_hourly	landing_error_hourly_n_check	CHECK ((n >= 0))	{"n":"-1"}
+public.landing_reloads	landing_reloads_action_check	CHECK ((action = ANY (ARRAY['kept'::text, 'recreate'::text, 'served-check'::text])))	{"action":""}
+public.landing_reloads	landing_reloads_result_check	CHECK ((result = ANY (ARRAY['ok'::text, 'failed'::text, 'drift'::text, 'unknown'::text])))	{"result":""}
+public.landing_reloads	landing_reloads_service_check	CHECK ((service = ANY (ARRAY['landing'::text, 'fragcache'::text])))	{"service":""}
+public.landing_status_hourly	landing_status_hourly_agent_class_check	CHECK ((agent_class = ANY (ARRAY['person'::text, 'search'::text, 'crawler'::text, 'automation'::text])))	{"agent_class":""}
+public.landing_status_hourly	landing_status_hourly_hour_check	CHECK (((EXTRACT(minute FROM (hour AT TIME ZONE 'UTC'::text)) = (0)::numeric) AND (EXTRACT(second FROM (hour AT TIME ZONE 'UTC'::text)) = (0)::numeric)))	{"hour":"2026-01-01 00:30:17.5+00"}
+public.landing_status_hourly	landing_status_hourly_n_check	CHECK ((n >= 0))	{"n":"-1"}
+public.landing_status_hourly	landing_status_hourly_route_class_check	CHECK ((route_class = ANY (ARRAY['home'::text, 'page'::text, 'place'::text, 'station'::text, 'motorway'::text, 'fragment'::text, 'asset'::text, 'meta'::text, 'other'::text])))	{"route_class":""}
+public.landing_status_hourly	landing_status_hourly_status_check	CHECK (((status >= 100) AND (status <= 599)))	{"status":"99"}
+public.lez_zone_overlaps	lez_zone_overlaps_two_feeds	CHECK ((source_feed <> other_feed))	{"source_feed":"a","other_feed":"a"}
+public.lez_zones	lez_zones_area_is_area	CHECK (((role = 'exempt_road'::text) OR (public.geometrytype(geom) = ANY (ARRAY['POLYGON'::text, 'MULTIPOLYGON'::text]))))	{"role":"zone","geom":"SRID=4326;POINT(0 0)"}
+public.lez_zones	lez_zones_role_known	CHECK ((role = ANY (ARRAY['zone'::text, 'exempt_road'::text, 'transfer'::text])))	{"role":""}
+public.lorry_city	lorry_city_category	CHECK ((category = ANY (ARRAY['connection_motorway'::text, 'connection_primary'::text, 'connection_secondary'::text, 'connection_delivery'::text, 'lorry_priority_route'::text, 'heavy_transport'::text])))	{"category":""}
+public.lorry_city	lorry_city_class_on_network	CHECK (((layer = 'priority_route'::text) = (category IS NOT NULL)))	{"layer":"priority_route"}
+public.lorry_city	lorry_city_kind	CHECK (((layer = 'priority_route'::text) OR (kind IS NOT NULL)))	{"layer":""}
+public.lorry_city	lorry_city_layer	CHECK ((layer = ANY (ARRAY['priority_route'::text, 'restriction'::text, 'zone'::text])))	{"layer":""}
+public.lorry_city	lorry_city_source	CHECK ((source_feed = ANY (ARRAY['lorry_koeln_verbindungen'::text, 'lorry_koeln_beschraenkungen'::text, 'lorry_dresden_verbotszonen'::text, 'lorry_dresden_vorrangrouten'::text, 'lorry_hh_gst_netz'::text])))	{"source_feed":""}
+public.lorry_city	lorry_city_value_unit	CHECK (((value IS NULL) = (unit IS NULL)))	{"value":"-1"}
+public.lorry_city	lorry_city_zone_dated	CHECK (((layer <> 'zone'::text) OR (version_date IS NOT NULL)))	{"layer":"zone"}
+public.lorry_hb	lorry_hb_layer	CHECK ((layer = 'restriction'::text))	{"layer":""}
+public.lorry_hb	lorry_hb_source	CHECK ((source_feed = ANY (ARRAY['lorry_hb_durchfahrtshoehen'::text, 'lorry_hb_fuehrungshoehen'::text])))	{"source_feed":""}
+public.lorry_hb	lorry_hb_value_unparsed	CHECK (((value IS NULL) AND (unit IS NULL) AND (published_text IS NOT NULL) AND (publisher_id IS NOT NULL)))	{"publisher_id":""}
+public.lorry_ivm	lorry_ivm_layer	CHECK ((((source_feed = 'lorry_ivm_vorrangnetz'::text) AND (layer = 'priority_route'::text)) OR ((source_feed = 'lorry_ivm_beschilderung'::text) AND (layer = 'restriction'::text))))	{"source_feed":""}
+public.lorry_ivm	lorry_ivm_source	CHECK ((source_feed = ANY (ARRAY['lorry_ivm_vorrangnetz'::text, 'lorry_ivm_beschilderung'::text])))	{"source_feed":""}
+public.lorry_long_network	lorry_long_network_layer	CHECK ((layer = 'long_lorry'::text))	{"layer":""}
+public.lorry_long_network	lorry_long_network_source	CHECK ((source_feed = ANY (ARRAY['lorry_bast_langlkw'::text, 'lorry_hh_langlkw'::text])))	{"source_feed":""}
+public.lorry_sevas	lorry_sevas_layer	CHECK ((layer = ANY (ARRAY['restriction'::text, 'priority_route'::text])))	{"layer":""}
+public.lorry_sevas	lorry_sevas_source	CHECK ((source_feed = 'lorry_sevas_nrw'::text))	{"source_feed":""}
+public.los_lane_sites	los_lane_sites_lane_range	CHECK (((lane >= 1) AND (lane <= 99)))	{"lane":"0"}
+public.los_lane_sites	los_lane_sites_site_shape	CHECK ((site_id ~ '^mq\\.'::text))	{"site_id":""}
+public.los_lane_sites	los_lane_sites_source_registered	CHECK ((source_feed = 'los_nrw_lane_sites'::text))	{"source_feed":""}
+public.los_lane_state	los_lane_state_source_registered	CHECK ((source_feed = 'los_nrw_lanes'::text))	{"source_feed":""}
+public.los_sites	los_sites_carriageway_known	CHECK ((carriageway = ANY (ARRAY['hfb'::text, 'entry'::text, 'exit'::text, 'other'::text])))	{"carriageway":""}
+public.los_sites	los_sites_road_shape	CHECK (((road IS NULL) OR (road ~ '^A[1-9][0-9]{0,2}$'::text)))	{"road":""}
+public.los_sites	los_sites_rule_known	CHECK (((road_rule IS NULL) OR (road_rule = ANY (ARRAY['single'::text, 'id'::text, 'nearest'::text, 'none'::text, 'unplaced'::text]))))	{"road_rule":""}
+public.los_sites	los_sites_source_registered	CHECK ((source_feed = 'los_nrw_sites'::text))	{"source_feed":""}
+public.los_state	los_state_source_registered	CHECK ((source_feed = 'los_nrw'::text))	{"source_feed":""}
+public.mcp_usage	mcp_usage_client_check	CHECK ((client ~ '^[a-z0-9][a-z0-9._-]{0,39}$'::text))	{"client":""}
+public.mcp_usage	mcp_usage_door_check	CHECK ((door = ANY (ARRAY['streamable'::text, 'sse'::text])))	{"door":""}
+public.mcp_usage	mcp_usage_errors_check	CHECK ((errors >= 0))	{"errors":"-1"}
+public.mcp_usage	mcp_usage_period_aligned	CHECK (((period_start AT TIME ZONE 'UTC'::text) = date_trunc(period, (period_start AT TIME ZONE 'UTC'::text))))	{"period":"day","period_start":"2026-01-01 00:30:00+00"}
+public.mcp_usage	mcp_usage_period_check	CHECK ((period = ANY (ARRAY['hour'::text, 'day'::text])))	{"period":""}
+public.mcp_usage	mcp_usage_refusals_check	CHECK ((refusals >= 0))	{"refusals":"-1"}
+public.mcp_usage	mcp_usage_requests_check	CHECK ((requests >= 0))	{"requests":"-1"}
+public.mcp_usage	mcp_usage_rpc_check	CHECK ((rpc ~ '^[A-Za-z][A-Za-z0-9_/.-]{0,63}$'::text))	{"rpc":""}
+public.mcp_usage	mcp_usage_server_errors_check	CHECK ((server_errors >= 0))	{"server_errors":"-1"}
+public.mcp_usage	mcp_usage_sessions_check	CHECK ((sessions >= 0))	{"sessions":"-1"}
+public.mcp_usage	mcp_usage_tool_check	CHECK ((tool ~ '^([a-z][a-z0-9_]{0,63})?$'::text))	{"tool":"zz-not-allowed"}
+public.mcp_usage	mcp_usage_tool_error_internal_check	CHECK ((tool_error_internal >= 0))	{"tool_error_internal":"-1"}
+public.mcp_usage	mcp_usage_tool_error_invalid_input_check	CHECK ((tool_error_invalid_input >= 0))	{"tool_error_invalid_input":"-1"}
+public.mcp_usage	mcp_usage_tool_error_limit_reached_check	CHECK ((tool_error_limit_reached >= 0))	{"tool_error_limit_reached":"-1"}
+public.mcp_usage	mcp_usage_tool_error_not_found_check	CHECK ((tool_error_not_found >= 0))	{"tool_error_not_found":"-1"}
+public.mcp_usage	mcp_usage_tool_error_out_of_coverage_check	CHECK ((tool_error_out_of_coverage >= 0))	{"tool_error_out_of_coverage":"-1"}
+public.mcp_usage	mcp_usage_tool_error_timeout_check	CHECK ((tool_error_timeout >= 0))	{"tool_error_timeout":"-1"}
+public.mcp_usage	mcp_usage_tool_error_unavailable_check	CHECK ((tool_error_unavailable >= 0))	{"tool_error_unavailable":"-1"}
+public.mcp_usage	mcp_usage_tool_errors_check	CHECK ((tool_errors >= 0))	{"tool_errors":"-1"}
+public.mcp_usage	mcp_usage_total_ms_check	CHECK ((total_ms >= 0))	{"total_ms":"-1"}
+public.mcp_usage_exports	mcp_usage_exports_attempts_check	CHECK ((attempts >= 1))	{"attempts":"0"}
+public.mcp_usage_exports	mcp_usage_exports_destination_check	CHECK ((destination = 'ga4'::text))	{"destination":""}
+public.mcp_usage_exports	mcp_usage_exports_error_check	CHECK ((length(error) <= 500))	{"error":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.mcp_usage_exports	mcp_usage_exports_finished	CHECK (((state = 'claimed'::text) = (finished_at IS NULL)))	{"state":""}
+public.mcp_usage_exports	mcp_usage_exports_http_status_check	CHECK (((http_status >= 100) AND (http_status <= 599)))	{"http_status":"99"}
+public.mcp_usage_exports	mcp_usage_exports_state_check	CHECK ((state = ANY (ARRAY['claimed'::text, 'sent'::text, 'failed'::text])))	{"state":""}
+public.mcp_usage_exports	mcp_usage_exports_totals_check	CHECK ((jsonb_typeof(totals) = 'object'::text))	{"totals":"\"x\""}
+public.motorway_summary	motorway_summary_closures_check	CHECK ((closures >= 0))	{"closures":"-1"}
+public.motorway_summary	motorway_summary_jams_check	CHECK ((jams >= 0))	{"jams":"-1"}
+public.motorway_summary	motorway_summary_road_check	CHECK ((road ~ '^A[1-9][0-9]{0,2}$'::text))	{"road":""}
+public.motorway_summary	motorway_summary_roadworks_check	CHECK ((roadworks >= 0))	{"roadworks":"-1"}
+public.motorway_summary	motorway_summary_warnings_check	CHECK ((warnings >= 0))	{"warnings":"-1"}
+public.mvv_bus_load	mvv_bus_load_class	CHECK (((load_class >= 1) AND (load_class <= 4)))	{"load_class":"0"}
+public.mvv_bus_load	mvv_bus_load_day	CHECK ((day_type = ANY (ARRAY['MFS'::text, 'MFF'::text, 'Sa'::text, 'So'::text])))	{"day_type":""}
+public.mvv_bus_load	mvv_bus_load_feed	CHECK ((source_feed = 'mvv_bus_load'::text))	{"source_feed":""}
+public.mvv_bus_load	mvv_bus_load_rows	CHECK ((file_rows >= 1))	{"file_rows":"0"}
+public.mvv_bus_load	mvv_bus_load_time	CHECK ((dep_time ~ '^[0-2][0-9]:[0-5][0-9]$'::text))	{"dep_time":""}
+public.oom_kills	oom_kills_anon_rss_kb_check	CHECK ((anon_rss_kb >= 0))	{"anon_rss_kb":"-1"}
+public.oom_kills	oom_kills_constraint_kind_check	CHECK ((constraint_kind = ANY (ARRAY['memcg'::text, 'global'::text])))	{"constraint_kind":""}
+public.oom_kills	oom_kills_container_check	CHECK ((container ~ '^viafrei-[a-z0-9][a-z0-9-]{0,62}$'::text))	{"container":""}
+public.oom_kills	oom_kills_limit_kb_check	CHECK ((limit_kb > 0))	{"limit_kb":"-1"}
+public.oom_kills	oom_kills_line_sha256_check	CHECK ((line_sha256 ~ '^[0-9a-f]{64}$'::text))	{"line_sha256":""}
+public.oom_kills	oom_kills_names_only_ours	CHECK (((victim = 'ours'::text) OR ((container IS NULL) AND (process IS NULL) AND (anon_rss_kb IS NULL) AND (limit_kb IS NULL))))	{"victim":"other","container":"x"}
+public.oom_kills	oom_kills_other_only_global	CHECK (((victim <> 'other'::text) OR (constraint_kind = 'global'::text)))	{"victim":"other","constraint_kind":"zz"}
+public.oom_kills	oom_kills_ours_is_named	CHECK (((victim <> 'ours'::text) OR (container IS NOT NULL)))	{"victim":"ours"}
+public.oom_kills	oom_kills_process_check	CHECK ((process ~ '^[A-Za-z0-9._:-]{1,15}$'::text))	{"process":""}
+public.oom_kills	oom_kills_victim_check	CHECK ((victim = ANY (ARRAY['ours'::text, 'other'::text, 'unknown'::text])))	{"victim":""}
+public.opendata_roadworks	opendata_roadworks_closure_window_ordered	CHECK (((closure_starts_at IS NULL) OR (closure_ends_at IS NULL) OR (closure_starts_at < closure_ends_at)))	{"closure_starts_at":"2026-01-02 00:00:00+00","closure_ends_at":"2026-01-01 00:00:00+00"}
+public.opendata_roadworks	opendata_roadworks_kind_known	CHECK ((kind = ANY (ARRAY['roadworks'::text, 'event'::text, 'message'::text])))	{"kind":""}
+public.opendata_roadworks	opendata_roadworks_period_ordered	CHECK (((starts_at IS NULL) OR (ends_at IS NULL) OR (starts_at <= ends_at)))	{"starts_at":"2026-01-02 00:00:00+00","ends_at":"2026-01-01 00:00:00+00"}
+public.ops_audit	ops_audit_action_check	CHECK ((action = ANY (ARRAY['login'::text, 'login-refused'::text, 'restart'::text, 'config'::text, 'refused'::text, 'passkey-add'::text, 'passkey-remove'::text, 'run-now'::text, 'pause'::text, 'resume'::text])))	{"action":""}
+public.ops_audit	ops_audit_actor_check	CHECK ((actor ~ '^[a-z][a-z0-9_-]{0,31}$'::text))	{"actor":""}
+public.ops_audit	ops_audit_after_check	CHECK (((after IS NULL) OR (length(after) <= 200)))	{"after":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.ops_audit	ops_audit_before_check	CHECK (((before IS NULL) OR (length(before) <= 200)))	{"before":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.ops_audit	ops_audit_client_ip_check	CHECK (((client_ip IS NULL) OR (length(client_ip) <= 45)))	{"client_ip":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.ops_audit	ops_audit_result_check	CHECK ((result ~ '^[a-z][a-z-]{0,31}$'::text))	{"result":""}
+public.ops_audit	ops_audit_target_check	CHECK (((length(target) >= 1) AND (length(target) <= 120)))	{"target":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.ops_passkeys	ops_passkeys_credential_id_check	CHECK (((length(credential_id) >= 1) AND (length(credential_id) <= 1023)))	{"credential_id":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.ops_passkeys	ops_passkeys_label_check	CHECK (((label ~ '^[^[:cntrl:]]{1,40}$'::text) AND (label = btrim(label))))	{"label":""}
+public.ops_passkeys	ops_passkeys_public_key_check	CHECK (((length(public_key) >= 16) AND (length(public_key) <= 4096)))	{"public_key":"15"}
+public.ops_passkeys	ops_passkeys_sign_count_check	CHECK (((sign_count >= 0) AND (sign_count <= '4294967295'::bigint)))	{"sign_count":"-1"}
+public.ops_passkeys	ops_passkeys_transports_check	CHECK ((transports <@ ARRAY['ble'::text, 'cable'::text, 'hybrid'::text, 'internal'::text, 'nfc'::text, 'smart-card'::text, 'usb'::text]))	{"transports":"{zz-not-allowed}"}
+public.ops_requests	ops_requests_action_check	CHECK ((action = ANY (ARRAY['restart'::text, 'run-now'::text])))	{"action":""}
+public.ops_requests	ops_requests_requested_by_check	CHECK ((requested_by ~ '^[a-z][a-z0-9_-]{0,31}$'::text))	{"requested_by":""}
+public.ops_requests	ops_requests_result_check	CHECK (((result IS NULL) OR (result ~ '^[a-z][a-z-]{0,31}$'::text)))	{"result":""}
+public.ops_requests	ops_requests_state_check	CHECK ((state = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text, 'refused'::text])))	{"state":""}
+public.ops_requests	ops_requests_target_check	CHECK (\nCASE action\n    WHEN 'restart'::text THEN (target = ANY (ARRAY['ingest-autobahn'::text, 'ingest-tankerkoenig'::text, 'ingest-mobilithek'::text, 'ingest-dwd'::text, 'ingest-vbb-rt'::text, 'ingest-db-fasta'::text, 'ingest-gtfs-roll'::text, 'ingest-gtfs-fetch'::text, 'ingest-zhv'::text, 'ingest-bnetza'::text, 'ingest-ocpdb'::text, 'ingest-hamburg'::text, 'ingest-gbfs'::text, 'mcp'::text, 'digest'::text, 'web'::text, 'status'::text]))\n    WHEN 'run-now'::text THEN (target ~ '^[a-z][a-z0-9_]{0,63}$'::text)\n    ELSE false\nEND)	{"action":""}
+public.ops_rollup_daily	ops_rollup_daily_key_check	CHECK ((key ~ '^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,79}$'::text))	{"key":""}
+public.ops_rollup_daily	ops_rollup_daily_ledger_check	CHECK ((ledger = ANY (ARRAY['feed'::text, 'ingest'::text])))	{"ledger":""}
+public.ops_rollup_feed	ops_rollup_feed_aligned	CHECK ((((EXTRACT(epoch FROM bucket_start))::bigint % (300)::bigint) = 0))	{"bucket_start":"2026-01-01 00:30:17.5+00"}
+public.ops_rollup_feed	ops_rollup_feed_day	CHECK ((bucket_day = ((bucket_start AT TIME ZONE 'UTC'::text))::date))	{"bucket_start":"2026-01-01 00:30:17.5+00"}
+public.ops_rollup_feed	ops_rollup_feed_key_check	CHECK ((key ~ '^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,79}$'::text))	{"key":""}
+public.ops_rollup_feed	ops_rollup_feed_ledger_check	CHECK ((ledger = ANY (ARRAY['feed'::text, 'ingest'::text])))	{"ledger":""}
+public.ops_rollup_feed	ops_rollup_feed_runs_check	CHECK ((runs > 0))	{"runs":"-1"}
+public.ops_rollup_held	ops_rollup_held_approx_rows_check	CHECK ((approx_rows >= 0))	{"approx_rows":"-1"}
+public.ops_rollup_held	ops_rollup_held_kind_check	CHECK ((kind ~ '^[a-z][a-z_]{0,39}$'::text))	{"kind":""}
+public.ops_rollup_usage	ops_rollup_usage_class_check	CHECK ((class = ANY (ARRAY['real'::text, 'scanners'::text, 'own'::text])))	{"class":""}
+public.ops_rollup_usage	ops_rollup_usage_tool_check	CHECK ((tool ~ '^([a-z][a-z0-9_]{0,63}|other)$'::text))	{"tool":""}
+public.osm_addresses	osm_addresses_locatable	CHECK (((place_norm IS NOT NULL) OR (postcode IS NOT NULL)))	{"street":"x"}
+public.osm_addresses	osm_addresses_source_is_osm	CHECK ((source_id = 'osm'::text))	{"source_id":""}
+public.osm_addresses	osm_addresses_type_known	CHECK ((osm_type = ANY (ARRAY['node'::text, 'way'::text, 'relation'::text])))	{"osm_type":""}
+public.osm_boundary_de	osm_boundary_de_geom_valid	CHECK ((public.st_isvalid(geom) AND (NOT public.st_isempty(geom))))	{"geom":"SRID=4326;POLYGON((0 0,1 1,1 0,0 1,0 0))"}
+public.osm_boundary_de	osm_boundary_de_land_known	CHECK ((land = ANY (ARRAY['baden-wuerttemberg'::text, 'bayern'::text, 'berlin'::text, 'brandenburg'::text, 'bremen'::text, 'hamburg'::text, 'hessen'::text, 'mecklenburg-vorpommern'::text, 'niedersachsen'::text, 'nordrhein-westfalen'::text, 'rheinland-pfalz'::text, 'saarland'::text, 'sachsen'::text, 'sachsen-anhalt'::text, 'schleswig-holstein'::text, 'thueringen'::text])))	{"land":""}
+public.osm_boundary_de	osm_boundary_de_part_positive	CHECK ((part >= 1))	{"part":"0"}
+public.osm_boundary_de	osm_boundary_de_source_is_osm	CHECK ((source_id = 'osm'::text))	{"source_id":""}
+public.osm_pois	osm_pois_category_known	CHECK ((category = ANY (ARRAY['office'::text, 'amenity'::text, 'shop'::text, 'tourism'::text, 'healthcare'::text, 'leisure'::text, 'industrial'::text, 'historic'::text, 'natural'::text, 'highway'::text, 'building'::text, 'railway'::text])))	{"category":""}
+public.osm_pois	osm_pois_category_value_not_blank	CHECK ((category_value <> ''::text))	{"category_value":""}
+public.osm_pois	osm_pois_name_not_blank	CHECK (((name <> ''::text) AND (name_norm <> ''::text)))	{"name":""}
+public.osm_pois	osm_pois_source_is_osm	CHECK ((source_id = 'osm'::text))	{"source_id":""}
+public.osm_pois	osm_pois_type_known	CHECK ((osm_type = ANY (ARRAY['node'::text, 'way'::text, 'relation'::text])))	{"osm_type":""}
+public.osm_replication_state	osm_replication_state_sequence_positive	CHECK ((sequence > 0))	{"sequence":"-1"}
+public.osm_replication_state	osm_replication_state_source_known	CHECK ((source = ANY (ARRAY['baseline'::text, 'diff'::text])))	{"source":""}
+public.osm_speed_cameras	osm_speed_cameras_enforces	CHECK ((enforces = ANY (ARRAY['speed'::text, 'red_light'::text, 'speed_red_light'::text])))	{"enforces":""}
+public.osm_speed_cameras	osm_speed_cameras_land_known	CHECK (((land IS NULL) OR (land = ANY (ARRAY['baden-wuerttemberg'::text, 'bayern'::text, 'berlin'::text, 'brandenburg'::text, 'bremen'::text, 'hamburg'::text, 'hessen'::text, 'mecklenburg-vorpommern'::text, 'niedersachsen'::text, 'nordrhein-westfalen'::text, 'rheinland-pfalz'::text, 'saarland'::text, 'sachsen'::text, 'sachsen-anhalt'::text, 'schleswig-holstein'::text, 'thueringen'::text, 'germany'::text]))))	{"land":""}
+public.osm_speed_cameras	osm_speed_cameras_node	CHECK ((osm_type = 'node'::text))	{"osm_type":""}
+public.osm_speed_cameras	osm_speed_cameras_source	CHECK ((source_id = 'osm_speed_cameras'::text))	{"source_id":""}
+public.osm_speed_cameras	osm_speed_cameras_speed	CHECK (((max_speed_kmh IS NULL) OR ((max_speed_kmh >= 5) AND (max_speed_kmh <= 200))))	{"max_speed_kmh":"4"}
+public.osm_streets	osm_streets_cls	CHECK (((cls >= 1) AND (cls <= 6)))	{"cls":"0"}
+public.osm_streets	osm_streets_land_known	CHECK (((land IS NULL) OR (land = ANY (ARRAY['baden-wuerttemberg'::text, 'bayern'::text, 'berlin'::text, 'brandenburg'::text, 'bremen'::text, 'hamburg'::text, 'hessen'::text, 'mecklenburg-vorpommern'::text, 'niedersachsen'::text, 'nordrhein-westfalen'::text, 'rheinland-pfalz'::text, 'saarland'::text, 'sachsen'::text, 'sachsen-anhalt'::text, 'schleswig-holstein'::text, 'thueringen'::text, 'germany'::text]))))	{"land":""}
+public.osm_streets	osm_streets_lo_band	CHECK (((cls <= 4) = (geom_lo IS NOT NULL)))	{"cls":"-1"}
+public.osm_streets	osm_streets_source_is_osm	CHECK ((source_id = 'osm_streets'::text))	{"source_id":""}
+public.osm_streets	osm_streets_way	CHECK ((osm_type = 'way'::text))	{"osm_type":""}
+public.parkapi_stray_latch	parkapi_stray_latch_cleared	CHECK (((cleared_at IS NULL) OR (cleared_at >= tripped_at)))	{"tripped_at":"2026-01-02 00:00:00+00","cleared_at":"2026-01-01 00:00:00+00"}
+public.parkapi_stray_latch	parkapi_stray_latch_feed_key_check	CHECK ((feed_key = 'parkapi_bw'::text))	{"feed_key":""}
+public.parkapi_stray_latch	parkapi_stray_latch_reason_check	CHECK (((reason IS NULL) OR (length(reason) <= 200)))	{"reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.parking_facilities	parking_facilities_attribution	CHECK (((attribution_id <> ''::text) AND (attribution_id !~~ '%\\_pending'::text)))	{"attribution_id":""}
+public.parking_facilities	parking_facilities_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+public.parking_facilities	parking_facilities_facilities_absent_vocabulary	CHECK ((facilities_absent <@ ARRAY['toilet'::text, 'accessible_toilet'::text, 'shower'::text, 'restaurant'::text, 'snack'::text, 'cafe'::text, 'shop'::text, 'fuel'::text, 'charging'::text, 'drinking_water'::text, 'picnic'::text, 'playground'::text, 'wifi'::text, 'security'::text]))	{"facilities_absent":"{zz-not-allowed}"}
+public.parking_facilities	parking_facilities_facilities_disjoint	CHECK ((NOT (facilities && facilities_absent)))	{"facilities":"{toilet}","facilities_absent":"{toilet}"}
+public.parking_facilities	parking_facilities_facilities_source	CHECK (((facilities_source IS NULL) = ((cardinality(facilities) = 0) AND (cardinality(facilities_absent) = 0))))	{"facilities":"{zz-not-allowed}"}
+public.parking_facilities	parking_facilities_facilities_source_nonempty	CHECK (((facilities_source IS NULL) OR (facilities_source <> ''::text)))	{"facilities_source":""}
+public.parking_facilities	parking_facilities_facilities_vocabulary	CHECK ((facilities <@ ARRAY['toilet'::text, 'accessible_toilet'::text, 'shower'::text, 'restaurant'::text, 'snack'::text, 'cafe'::text, 'shop'::text, 'fuel'::text, 'charging'::text, 'drinking_water'::text, 'picnic'::text, 'playground'::text, 'wifi'::text, 'security'::text]))	{"facilities":"{zz-not-allowed}"}
+public.parking_facilities	parking_facilities_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+public.parking_facilities_bysa	parking_facilities_bysa_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+public.parking_facilities_bysa	parking_facilities_bysa_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+public.parking_facilities_bysa	parking_facilities_bysa_licence	CHECK ((attribution_id = 'mobilithek_park_nrw_pr'::text))	{"attribution_id":""}
+public.parking_facilities_odbl	parking_facilities_odbl_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0) AND (COALESCE(capacity_disabled, 0) >= 0)))	{"capacity_total":"-1"}
+public.parking_facilities_odbl	parking_facilities_odbl_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+public.parking_facilities_odbl	parking_facilities_odbl_licence	CHECK ((attribution_id = 'mobilithek_park_trucklounge'::text))	{"attribution_id":""}
+public.parking_facilities_sid	parking_facilities_sid_address	CHECK (((address IS NULL) OR ((jsonb_typeof(address) = 'object'::text) AND ((address - ARRAY['street'::text, 'house_number'::text, 'postcode'::text, 'city'::text]) = '{}'::jsonb))))	{"address":"\"x\""}
+public.parking_facilities_sid	parking_facilities_sid_capacity	CHECK (((COALESCE(capacity_total, 0) >= 0) AND (COALESCE(capacity_truck, 0) >= 0)))	{"capacity_total":"-1"}
+public.parking_facilities_sid	parking_facilities_sid_facilities_absent_vocabulary	CHECK ((facilities_absent <@ ARRAY['toilet'::text, 'accessible_toilet'::text, 'shower'::text, 'restaurant'::text, 'snack'::text, 'cafe'::text, 'shop'::text, 'fuel'::text, 'charging'::text, 'drinking_water'::text, 'picnic'::text, 'playground'::text, 'wifi'::text, 'security'::text]))	{"facilities_absent":"{zz-not-allowed}"}
+public.parking_facilities_sid	parking_facilities_sid_facilities_disjoint	CHECK ((NOT (facilities && facilities_absent)))	{"facilities":"{toilet}","facilities_absent":"{toilet}"}
+public.parking_facilities_sid	parking_facilities_sid_facilities_source	CHECK (((facilities_source IS NULL) = ((cardinality(facilities) = 0) AND (cardinality(facilities_absent) = 0))))	{"facilities":"{zz-not-allowed}"}
+public.parking_facilities_sid	parking_facilities_sid_facilities_vocabulary	CHECK ((facilities <@ ARRAY['toilet'::text, 'accessible_toilet'::text, 'shower'::text, 'restaurant'::text, 'snack'::text, 'cafe'::text, 'shop'::text, 'fuel'::text, 'charging'::text, 'drinking_water'::text, 'picnic'::text, 'playground'::text, 'wifi'::text, 'security'::text]))	{"facilities":"{zz-not-allowed}"}
+public.parking_facilities_sid	parking_facilities_sid_feed	CHECK ((source_feed = 'truckpark_sid_static'::text))	{"source_feed":""}
+public.parking_facilities_sid	parking_facilities_sid_kind	CHECK ((kind = ANY (ARRAY['rest_area'::text, 'car_park'::text, 'park_and_ride'::text, 'truck'::text, 'other'::text])))	{"kind":""}
+public.parking_facilities_sid	parking_facilities_sid_licence	CHECK ((attribution_id = 'toll_collect_sid'::text))	{"attribution_id":""}
+public.parking_facility_refusals	parking_facility_refusals_is_array	CHECK ((jsonb_typeof(refusals) = 'array'::text))	{"refusals":"\"x\""}
+public.parking_forecast_profiles	parking_forecast_profiles_attribution	CHECK (((attribution_id <> ''::text) AND (attribution_id !~~ '%\\_pending'::text)))	{"attribution_id":""}
+public.parking_forecast_profiles	parking_forecast_profiles_band	CHECK (((band_start >= 0) AND (band_start <= 23) AND ((band_end >= 0) AND (band_end <= 24)) AND (band_start <> band_end)))	{"band_start":"-1"}
+public.parking_forecast_profiles	parking_forecast_profiles_class	CHECK ((class = ANY (ARRAY['green'::text, 'yellow'::text, 'red'::text])))	{"class":""}
+public.parking_forecast_profiles	parking_forecast_profiles_day_type	CHECK ((day_type = ANY (ARRAY['weekday'::text, 'saturday'::text, 'sunday'::text])))	{"day_type":""}
+public.parking_occupancy	parking_occupancy_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+public.parking_occupancy	parking_occupancy_implausible	CHECK (((implausible_fields IS NULL) OR ((cardinality(implausible_fields) > 0) AND (implausible_fields <@ ARRAY['occupancy_pct'::text, 'spaces_free'::text, 'spaces_total'::text, 'feed_ts'::text])))) NOT VALID	{"implausible_fields":"{zz-not-allowed}"}
+public.parking_occupancy	parking_occupancy_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric))) NOT VALID	{"occupancy_pct":"-1"}
+public.parking_occupancy_odbl	parking_occupancy_odbl_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+public.parking_occupancy_odbl	parking_occupancy_odbl_implausible	CHECK (((implausible_fields IS NULL) OR ((cardinality(implausible_fields) > 0) AND (implausible_fields <@ ARRAY['occupancy_pct'::text, 'spaces_free'::text, 'spaces_total'::text, 'feed_ts'::text])))) NOT VALID	{"implausible_fields":"{zz-not-allowed}"}
+public.parking_occupancy_odbl	parking_occupancy_odbl_licence	CHECK ((attribution_id = 'mobilithek_park_trucklounge_occ'::text))	{"attribution_id":""}
+public.parking_occupancy_odbl	parking_occupancy_odbl_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric))) NOT VALID	{"occupancy_pct":"-1"}
+public.parking_occupancy_sid	parking_occupancy_sid_counts	CHECK (((COALESCE(spaces_free, 0) >= 0) AND (COALESCE(spaces_total, 0) >= 0)))	{"spaces_free":"-1"}
+public.parking_occupancy_sid	parking_occupancy_sid_feed	CHECK ((source_feed = 'truckpark_sid_dyn'::text))	{"source_feed":""}
+public.parking_occupancy_sid	parking_occupancy_sid_implausible	CHECK (((implausible_fields IS NULL) OR ((cardinality(implausible_fields) > 0) AND (implausible_fields <@ ARRAY['occupancy_pct'::text, 'spaces_free'::text, 'spaces_total'::text, 'feed_ts'::text])))) NOT VALID	{"implausible_fields":"{zz-not-allowed}"}
+public.parking_occupancy_sid	parking_occupancy_sid_pct	CHECK (((occupancy_pct IS NULL) OR (occupancy_pct >= (0)::numeric))) NOT VALID	{"occupancy_pct":"-1"}
+public.partition_archives	partition_archives_bytes_check	CHECK ((bytes > 0))	{"bytes":"-1"}
+public.partition_archives	partition_archives_rows_check	CHECK ((rows >= 0))	{"rows":"-1"}
+public.partition_archives	partition_archives_sha256_check	CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text))	{"sha256":""}
+public.partition_retention	partition_retention_keep_days	CHECK ((keep_days >= 1))	{"keep_days":"0"}
+public.partition_retention	partition_retention_reason	CHECK ((reason <> ''::text))	{"reason":""}
+public.partition_settings	partition_settings_floor_positive	CHECK ((min_daily_tables >= 1))	{"min_daily_tables":"0"}
+public.partition_settings	partition_settings_one_row	CHECK (singleton)	{"singleton":"false"}
+public.place_slugs	place_slugs_ags_check	CHECK ((ags ~ '^[0-9]{8}$'::text))	{"ags":""}
+public.place_slugs	place_slugs_slug_check	CHECK (((slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 80) AND (slug !~ '[0-9]{5}'::text)))	{"slug":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.place_website_checks	place_website_checks_check	CHECK (((ok AND (reason IS NULL)) OR ((NOT ok) AND (reason IS NOT NULL) AND (length(reason) <= 300))))	{"ok":"false"}
+public.place_website_checks	place_website_checks_url_check	CHECK (((url ~ '^https://[^[:space:]"<>''`]+$'::text) AND (length(url) <= 300)))	{"url":"301"}
+public.place_websites	place_websites_ags_check	CHECK ((ags ~ '^[0-9]{8}$'::text))	{"ags":""}
+public.place_websites	place_websites_source_id_check	CHECK ((source_id = 'wikidata'::text))	{"source_id":""}
+public.place_websites	place_websites_url_check	CHECK (((url ~ '^https://[^[:space:]"<>''`]+$'::text) AND (length(url) <= 300)))	{"url":"301"}
+public.place_websites	place_websites_wikidata_id_check	CHECK ((wikidata_id ~ '^Q[0-9]{1,12}$'::text))	{"wikidata_id":""}
+public.road_context_features	road_context_kind_known	CHECK ((kind = ANY (ARRAY['border_crossing'::text, 'traffic_signal'::text, 'winter_service'::text, 'pedestrian_zone_access'::text, 'detour'::text, 'loading_zone'::text, 'coach_parking'::text, 'motorway_detour'::text, 'street_parking'::text, 'signal_installation'::text])))	{"kind":""}
+public.road_context_features	road_context_variant_known	CHECK ((((kind = 'border_crossing'::text) AND (variant = ANY (ARRAY['motorway'::text, 'federal'::text, 'state'::text, 'district'::text, 'ferry'::text, 'other'::text]))) OR ((kind = 'traffic_signal'::text) AND (variant = ANY (ARRAY['acoustic'::text, 'plain'::text]))) OR ((kind = 'winter_service'::text) AND (variant = ANY (ARRAY['priority_1'::text, 'priority_2'::text, 'priority_3'::text, 'unranked'::text]))) OR ((kind = 'pedestrian_zone_access'::text) AND (variant = ANY (ARRAY['pedestrian_zone'::text, 'no_motor_vehicles'::text, 'no_entry'::text, 'no_cycling'::text, 'sign_not_listed'::text]))) OR ((kind = 'detour'::text) AND (variant = ANY (ARRAY['motor_vehicles'::text, 'lorries'::text, 'cars'::text, 'cycles'::text, 'all_traffic'::text, 'other'::text]))) OR ((kind = 'loading_zone'::text) AND (variant = ANY (ARRAY['load_deliver'::text, 'load_deliver_work'::text, 'alternating'::text, 'other'::text]))) OR ((kind = 'coach_parking'::text) AND (variant = ANY (ARRAY['parking'::text, 'stop_only'::text]))) OR ((kind = 'motorway_detour'::text) AND (variant = 'signed'::text)) OR ((kind = 'street_parking'::text) AND (variant = ANY (ARRAY['ticket'::text, 'disc'::text, 'unmanaged'::text, 'disabled'::text, 'ev_charging'::text, 'loading'::text, 'sharing'::text, 'disabled_personal'::text, 'restricted_stopping'::text, 'no_stopping'::text, 'unresolved'::text, 'other'::text]))) OR ((kind = 'signal_installation'::text) AND (variant = ANY (ARRAY['junction'::text, 'pedestrian_crossing'::text, 'other'::text])))))	{"kind":""}
+public.road_event_twins	road_event_twins_not_self	CHECK ((twin_id <> origin_id))	{"twin_id":"1","origin_id":"1"}
+public.road_event_twins	road_event_twins_rule_known	CHECK ((rule = 'asb_node'::text))	{"rule":""}
+public.road_event_twins	road_event_twins_score_range	CHECK (((score >= 1) AND (score <= 3)))	{"score":"0"}
+public.road_weather_forecast	road_weather_forecast_rc	CHECK (((rc IS NULL) OR ((rc >= 1) AND (rc <= 6))))	{"rc":"0"}
+public.road_weather_forecast	road_weather_forecast_source	CHECK ((source_id = 'dwd_road'::text))	{"source_id":""}
+public.road_weather_stations	road_weather_stations_position_source	CHECK ((position_source = 'swsKatalog'::text))	{"position_source":""}
+public.road_weather_stations	road_weather_stations_segment	CHECK (((segment_type IS NULL) OR (segment_type = ANY (ARRAY[1, 2]))))	{"segment_type":"-1"}
+public.road_weather_stations	road_weather_stations_source	CHECK ((source_id = 'dwd_road'::text))	{"source_id":""}
+public.road_weather_stations	road_weather_stations_surface	CHECK (((surface IS NULL) OR (surface = ANY (ARRAY[1, 2]))))	{"surface":"-1"}
+public.runtime_config	runtime_config_bounds	CHECK (\nCASE\n    WHEN (value !~ '^[0-9]{1,6}$'::text) THEN ((key ~~ '%.paused'::text) AND (value = ANY (ARRAY['true'::text, 'false'::text])))\n    WHEN (key = 'tankerkoenig.interval_s'::text) THEN (((value)::integer >= 300) AND ((value)::integer <= 3600))\n    WHEN (key = 'fuel.cache_fresh_s'::text) THEN (((value)::integer >= 300) AND ((value)::integer <= 21600))\n    WHEN (key = 'fuel.rediscover_days'::text) THEN (((value)::integer >= 1) AND ((value)::integer <= 365))\n    WHEN (key = 'fuel.ask_radius_km'::text) THEN (((value)::integer >= 5) AND ((value)::integer <= 25))\n    WHEN (key = 'fuel.ask_ids'::text) THEN (((value)::integer >= 1) AND ((value)::integer <= 10))\n    WHEN (key = 'fuel.ask_deadline_ms'::text) THEN (((value)::integer >= 500) AND ((value)::integer <= 10000))\n    WHEN (key = 'fuel.detail_every_s'::text) THEN (((value)::integer >= 300) AND ((value)::integer <= 86400))\n    WHEN (key = 'fuel.wide_stations_per_day'::text) THEN (((value)::integer >= 0) AND ((value)::integer <= 2000))\n    WHEN (key = 'ui.card_page_size'::text) THEN (((value)::integer >= 3) AND ((value)::integer <= 50))\n    WHEN (key ~~ 'mobilithek.%.interval_s'::text) THEN ((value)::integer >= 60)\n    WHEN (key ~~ 'source.%.interval_s'::text) THEN ((value)::integer >= 60)\n    ELSE false\nEND)	{"key":"299"}
+public.runtime_config	runtime_config_changed_by_check	CHECK ((changed_by ~ '^[a-z][a-z0-9_-]{0,31}$'::text))	{"changed_by":""}
+public.runtime_config	runtime_config_key_check	CHECK ((key ~ '^(mobilithek\\.[a-z][a-z0-9_]{0,63}\\.(interval_s|paused)|tankerkoenig\\.interval_s|fuel\\.(cache_fresh_s|rediscover_days|ask_radius_km|ask_ids|ask_deadline_ms|detail_every_s|wide_stations_per_day)|source\\.[a-z][a-z0-9_]{0,63}\\.(paused|interval_s)|ui\\.card_page_size)$'::text))	{"key":""}
+public.runtime_config	runtime_config_reason_check	CHECK (((length(reason) >= 3) AND (length(reason) <= 200)))	{"reason":"2"}
+public.runtime_config	runtime_config_value_check	CHECK ((value ~ '^([0-9]{1,6}|true|false)$'::text))	{"value":""}
+public.search_console_weekly	search_console_weekly_check	CHECK (((state = 'read'::text) = ((impressions IS NOT NULL) AND (clicks IS NOT NULL))))	{"state":"read"}
+public.search_console_weekly	search_console_weekly_check1	CHECK (((state = 'read'::text) OR (("position" IS NULL) AND (shown_not_clicked IS NULL) AND (legacy_impressions IS NULL))))	{"state":"zz","position":"1"}
+public.search_console_weekly	search_console_weekly_check2	CHECK (((clicks IS NULL) OR (impressions IS NULL) OR (clicks <= impressions)))	{"clicks":"2","impressions":"1"}
+public.search_console_weekly	search_console_weekly_clicks_check	CHECK ((clicks >= 0))	{"clicks":"-1"}
+public.search_console_weekly	search_console_weekly_impressions_check	CHECK ((impressions >= 0))	{"impressions":"-1"}
+public.search_console_weekly	search_console_weekly_legacy_impressions_check	CHECK ((legacy_impressions >= 0))	{"legacy_impressions":"-1"}
+public.search_console_weekly	search_console_weekly_position_check	CHECK (("position" >= (0)::numeric))	{"position":"-1"}
+public.search_console_weekly	search_console_weekly_shown_not_clicked_check	CHECK ((shown_not_clicked >= 0))	{"shown_not_clicked":"-1"}
+public.search_console_weekly	search_console_weekly_state_check	CHECK ((state = ANY (ARRAY['read'::text, 'unread'::text])))	{"state":""}
+public.search_console_weekly	search_console_weekly_week_check	CHECK ((EXTRACT(isodow FROM week) = (1)::numeric))	{"week":"2026-01-01 00:30:17.5+00"}
+public.search_console_weekly_parts	search_console_weekly_parts_check	CHECK (((clicks >= 0) AND (clicks <= impressions)))	{"clicks":"-1"}
+public.search_console_weekly_parts	search_console_weekly_parts_check1	CHECK ((((dimension = 'device'::text) AND (key = ANY (ARRAY['mobile'::text, 'desktop'::text, 'tablet'::text]))) OR ((dimension = 'page_type'::text) AND (key = ANY (ARRAY['road'::text, 'exit'::text, 'place'::text, 'station'::text, 'home'::text, 'other'::text]))) OR ((dimension = 'position_bucket'::text) AND (key = ANY (ARRAY['1-3'::text, '4-10'::text, '11-20'::text, '21-50'::text, '51+'::text])))))	{"dimension":""}
+public.search_console_weekly_parts	search_console_weekly_parts_check2	CHECK (((dimension = 'position_bucket'::text) = (rows IS NOT NULL)))	{"dimension":"position_bucket"}
+public.search_console_weekly_parts	search_console_weekly_parts_dimension_check	CHECK ((dimension = ANY (ARRAY['device'::text, 'page_type'::text, 'position_bucket'::text])))	{"dimension":""}
+public.search_console_weekly_parts	search_console_weekly_parts_impressions_check	CHECK ((impressions >= 0))	{"impressions":"-1"}
+public.search_console_weekly_parts	search_console_weekly_parts_position_check	CHECK (("position" >= (0)::numeric))	{"position":"-1"}
+public.search_console_weekly_parts	search_console_weekly_parts_rows_check	CHECK ((rows >= 0))	{"rows":"-1"}
+public.site_visits_daily	site_visits_daily_automated_check	CHECK ((automated >= 0))	{"automated":"-1"}
+public.site_visits_daily	site_visits_daily_check	CHECK ((visitors <= page_views))	{"visitors":"2","page_views":"1"}
+public.site_visits_daily	site_visits_daily_crawler_range	CHECK (((crawler_views IS NULL) OR (automated IS NULL) OR (crawler_views <= automated)))	{"crawler_views":"2","automated":"1"}
+public.site_visits_daily	site_visits_daily_crawler_views_check	CHECK ((crawler_views >= 0))	{"crawler_views":"-1"}
+public.site_visits_daily	site_visits_daily_own_range	CHECK (((own_views IS NULL) OR (own_views <= page_views)))	{"own_views":"2","page_views":"1"}
+public.site_visits_daily	site_visits_daily_own_views_check	CHECK ((own_views >= 0))	{"own_views":"-1"}
+public.site_visits_daily	site_visits_daily_page_views_check	CHECK ((page_views >= 0))	{"page_views":"-1"}
+public.site_visits_daily	site_visits_daily_rule_known	CHECK (((rule IS NULL) OR ((rule >= 1) AND (rule <= 100))))	{"rule":"0"}
+public.site_visits_daily	site_visits_daily_visitors_check	CHECK ((visitors >= 0))	{"visitors":"-1"}
+public.site_visits_daily	site_visits_daily_visits_check	CHECK ((visits >= 0))	{"visits":"-1"}
+public.site_visits_daily	site_visits_daily_visits_range	CHECK (((visits IS NULL) OR ((visits >= visitors) AND (visits <= page_views))))	{"visits":"3","visitors":"1","page_views":"2"}
+public.site_visits_devices	site_visits_devices_device_check	CHECK ((device = ANY (ARRAY['desktop'::text, 'mobile'::text, 'tablet'::text, 'other'::text])))	{"device":""}
+public.site_visits_devices	site_visits_devices_views_check	CHECK ((views > 0))	{"views":"-1"}
+public.site_visits_entries	site_visits_entries_route_check	CHECK (((route = 'other'::text) OR (route ~ '^/[a-z0-9/-]{0,60}$'::text)))	{"route":""}
+public.site_visits_entries	site_visits_entries_visits_check	CHECK ((visits > 0))	{"visits":"-1"}
+public.site_visits_entry_referrers	site_visits_entry_referrers_check	CHECK (((visits >= 3) OR (referrer = ANY (ARRAY['direct'::text, 'app'::text, 'other'::text]))))	{"visits":"1","referrer":"example.org"}
+public.site_visits_entry_referrers	site_visits_entry_referrers_referrer_check	CHECK ((referrer ~ '^[a-z0-9.-]{1,253}$'::text))	{"referrer":""}
+public.site_visits_entry_referrers	site_visits_entry_referrers_visits_check	CHECK ((visits > 0))	{"visits":"-1"}
+public.site_visits_hourly	site_visits_hourly_check	CHECK ((visits <= page_views))	{"visits":"2","page_views":"1"}
+public.site_visits_hourly	site_visits_hourly_hour_check	CHECK (((hour >= 0) AND (hour <= 23)))	{"hour":"-1"}
+public.site_visits_hourly	site_visits_hourly_page_views_check	CHECK ((page_views >= 0))	{"page_views":"-1"}
+public.site_visits_hourly	site_visits_hourly_visits_check	CHECK ((visits >= 0))	{"visits":"-1"}
+public.site_visits_pages_per_visit	site_visits_pages_per_visit_bucket_check	CHECK ((bucket = ANY (ARRAY['1'::text, '2'::text, '3'::text, '4-5'::text, '6-10'::text, '11+'::text])))	{"bucket":""}
+public.site_visits_pages_per_visit	site_visits_pages_per_visit_visits_check	CHECK ((visits > 0))	{"visits":"-1"}
+public.site_visits_referrers	site_visits_referrers_referrer_check	CHECK ((referrer ~ '^[a-z0-9.-]{1,253}$'::text))	{"referrer":""}
+public.site_visits_referrers	site_visits_referrers_views_check	CHECK ((views > 0))	{"views":"-1"}
+public.site_visits_routes	site_visits_routes_lang_check	CHECK ((lang = ANY (ARRAY['de'::text, 'en'::text, 'ru'::text, 'bg'::text, 'uk'::text, 'ro'::text, 'tr'::text, 'fr'::text, 'es'::text, 'nl'::text, 'pl'::text, 'it'::text, 'lt'::text, 'cs'::text, 'hu'::text, 'sk'::text, 'da'::text, 'pt'::text, 'hr'::text, 'sr'::text, 'el'::text, 'lv'::text, 'auto'::text, 'other'::text])))	{"lang":""}
+public.site_visits_routes	site_visits_routes_route_check	CHECK (((route = 'other'::text) OR (route ~ '^/[a-z0-9/-]{0,60}$'::text)))	{"route":""}
+public.site_visits_routes	site_visits_routes_views_check	CHECK ((views > 0))	{"views":"-1"}
+public.site_visits_search_engines	site_visits_search_engines_engine_check	CHECK ((engine = ANY (ARRAY['google'::text, 'bing'::text, 'duckduckgo'::text, 'ecosia'::text, 'qwant'::text, 'startpage'::text, 'yahoo'::text, 'yandex'::text, 'baidu'::text, 'other'::text])))	{"engine":""}
+public.site_visits_search_engines	site_visits_search_engines_visits_check	CHECK ((visits > 0))	{"visits":"-1"}
+public.source_hosts	source_hosts_app_version_check	CHECK (((app_version IS NULL) OR (length(app_version) <= 40)))	{"app_version":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.source_hosts	source_hosts_host_check	CHECK ((host = ANY (ARRAY['ingest-autobahn'::text, 'ingest-tankerkoenig'::text, 'ingest-mobilithek'::text, 'ingest-dwd'::text, 'ingest-vbb-rt'::text, 'ingest-db-fasta'::text, 'ingest-gtfs-roll'::text, 'ingest-gtfs-fetch'::text, 'ingest-zhv'::text, 'ingest-bnetza'::text, 'ingest-ocpdb'::text, 'ingest-hamburg'::text, 'ingest-gbfs'::text, 'retention'::text])))	{"host":""}
+public.source_hosts	source_hosts_order	CHECK ((heartbeat_at >= started_at))	{"started_at":"2026-01-02 00:00:00+00","heartbeat_at":"2026-01-01 00:00:00+00"}
+public.source_hosts	source_hosts_sources_check	CHECK ((sources >= 0))	{"sources":"-1"}
+public.source_schedule	source_schedule_declared_cadence_s_check	CHECK ((declared_cadence_s > 0))	{"declared_cadence_s":"-1"}
+public.source_schedule	source_schedule_floor_s_check	CHECK ((floor_s >= 0))	{"floor_s":"-1"}
+public.source_schedule	source_schedule_grant_reason_check	CHECK (((grant_reason IS NULL) OR (length(grant_reason) <= 200)))	{"grant_reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.source_schedule	source_schedule_granted_cadence_s_check	CHECK ((granted_cadence_s > 0))	{"granted_cadence_s":"-1"}
+public.source_schedule	source_schedule_granted_floor	CHECK ((granted_cadence_s >= floor_s))	{"granted_cadence_s":"1","floor_s":"2"}
+public.source_schedule	source_schedule_host_check	CHECK ((host = ANY (ARRAY['ingest-autobahn'::text, 'ingest-tankerkoenig'::text, 'ingest-mobilithek'::text, 'ingest-dwd'::text, 'ingest-vbb-rt'::text, 'ingest-db-fasta'::text, 'ingest-gtfs-roll'::text, 'ingest-gtfs-fetch'::text, 'ingest-zhv'::text, 'ingest-bnetza'::text, 'ingest-ocpdb'::text, 'ingest-hamburg'::text, 'ingest-gbfs'::text, 'retention'::text])))	{"host":""}
+public.source_schedule	source_schedule_last_result_check	CHECK (((last_result IS NULL) OR (length(last_result) <= 200)))	{"last_result":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.source_schedule	source_schedule_last_status_check	CHECK ((last_status = ANY (ARRAY['ok'::text, 'unchanged'::text, 'pending'::text, 'held'::text, 'skipped'::text, 'degraded'::text, 'error'::text, 'running'::text, 'interrupted'::text])))	{"last_status":""}
+public.source_schedule	source_schedule_lateness_ms_check	CHECK (((lateness_ms IS NULL) OR (lateness_ms >= 0)))	{"lateness_ms":"-1"}
+public.source_schedule	source_schedule_paused	CHECK (((state <> 'paused'::text) OR ((paused_by IS NOT NULL) AND (paused_at IS NOT NULL))))	{"state":"paused"}
+public.source_schedule	source_schedule_paused_by_check	CHECK (((paused_by IS NULL) OR (paused_by ~ '^[a-z][a-z0-9_-]{0,31}$'::text)))	{"paused_by":""}
+public.source_schedule	source_schedule_paused_reason_check	CHECK (((paused_reason IS NULL) OR ((length(paused_reason) >= 3) AND (length(paused_reason) <= 200))))	{"paused_reason":"2"}
+public.source_schedule	source_schedule_running	CHECK (((state = 'running'::text) = (running_since IS NOT NULL)))	{"running_since":"2026-01-01 00:30:17.5+00"}
+public.source_schedule	source_schedule_source_key_check	CHECK ((source_key ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"source_key":""}
+public.source_schedule	source_schedule_state_check	CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text, 'misconfigured'::text, 'running'::text, 'unknown'::text])))	{"state":""}
+public.speed_enforcement	speed_enforcement_ags	CHECK (((ags IS NULL) OR (ags ~ '^[0-9]{8}$'::text)))	{"ags":""}
+public.speed_enforcement	speed_enforcement_announced	CHECK (((kind <> 'mobile_announced'::text) OR (valid_from IS NOT NULL)))	{"kind":"mobile_announced"}
+public.speed_enforcement	speed_enforcement_attribution	CHECK ((attribution_id <> ''::text))	{"attribution_id":""}
+public.speed_enforcement	speed_enforcement_dated	CHECK (((valid_to IS NULL) OR (valid_from IS NULL) OR (valid_to >= valid_from)))	{"valid_from":"2026-01-02 00:00:00+00","valid_to":"2026-01-01 00:00:00+00"}
+public.speed_enforcement	speed_enforcement_enforces	CHECK ((enforces = ANY (ARRAY['speed'::text, 'red_light'::text, 'speed_red_light'::text])))	{"enforces":""}
+public.speed_enforcement	speed_enforcement_kind	CHECK ((kind = ANY (ARRAY['fixed'::text, 'section_control'::text, 'mobile_announced'::text, 'measuring_site'::text])))	{"kind":""}
+public.speed_enforcement	speed_enforcement_placed	CHECK (((geom IS NOT NULL) OR (ags ~ '^[0-9]{8}$'::text)))	{"ags":""}
+public.speed_enforcement	speed_enforcement_publisher	CHECK ((source_publisher <> ''::text))	{"source_publisher":""}
+public.speed_enforcement	speed_enforcement_speed	CHECK (((max_speed_kmh IS NULL) OR ((max_speed_kmh >= 5) AND (max_speed_kmh <= 200))))	{"max_speed_kmh":"4"}
+public.speed_enforcement	speed_enforcement_speed_hgv	CHECK (((max_speed_hgv_kmh IS NULL) OR ((max_speed_hgv_kmh >= 5) AND (max_speed_hgv_kmh <= 200))))	{"max_speed_hgv_kmh":"4"}
+public.station_accessibility	station_accessibility_eva_digits	CHECK (((eva_no IS NULL) OR (eva_no ~ '^[0-9]{6,8}$'::text)))	{"eva_no":""}
+public.station_accessibility	station_accessibility_height_credible	CHECK (((platform_height_cm IS NULL) OR ((platform_height_cm >= 1) AND (platform_height_cm <= 200))))	{"platform_height_cm":"0"}
+public.station_accessibility	station_accessibility_kind_known	CHECK ((element_kind = ANY (ARRAY['stop_place'::text, 'quay'::text])))	{"element_kind":""}
+public.station_accessibility	station_accessibility_quay_fields	CHECK (((element_kind = 'quay'::text) OR ((quay_type IS NULL) AND (plate_code IS NULL) AND (parent_quay_id IS NULL) AND (platform_height_raw IS NULL))))	{"element_kind":"stop_place","quay_type":"x"}
+public.station_accessibility	station_accessibility_source_registered	CHECK ((source_feed = 'openstation_netex'::text))	{"source_feed":""}
+public.station_equipment	station_equipment_eva_digits	CHECK (((eva_no IS NULL) OR (eva_no ~ '^[0-9]{6,8}$'::text)))	{"eva_no":""}
+public.station_equipment	station_equipment_kind_known	CHECK ((kind = ANY (ARRAY['elevator'::text, 'escalator'::text, 'travelator'::text])))	{"kind":""}
+public.station_equipment	station_equipment_source_registered	CHECK ((source_feed = ANY (ARRAY['openstation_netex'::text, 'kvb_aufzuege'::text, 'kvb_fahrtreppen'::text])))	{"source_feed":""}
+public.station_equipment	station_equipment_stop_place_known	CHECK (((stop_place_id IS NOT NULL) OR (source_feed = ANY (ARRAY['kvb_aufzuege'::text, 'kvb_fahrtreppen'::text]))))	{"source_feed":""}
+public.station_equipment_state	station_equipment_state_known	CHECK ((state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text])))	{"state":""}
+public.station_equipment_state	station_equipment_state_source_registered	CHECK ((source_feed = ANY (ARRAY['openstation_siri_fm'::text, 'kvb_aufzugsstoerung'::text, 'kvb_fahrtreppenstoerung'::text])))	{"source_feed":""}
+public.station_equipment_ticks	station_equipment_ticks_previous_known	CHECK (((previous_state IS NULL) OR (previous_state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text]))))	{"previous_state":""}
+public.station_equipment_ticks	station_equipment_ticks_state_known	CHECK ((state = ANY (ARRAY['active'::text, 'inactive'::text, 'unknown'::text])))	{"state":""}
+public.station_metro_osm	station_metro_osm_dhid	CHECK ((dhid ~ '^de:[0-9]{5}:[^:_ ]{1,40}$'::text))	{"dhid":""}
+public.station_metro_osm	station_metro_osm_kind	CHECK ((kind = ANY (ARRAY['subway'::text, 'light_rail_underground'::text])))	{"kind":""}
+public.station_metro_osm	station_metro_osm_licence	CHECK ((source_id = 'osm'::text))	{"source_id":""}
+public.station_metro_osm	station_metro_osm_metres	CHECK (((metres >= 0) AND (metres <= 1000)))	{"metres":"-1"}
+public.station_metro_osm	station_metro_osm_node	CHECK (((osm_type = 'node'::text) AND (osm_id > 0)))	{"osm_type":"-1"}
+public.station_slugs	station_slugs_slug_check	CHECK (((slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 80) AND (slug !~ '[0-9]{5}'::text)))	{"slug":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.stop_access_odbl	stop_access_odbl_counts	CHECK (((quays >= 0) AND ((quays_rail >= 0) AND (quays_rail <= quays)) AND ((quays_height_known >= 0) AND (quays_height_known <= quays)) AND ((quays_high_kerb >= 0) AND (quays_high_kerb <= quays)) AND ((quays_tactile >= 0) AND (quays_tactile <= quays)) AND ((quays_portable_ramp >= 0) AND (quays_portable_ramp <= quays)) AND ((quays_platform_lift >= 0) AND (quays_platform_lift <= quays)) AND (lifts >= 0) AND (ramps >= 0) AND (stairs >= 0) AND (escalators >= 0)))	{"quays":"-1"}
+public.stop_access_odbl	stop_access_odbl_licence	CHECK ((source_feed = 'tuc_vdv462'::text))	{"source_feed":""}
+public.street_bay_state	street_bay_state_known	CHECK ((state = ANY (ARRAY['free'::text, 'occupied'::text])))	{"state":""}
+public.street_bay_state	street_bay_state_source_registered	CHECK ((source_feed = 'dortmund_parksensoren'::text))	{"source_feed":""}
+public.street_bays	street_bays_id_shape	CHECK ((bay_id = ((split_part(source_feed, '_'::text, 1) || ':'::text) || external_id)))	{"bay_id":"x","source_feed":"a_b","external_id":"c"}
+public.street_bays	street_bays_kind_known	CHECK ((kind = ANY (ARRAY['disabled'::text, 'ev_charging'::text, 'loading'::text, 'regular'::text, 'unspecified'::text])))	{"kind":""}
+public.street_bays	street_bays_postcode_five_digits	CHECK ((postcode ~ '^[0-9]{5}$'::text))	{"postcode":""}
+public.street_bays	street_bays_source_registered	CHECK ((source_feed = ANY (ARRAY['dortmund_parksensoren_bays'::text, 'frankfurt_behindertenparkplaetze'::text])))	{"source_feed":""}
+public.street_bays	street_bays_spaces_counted	CHECK (((spaces IS NULL) OR ((spaces >= 1) AND (spaces <= 99))))	{"spaces":"0"}
+public.tick_storage_days	tick_storage_days_bytes_check	CHECK ((bytes >= 0))	{"bytes":"-1"}
+public.tmc_locations	tmc_locations_point	CHECK ((class = 'P'::text))	{"class":""}
+public.tmc_locations	tmc_locations_version_shape	CHECK ((lcl_version ~ '^[0-9]+\\.[0-9]+$'::text))	{"lcl_version":""}
+public.traffic_count_latest	traffic_count_latest_count	CHECK ((vehicles >= 0))	{"vehicles":"-1"}
+public.traffic_count_latest	traffic_count_latest_feed_registered	CHECK ((source_feed = 'hh_verkehrszaehlung'::text))	{"source_feed":""}
+public.traffic_count_latest	traffic_count_latest_interval	CHECK ((interval_end > interval_start))	{"interval_start":"2026-01-02 00:00:00+00","interval_end":"2026-01-01 00:00:00+00"}
+public.traffic_count_latest	traffic_count_latest_measure	CHECK ((measure = ANY (ARRAY['vehicles'::text, 'heavy'::text])))	{"measure":""}
+public.traffic_count_profiles	traffic_count_profiles_counts	CHECK (((vehicles >= 0) AND ((heavy IS NULL) OR (heavy >= 0)) AND ((speed_kmh IS NULL) OR (speed_kmh >= (0)::numeric))))	{"vehicles":"-1"}
+public.traffic_count_profiles	traffic_count_profiles_day_kind	CHECK ((day_kind = ANY (ARRAY['workday'::text, 'saturday'::text, 'sunday_holiday'::text])))	{"day_kind":""}
+public.traffic_count_profiles	traffic_count_profiles_days	CHECK ((days >= 3))	{"days":"2"}
+public.traffic_count_profiles	traffic_count_profiles_feed_registered	CHECK ((source_feed = 'berlin_verkehrsdetektion'::text))	{"source_feed":""}
+public.traffic_count_profiles	traffic_count_profiles_hour	CHECK (((hour >= 0) AND (hour <= 23)))	{"hour":"-1"}
+public.traffic_count_profiles	traffic_count_profiles_month	CHECK ((EXTRACT(day FROM month) = (1)::numeric))	{"month":"2026-01-02 00:00:00+00"}
+public.traffic_count_sites	traffic_count_sites_a_stream	CHECK (((vehicles_stream IS NOT NULL) OR (heavy_stream IS NOT NULL)))	{"name":"x"}
+public.traffic_count_sites	traffic_count_sites_feed_registered	CHECK ((source_feed = ANY (ARRAY['hh_verkehrszaehlstellen'::text, 'berlin_verkehrsdetektion'::text])))	{"source_feed":""}
+public.traffic_count_sites	traffic_count_sites_scope	CHECK ((scope = ANY (ARRAY['both'::text, 'one'::text])))	{"scope":""}
+public.translation_cache	translation_cache_check	CHECK ((last_used_at >= created_at))	{"created_at":"2999-01-01 00:00:00+00"}
+public.translation_cache	translation_cache_key_check	CHECK ((key ~ '^[0-9a-f]{64}$'::text))	{"key":""}
+public.translation_cache	translation_cache_lang_check	CHECK ((lang = ANY (ARRAY['en'::text, 'ru'::text, 'bg'::text, 'uk'::text, 'ro'::text, 'tr'::text, 'fr'::text, 'es'::text, 'nl'::text, 'pl'::text, 'it'::text, 'lt'::text, 'cs'::text, 'hu'::text, 'sk'::text, 'da'::text, 'pt'::text, 'hr'::text, 'sr'::text, 'el'::text, 'lv'::text])))	{"lang":""}
+public.translation_cache	translation_cache_model_check	CHECK ((model ~ '^[a-z0-9][a-z0-9.@+_-]{2,199}$'::text))	{"model":""}
+public.translation_cache	translation_cache_text_check	CHECK (((length(text) >= 1) AND (length(text) <= 4000)))	{"text":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.validator_horizon	validator_horizon_id_check	CHECK ((id = 1))	{"id":"-1"}
+public.validator_horizon	validator_horizon_reason_check	CHECK ((reason <> ''::text))	{"reason":""}
+public.vbb_transit_delays	vbb_transit_delays_licence	CHECK ((source = 'vbb_rt'::text))	{"source":""}
+public.vbn_siri_et_calls	vbn_siri_et_calls_delay	CHECK (((delay_s IS NULL) OR (abs(delay_s) <= 21600)))	{"delay_s":"21601"}
+public.vbn_siri_et_calls	vbn_siri_et_calls_licence	CHECK ((source_id = 'vbn_siri_et'::text))	{"source_id":""}
+public.vbn_siri_et_calls	vbn_siri_et_calls_visit	CHECK ((visit >= 1))	{"visit":"0"}
+public.vrn_transit_delays	vrn_transit_delays_licence	CHECK ((source = 'vrn_rt'::text))	{"source":""}
+public.watch_events	watch_events_revision_positive	CHECK ((revision >= 1))	{"revision":"0"}
+public.watch_events	watch_events_summary_bounded	CHECK (((length(summary) >= 1) AND (length(summary) <= 2000)))	{"summary":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.watch_events	watch_events_updated_not_before_created	CHECK ((updated_at >= created_at))	{"created_at":"2999-01-01 00:00:00+00"}
+public.watches	watches_condition_is_object	CHECK (((condition IS NULL) OR (jsonb_typeof(condition) = 'object'::text)))	{"condition":"\"x\""}
+public.watches	watches_key_bounded	CHECK (((length(key) >= 1) AND (length(key) <= 200)))	{"key":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.watches	watches_kind_known	CHECK ((kind = ANY (ARRAY['road'::text, 'station'::text, 'region'::text, 'place'::text, 'weather'::text, 'charger'::text])))	{"kind":""}
+public.watches	watches_session_bounded	CHECK (((length(session_id) >= 1) AND (length(session_id) <= 200)))	{"session_id":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+public.watches	watches_window_24h	CHECK (((expires_at > created_at) AND (expires_at <= (created_at + '24:00:00'::interval))))	{"expires_at":"2026-01-01 00:30:17.5+00"}
+public.weather_warnings	weather_warnings_area_hash	CHECK ((area_sha256 ~ '^[0-9a-f]{64}$'::text))	{"area_sha256":""}
+public.weather_warnings	weather_warnings_attribution	CHECK (((source_id <> ''::text) AND (source_id !~~ '%\\_pending'::text)))	{"source_id":""}
+public.weather_warnings	weather_warnings_closed_reason	CHECK (((closed_at IS NULL) OR (closed_reason = ANY (ARRAY['withdrawn'::text, 'superseded'::text]))))	{"closed_at":"2026-01-01 00:00:00+00","closed_reason":"zz-not-allowed"}
+public.weather_warnings	weather_warnings_hash	CHECK ((official_sha256 ~ '^[0-9a-f]{64}$'::text))	{"official_sha256":""}
+public.weather_warnings	weather_warnings_level	CHECK (((level >= 0) AND (level <= 4)))	{"level":"-1"}
+public.weather_warnings	weather_warnings_level_source	CHECK (((level_source IS NULL) OR (level_source = ANY (ARRAY['published'::text, 'derived_from_severity'::text]))))	{"level_source":""}
+public.weather_warnings	weather_warnings_window	CHECK (((valid_to IS NULL) OR (valid_to >= valid_from)))	{"valid_from":"2026-01-02 00:00:00+00","valid_to":"2026-01-01 00:00:00+00"}
+public.weather_warnings_en	weather_warnings_en_attribution	CHECK (((source_id <> ''::text) AND (source_id !~~ '%\\_pending'::text)))	{"source_id":""}
+public.weather_warnings_en	weather_warnings_en_closed_reason	CHECK (((closed_at IS NULL) OR (closed_reason = ANY (ARRAY['withdrawn'::text, 'superseded'::text]))))	{"closed_at":"2026-01-01 00:00:00+00","closed_reason":"zz-not-allowed"}
+public.weather_warnings_en	weather_warnings_en_hash	CHECK ((content_sha256 ~ '^[0-9a-f]{64}$'::text))	{"content_sha256":""}
+public.weather_warnings_en	weather_warnings_en_window	CHECK (((valid_to IS NULL) OR (valid_from IS NULL) OR (valid_to >= valid_from)))	{"valid_from":"2026-01-02 00:00:00+00","valid_to":"2026-01-01 00:00:00+00"}
+public.worker_boots	worker_boots_config_holds_no_subscription_id	CHECK (((config)::text !~ '[0-9]{19}'::text))	{"config":"{\"a\": \"1234567890123456789\"}"}
+public.worker_boots	worker_boots_config_is_an_object	CHECK ((jsonb_typeof(config) = 'object'::text))	{"config":"\"x\""}
+public.worker_boots	worker_boots_config_is_flat	CHECK ((NOT jsonb_path_exists(config, '$.*?(@.type() == "object" || @.type() == "array")'::jsonpath)))	{"config":"{\"a\": {\"b\": 1}}"}
+public.worker_boots	worker_boots_worker_is_a_name	CHECK ((worker ~ '^[a-z][a-z0-9-]*$'::text))	{"worker":""}
