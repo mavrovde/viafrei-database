@@ -1,0 +1,545 @@
+# The schema coverage manifest (#32): kind, object, and a test that proves it.
+# One row per (object, test); an object may have several. The test is <file> > <title>.
+# Read by scripts/coverage-schema.ts (npm run coverage:schema) against a database migrated to head.
+# kinds: table view function trigger check policy grant role partitioned
+check	domains.charging_point_status.charging_point_status_external_id_check	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.charging_point_status.charging_point_status_external_id_check	test/charging-status-hydrogen.db.test.ts > refuses a tick for another source, for a source of another domain, without a source, with an empty key, a line or no day partition
+check	domains.charging_point_status.charging_point_status_geom_point	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.charging_point_status.charging_point_status_geom_point	test/charging-status-hydrogen.db.test.ts > refuses a tick for another source, for a source of another domain, without a source, with an empty key, a line or no day partition
+check	domains.charging_point_status.charging_point_status_source_id_check	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.charging_point_status.charging_point_status_source_id_check	test/charging-status-hydrogen.db.test.ts > refuses a tick for another source, for a source of another domain, without a source, with an empty key, a line or no day partition
+check	domains.charging_points.charging_points_connector_types_array	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_connector_types_array	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_current_type	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_current_type	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_external_id_check	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_external_id_check	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_geom_point	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_geom_point	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_max_power_kw	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_max_power_kw	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_plugs_array	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_plugs_array	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_point_no	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_point_no	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.charging_points.charging_points_source_id_check	test/charging-points.db.test.ts > has the constraints and indexes of speed_cameras, under its own names
+check	domains.charging_points.charging_points_source_id_check	test/charging-points.db.test.ts > refuses a point without its device, its number or its site, an empty key, and what is not a point's data
+check	domains.hydrogen_stations.hydrogen_stations_address_object	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.hydrogen_stations.hydrogen_stations_address_object	test/charging-status-hydrogen.db.test.ts > refuses a station without refill points, with refill points that are not a list, an address that is not an object, a line, or an empty key
+check	domains.hydrogen_stations.hydrogen_stations_external_id_check	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.hydrogen_stations.hydrogen_stations_external_id_check	test/charging-status-hydrogen.db.test.ts > refuses a station without refill points, with refill points that are not a list, an address that is not an object, a line, or an empty key
+check	domains.hydrogen_stations.hydrogen_stations_geom_point	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.hydrogen_stations.hydrogen_stations_geom_point	test/charging-status-hydrogen.db.test.ts > refuses a station without refill points, with refill points that are not a list, an address that is not an object, a line, or an empty key
+check	domains.hydrogen_stations.hydrogen_stations_refill_nonempty	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.hydrogen_stations.hydrogen_stations_refill_nonempty	test/charging-status-hydrogen.db.test.ts > refuses a station without refill points, with refill points that are not a list, an address that is not an object, a line, or an empty key
+check	domains.hydrogen_stations.hydrogen_stations_refill_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.hydrogen_stations.hydrogen_stations_refill_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.hydrogen_stations.hydrogen_stations_source_id_check	test/charging-status-hydrogen.db.test.ts > has the constraints and indexes of the convention, a tick table's owner key and primary key carrying observed_at
+check	domains.hydrogen_stations.hydrogen_stations_source_id_check	test/charging-status-hydrogen.db.test.ts > refuses a station without refill points, with refill points that are not a list, an address that is not an object, a line, or an empty key
+check	domains.parking_facilities.parking_facilities_address_object	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_address_object	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_capacity	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_capacity	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_facilities_absent_vocabulary	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_facilities_absent_vocabulary	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_facilities_disjoint	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_facilities_disjoint	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_facilities_source	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_facilities_source	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_facilities_source_nonempty	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_facilities_source_nonempty	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_facilities_source_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.parking_facilities.parking_facilities_facilities_source_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.parking_facilities.parking_facilities_facilities_vocabulary	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_facilities_vocabulary	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_kind	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_kind	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities.parking_facilities_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities.parking_facilities_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_address_object	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_address_object	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_capacity	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_capacity	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_kind	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_kind	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_bysa.parking_facilities_bysa_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_bysa.parking_facilities_bysa_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_address_object	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_address_object	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_capacity	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_capacity	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_kind	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_kind	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_odbl.parking_facilities_odbl_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_odbl.parking_facilities_odbl_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_address_object	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_address_object	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_capacity	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_capacity	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_absent_vocabulary	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_absent_vocabulary	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_disjoint	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_disjoint	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source_nonempty	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source_nonempty	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_source_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_vocabulary	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_facilities_vocabulary	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_kind	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_kind	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_facilities_sid.parking_facilities_sid_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_facilities_sid.parking_facilities_sid_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_counts	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_counts	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_implausible	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_implausible	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_pct	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_pct	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy.parking_occupancy_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy.parking_occupancy_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_counts	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_counts	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_implausible	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_implausible	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_pct	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_pct	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_odbl.parking_occupancy_odbl_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_counts	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_counts	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_implausible	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_implausible	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_pct	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_pct	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.parking_occupancy_sid.parking_occupancy_sid_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.parking_occupancy_sid.parking_occupancy_sid_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.road_context_feature_versions.road_context_feature_versions_content_hash	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_feature_versions.road_context_feature_versions_content_hash	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_feature_versions.road_context_feature_versions_external_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_feature_versions.road_context_feature_versions_external_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_feature_versions.road_context_feature_versions_props_object	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_feature_versions.road_context_feature_versions_props_object	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_feature_versions.road_context_feature_versions_source_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_feature_versions.road_context_feature_versions_source_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_content_hash	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_content_hash	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_external_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_external_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_kind	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_kind	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_props_object	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_props_object	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_source_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_source_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_context_features.road_context_features_variant	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_context_features.road_context_features_variant	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.road_events.road_events_external_id_check	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_external_id_check	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_external_id_shape	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_external_id_shape	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_locations_array	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_locations_array	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_payload_object	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_payload_object	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_publication_creator	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_publication_creator	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_publication_creator_no_colon	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_publication_creator_no_colon	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_publication_id	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_publication_id	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_record_types_array	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_record_types_array	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_source_id_check	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_source_id_check	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_events.road_events_valid_windows_array	test/road-events.db.test.ts > has the constraints and indexes of the convention, and its own
+check	domains.road_events.road_events_valid_windows_array	test/road-events.db.test.ts > keeps the same publication id of two creators in one feed apart, and refuses a key that disagrees with them
+check	domains.road_weather_forecast.road_weather_forecast_external_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_forecast.road_weather_forecast_external_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_forecast.road_weather_forecast_geom_none	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_forecast.road_weather_forecast_geom_none	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_forecast.road_weather_forecast_rc	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_forecast.road_weather_forecast_rc	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_forecast.road_weather_forecast_source_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_forecast.road_weather_forecast_source_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_stations.road_weather_stations_external_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_stations.road_weather_stations_external_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_stations.road_weather_stations_geom_point	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_stations.road_weather_stations_geom_point	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_stations.road_weather_stations_segment	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_stations.road_weather_stations_segment	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_stations.road_weather_stations_source_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_stations.road_weather_stations_source_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_weather_stations.road_weather_stations_surface	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.road_weather_stations.road_weather_stations_surface	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.road_works.road_works_closure_window_ordered	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_closure_window_ordered	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.road_works.road_works_external_id_check	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_external_id_check	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.road_works.road_works_kind	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_kind	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.road_works.road_works_period_ordered	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_period_ordered	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.road_works.road_works_source_id_check	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_source_id_check	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.road_works.road_works_title_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.road_works.road_works_title_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.road_works.road_works_title_nonempty	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+check	domains.road_works.road_works_title_nonempty	test/road-works-columns.db.test.ts > refuses an unknown kind and a period or a closure window that ends before it starts
+check	domains.speed_cameras.speed_cameras_kind_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.speed_cameras.speed_cameras_kind_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.street_bay_state.street_bay_state_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bay_state.street_bay_state_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bay_state.street_bay_state_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bay_state.street_bay_state_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bay_state.street_bay_state_known	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bay_state.street_bay_state_known	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bay_state.street_bay_state_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bay_state.street_bay_state_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_external_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_external_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_geom_point	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_geom_point	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_kind	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_kind	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_postcode	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_postcode	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_source_id_check	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_source_id_check	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.street_bays.street_bays_spaces	test/parking.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.street_bays.street_bays_spaces	test/parking.db.test.ts > refuses what the old tables refused, by constraint name
+check	domains.transit_agencies_odbl.transit_agencies_odbl_agency_name_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_agencies_odbl.transit_agencies_odbl_agency_name_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_agencies_odbl.transit_agencies_odbl_agency_timezone_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_agencies_odbl.transit_agencies_odbl_agency_timezone_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_agencies_odbl.transit_agencies_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_agencies_odbl.transit_agencies_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_routes_odbl.transit_routes_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_routes_odbl.transit_routes_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_service_dates_odbl.transit_service_dates_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_service_dates_odbl.transit_service_dates_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_service_dates_odbl.transit_service_dates_odbl_service_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_service_dates_odbl.transit_service_dates_odbl_service_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_stop_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_stop_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_trip_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_stop_times_odbl.transit_stop_times_odbl_trip_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_stops_odbl.transit_stops_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_stops_odbl.transit_stops_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_stops_odbl.transit_stops_odbl_stop_name_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_stops_odbl.transit_stops_odbl_stop_name_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_entity_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_trip_updates_odbl.transit_trip_updates_odbl_entity_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_trips_odbl.transit_trips_odbl_feed_version_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_trips_odbl.transit_trips_odbl_feed_version_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_trips_odbl.transit_trips_odbl_route_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_trips_odbl.transit_trips_odbl_route_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.transit_trips_odbl.transit_trips_odbl_service_id_nonempty	test/required-columns.db.test.ts > holds every listed column NOT NULL, and each text one non-empty by a check of its own name
+check	domains.transit_trips_odbl.transit_trips_odbl_service_id_nonempty	test/required-columns.db.test.ts > refuses the empty string in a listed text column, by its check
+check	domains.weather_warnings.weather_warnings_area_hash	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_area_hash	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_closed_reason	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_closed_reason	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_external_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_external_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_external_id_shape	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_external_id_shape	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_geom_area	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_geom_area	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_hash	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_hash	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_level	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_level	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_level_source	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_level_source	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_source_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_source_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings.weather_warnings_window	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings.weather_warnings_window	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_closed_reason	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_closed_reason	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_external_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_external_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_external_id_shape	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_external_id_shape	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_geom_none	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_geom_none	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_hash	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_hash	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_language	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_language	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_source_id_check	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_source_id_check	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_warncell_ids_array	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_warncell_ids_array	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.weather_warnings_en.weather_warnings_en_window	test/weather.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.weather_warnings_en.weather_warnings_en_window	test/weather.db.test.ts > refuses what the old tables refused, and a key that disagrees with its parts
+check	domains.webcams.webcams_external_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.webcams.webcams_external_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.webcams.webcams_geom_point	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.webcams.webcams_geom_point	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.webcams.webcams_link_url	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.webcams.webcams_link_url	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.webcams.webcams_location_label	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.webcams.webcams_location_label	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+check	domains.webcams.webcams_source_id_check	test/road-context-webcams.db.test.ts > has the constraints and indexes of the convention, and each table its own
+check	domains.webcams.webcams_source_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
+function	domains.jsonb_texts(a jsonb)	test/parking.db.test.ts > splits a JSON array into its strings for the checks, and anything else into nothing
+function	domains.road_events_note_suspended()	test/road-events.db.test.ts > derives suspended from the payload: a writer's own value is overwritten, on insert and on any update
+function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one
+function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > the partition helper keeps both schemas: a second run makes nothing, a missing day of a domain tick table is made again
+function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > the partition helper refuses a range-partitioned domain table that is not keyed on observed_at, naming its schema
+function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > the partition helper still refuses a public schema below its floor
+grant	viafrei_ingestor@domains.charging_point_status	test/charging-status-hydrogen.db.test.ts > grants the ingestor select and insert on the ticks, what speed_cameras grants on the state table, and no reader anything
+grant	viafrei_ingestor@domains.charging_points	test/charging-points.db.test.ts > grants the ingestor what speed_cameras grants it, and nobody else anything
+grant	viafrei_ingestor@domains.charging_points_merged	test/charging-points.db.test.ts > grants the ingestor what speed_cameras grants it, and nobody else anything
+grant	viafrei_ingestor@domains.hydrogen_stations	test/charging-status-hydrogen.db.test.ts > grants the ingestor select and insert on the ticks, what speed_cameras grants on the state table, and no reader anything
+grant	viafrei_ingestor@domains.hydrogen_stations_merged	test/charging-status-hydrogen.db.test.ts > grants the ingestor select and insert on the ticks, what speed_cameras grants on the state table, and no reader anything
+grant	viafrei_ingestor@domains.parking_facilities	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_bysa	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_bysa_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_odbl	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_odbl_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_sid	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_facilities_sid_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_occupancy	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_occupancy_odbl	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.parking_occupancy_sid	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.road_context_feature_versions	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_context_features	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_context_features_merged	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_events	test/road-events.db.test.ts > grants what speed_cameras grants, and no reader anything
+grant	viafrei_ingestor@domains.road_events_merged	test/road-events.db.test.ts > grants what speed_cameras grants, and no reader anything
+grant	viafrei_ingestor@domains.road_weather_forecast	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_weather_stations	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_weather_stations_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.road_works	test/road-works-columns.db.test.ts > keeps the merged view's grant through the recreate: the owner and viafrei_ingestor's select, nothing else
+grant	viafrei_ingestor@domains.road_works	test/road-works-columns.db.test.ts > rebuilds the merged view over the new shape, the same statement as speed_cameras', with its grant and no reader
+grant	viafrei_ingestor@domains.road_works_merged	test/road-works-columns.db.test.ts > keeps the merged view's grant through the recreate: the owner and viafrei_ingestor's select, nothing else
+grant	viafrei_ingestor@domains.road_works_merged	test/road-works-columns.db.test.ts > rebuilds the merged view over the new shape, the same statement as speed_cameras', with its grant and no reader
+grant	viafrei_ingestor@domains.street_bay_state	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.street_bay_state_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.street_bays	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.street_bays_merged	test/parking.db.test.ts > grants the ingestor what speed_cameras grants on a state table, select and insert on a tick table, and no reader anything — the gated pair included
+grant	viafrei_ingestor@domains.weather_warnings	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.weather_warnings_en	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.weather_warnings_en_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.weather_warnings_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.webcams	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+grant	viafrei_ingestor@domains.webcams_merged	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+partitioned	domains.charging_point_status	test/charging-status-hydrogen.db.test.ts > makes charging_point_status a tick table: partitioned by day on observed_at, no default partition, today and tomorrow covered
+partitioned	domains.charging_point_status	test/charging-status-hydrogen.db.test.ts > records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one
+partitioned	domains.parking_occupancy	test/parking.db.test.ts > partitions the two daily ticks by day with no default partition and a retention row, and leaves the ODbL ticks whole
+partitioned	domains.parking_occupancy_sid	test/parking.db.test.ts > partitions the two daily ticks by day with no default partition and a retention row, and leaves the ODbL ticks whole
+partitioned	domains.road_weather_forecast	test/weather.db.test.ts > partitions the forecast by day with no default partition, and records its one-day window with no archive
+policy	domains.charging_point_status.charging_point_status_own_insert	test/charging-status-hydrogen.db.test.ts > enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy
+policy	domains.charging_point_status.charging_point_status_own_insert	test/charging-status-hydrogen.db.test.ts > refuses a tick for another source, for a source of another domain, without a source, with an empty key, a line or no day partition
+policy	domains.charging_point_status.charging_point_status_read	test/charging-status-hydrogen.db.test.ts > enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy
+policy	domains.charging_point_status.charging_point_status_read	test/charging-status-hydrogen.db.test.ts > refuses a tick for another source, for a source of another domain, without a source, with an empty key, a line or no day partition
+policy	domains.charging_points.charging_points_own_insert	test/charging-points.db.test.ts > enables and forces row-level security with the policies of speed_cameras
+policy	domains.charging_points.charging_points_own_insert	test/charging-points.db.test.ts > lets a source update and close only its own rows
+policy	domains.charging_points.charging_points_own_insert	test/charging-points.db.test.ts > refuses a write for another source, for a source of another domain, and without a source set
+policy	domains.charging_points.charging_points_own_update	test/charging-points.db.test.ts > enables and forces row-level security with the policies of speed_cameras
+policy	domains.charging_points.charging_points_own_update	test/charging-points.db.test.ts > lets a source update and close only its own rows
+policy	domains.charging_points.charging_points_own_update	test/charging-points.db.test.ts > refuses a write for another source, for a source of another domain, and without a source set
+policy	domains.charging_points.charging_points_read	test/charging-points.db.test.ts > enables and forces row-level security with the policies of speed_cameras
+policy	domains.charging_points.charging_points_read	test/charging-points.db.test.ts > lets a source update and close only its own rows
+policy	domains.charging_points.charging_points_read	test/charging-points.db.test.ts > refuses a write for another source, for a source of another domain, and without a source set
+policy	domains.hydrogen_stations.hydrogen_stations_own_insert	test/charging-status-hydrogen.db.test.ts > enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy
+policy	domains.hydrogen_stations.hydrogen_stations_own_insert	test/charging-status-hydrogen.db.test.ts > lets a source close only its own stations
+policy	domains.hydrogen_stations.hydrogen_stations_own_insert	test/charging-status-hydrogen.db.test.ts > refuses a station write for another source, a source of another domain, and without a source
+policy	domains.hydrogen_stations.hydrogen_stations_own_update	test/charging-status-hydrogen.db.test.ts > enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy
+policy	domains.hydrogen_stations.hydrogen_stations_own_update	test/charging-status-hydrogen.db.test.ts > lets a source close only its own stations
+policy	domains.hydrogen_stations.hydrogen_stations_own_update	test/charging-status-hydrogen.db.test.ts > refuses a station write for another source, a source of another domain, and without a source
+policy	domains.hydrogen_stations.hydrogen_stations_read	test/charging-status-hydrogen.db.test.ts > enables and forces row-level security; the state table has the policies of speed_cameras, the tick table no update policy
+policy	domains.hydrogen_stations.hydrogen_stations_read	test/charging-status-hydrogen.db.test.ts > lets a source close only its own stations
+policy	domains.hydrogen_stations.hydrogen_stations_read	test/charging-status-hydrogen.db.test.ts > refuses a station write for another source, a source of another domain, and without a source
+policy	domains.parking_facilities.parking_facilities_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities.parking_facilities_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities.parking_facilities_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities.parking_facilities_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities.parking_facilities_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities.parking_facilities_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_bysa.parking_facilities_bysa_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_odbl.parking_facilities_odbl_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_sid.parking_facilities_sid_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_facilities_sid.parking_facilities_sid_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_facilities_sid.parking_facilities_sid_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy.parking_occupancy_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy.parking_occupancy_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy.parking_occupancy_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy.parking_occupancy_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy_odbl.parking_occupancy_odbl_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.parking_occupancy_sid.parking_occupancy_sid_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.road_context_feature_versions.road_context_feature_versions_own_insert	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_context_feature_versions.road_context_feature_versions_own_insert	test/road-context-webcams.db.test.ts > one source writes a feature and its version in one transaction, and a source of another domain may append no version
+policy	domains.road_context_feature_versions.road_context_feature_versions_read	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_context_feature_versions.road_context_feature_versions_read	test/road-context-webcams.db.test.ts > one source writes a feature and its version in one transaction, and a source of another domain may append no version
+policy	domains.road_context_features.road_context_features_own_insert	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_context_features.road_context_features_own_update	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_context_features.road_context_features_read	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_events.road_events_own_insert	test/road-events.db.test.ts > enables and forces row-level security with the policies of speed_cameras, and the merged view
+policy	domains.road_events.road_events_own_insert	test/road-events.db.test.ts > refuses a write for another source, a source of another domain, and without a source
+policy	domains.road_events.road_events_own_update	test/road-events.db.test.ts > enables and forces row-level security with the policies of speed_cameras, and the merged view
+policy	domains.road_events.road_events_own_update	test/road-events.db.test.ts > refuses a write for another source, a source of another domain, and without a source
+policy	domains.road_events.road_events_read	test/road-events.db.test.ts > enables and forces row-level security with the policies of speed_cameras, and the merged view
+policy	domains.road_events.road_events_read	test/road-events.db.test.ts > refuses a write for another source, a source of another domain, and without a source
+policy	domains.road_weather_forecast.road_weather_forecast_own_insert	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_weather_forecast.road_weather_forecast_read	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_weather_stations.road_weather_stations_own_insert	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_weather_stations.road_weather_stations_own_update	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_weather_stations.road_weather_stations_read	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.road_works.road_works_own_insert	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+policy	domains.road_works.road_works_own_update	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+policy	domains.road_works.road_works_read	test/road-works-columns.db.test.ts > has its own checks and the anchor index, the rest as speed_cameras
+policy	domains.street_bay_state.street_bay_state_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bay_state.street_bay_state_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.street_bay_state.street_bay_state_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bay_state.street_bay_state_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.street_bay_state.street_bay_state_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bay_state.street_bay_state_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.street_bays.street_bays_own_insert	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bays.street_bays_own_insert	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.street_bays.street_bays_own_update	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bays.street_bays_own_update	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.street_bays.street_bays_read	test/parking.db.test.ts > enables and forces row-level security; the state tables have the policies of speed_cameras, the ticks no update policy
+policy	domains.street_bays.street_bays_read	test/parking.db.test.ts > keeps the licence pairs apart: a source registered for one parking domain cannot write another
+policy	domains.weather_warnings.weather_warnings_own_insert	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.weather_warnings.weather_warnings_own_update	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.weather_warnings.weather_warnings_read	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.weather_warnings_en.weather_warnings_en_own_insert	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.weather_warnings_en.weather_warnings_en_own_update	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.weather_warnings_en.weather_warnings_en_read	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.webcams.webcams_own_insert	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.webcams.webcams_own_update	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+policy	domains.webcams.webcams_read	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+table	domains.charging_point_status	test/charging-status-hydrogen.db.test.ts > appends status ticks: a repeat of the same observation is a no-op, a later one is a new row, and nothing is updated
+table	domains.charging_point_status	test/charging-status-hydrogen.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.charging_points	test/charging-points.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.charging_points	test/charging-points.db.test.ts > takes a register point through the ingestor's upsert, and an unchanged one moves no row
+table	domains.hydrogen_stations	test/charging-status-hydrogen.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.hydrogen_stations	test/charging-status-hydrogen.db.test.ts > takes a hydrogen station through the ingestor's upsert, and an unchanged one moves no row
+table	domains.parking_facilities	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_facilities	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.parking_facilities_bysa	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_facilities_bysa	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.parking_facilities_odbl	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_facilities_odbl	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.parking_facilities_sid	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_facilities_sid	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.parking_occupancy	test/parking.db.test.ts > appends ticks to each occupancy table: a repeat is a no-op, a later one a new row, and nothing is updated
+table	domains.parking_occupancy	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_occupancy_odbl	test/parking.db.test.ts > appends ticks to each occupancy table: a repeat is a no-op, a later one a new row, and nothing is updated
+table	domains.parking_occupancy_odbl	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.parking_occupancy_sid	test/parking.db.test.ts > appends ticks to each occupancy table: a repeat is a no-op, a later one a new row, and nothing is updated
+table	domains.parking_occupancy_sid	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.road_context_feature_versions	test/road-context-webcams.db.test.ts > appends versions: a repeat is a no-op, a change is a new row, and a feature's history is read newest first
+table	domains.road_context_feature_versions	test/road-context-webcams.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares, and the generated anchor last
+table	domains.road_context_feature_versions	test/road-context-webcams.db.test.ts > keeps the version history unpartitioned and out of the retention job, as its old twin
+table	domains.road_context_features	test/road-context-webcams.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares, and the generated anchor last
+table	domains.road_context_features	test/road-context-webcams.db.test.ts > takes rows into each state table through the ingestor's upsert, generates the anchor, and an unchanged row moves nothing
+table	domains.road_events	test/road-events.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.road_events	test/road-events.db.test.ts > takes an event through the ingestor's upsert, and an unchanged one moves no row
+table	domains.road_weather_forecast	test/weather.db.test.ts > appends forecast runs: a repeat is a no-op, the next run is new rows, the newest run of a station is read through its index
+table	domains.road_weather_forecast	test/weather.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.road_weather_stations	test/weather.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.road_weather_stations	test/weather.db.test.ts > takes a row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.road_works	test/road-works-columns.db.test.ts > keeps the system columns and the baseline's domain columns, then the added ones, and a generated anchor last
+table	domains.road_works	test/road-works-columns.db.test.ts > takes a work through the ingestor's upsert, generates the anchor on the shape, and moves it with geom
+table	domains.street_bay_state	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.street_bay_state	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.street_bays	test/parking.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.street_bays	test/parking.db.test.ts > takes one row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.weather_warnings	test/weather.db.test.ts > closes a superseded version with its reason, and lets the ordinary close leave the reason empty
+table	domains.weather_warnings	test/weather.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.weather_warnings	test/weather.db.test.ts > takes a row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.weather_warnings_en	test/weather.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares
+table	domains.weather_warnings_en	test/weather.db.test.ts > takes a row into each state table through the ingestor's upsert, and an unchanged one moves no row
+table	domains.webcams	test/road-context-webcams.db.test.ts > has the system columns of speed_cameras, then the domain columns, each in a type a writer declares, and the generated anchor last
+table	domains.webcams	test/road-context-webcams.db.test.ts > takes rows into each state table through the ingestor's upsert, generates the anchor, and an unchanged row moves nothing
+table	public.partition_retention	test/charging-status-hydrogen.db.test.ts > records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one
+trigger	domains.road_events.road_events_suspended	test/road-events.db.test.ts > derives suspended from the payload: a writer's own value is overwritten, on insert and on any update
+view	domains.charging_points_merged	test/charging-points.db.test.ts > breaks a tie of trust by the freshest observation, whichever source sorts first
+view	domains.charging_points_merged	test/charging-points.db.test.ts > has a merged view of every table column plus the merge columns
+view	domains.charging_points_merged	test/charging-points.db.test.ts > keeps a row whose source is not registered, ranked after every registered one
+view	domains.charging_points_merged	test/charging-points.db.test.ts > merges one entity per match key, the most trusted source first, every source attributed
+view	domains.charging_points_merged	test/charging-points.db.test.ts > merges only open rows: a closed winner gives way, and an entity with only closed rows is absent
+view	domains.hydrogen_stations_merged	test/charging-status-hydrogen.db.test.ts > has a merged view for the state table only
+view	domains.hydrogen_stations_merged	test/charging-status-hydrogen.db.test.ts > merges open stations by trust, then freshness; a closed row gives way; an unregistered source ranks last
+view	domains.parking_facilities_bysa_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.parking_facilities_bysa_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.parking_facilities_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.parking_facilities_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.parking_facilities_odbl_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.parking_facilities_odbl_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.parking_facilities_sid_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.parking_facilities_sid_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.road_context_features_merged	test/road-context-webcams.db.test.ts > answers the old near read over the new table, kind by kind, through the gist index
+view	domains.road_context_features_merged	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+view	domains.road_events_merged	test/road-events.db.test.ts > enables and forces row-level security with the policies of speed_cameras, and the merged view
+view	domains.road_events_merged	test/road-events.db.test.ts > merges open events by trust, then freshness
+view	domains.road_weather_stations_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+view	domains.road_works_merged	test/road-works-columns.db.test.ts > decides two rows of equal trust and the same observed_at by completeness, the baseline's tie-break
+view	domains.road_works_merged	test/road-works-columns.db.test.ts > its rollback note restores exactly the baseline's view and grant
+view	domains.road_works_merged	test/road-works-columns.db.test.ts > rebuilds the merged view over the new shape, the same statement as speed_cameras', with its grant and no reader
+view	domains.street_bay_state_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.street_bay_state_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.street_bays_merged	test/parking.db.test.ts > has a merged view for each state table and none for a tick table
+view	domains.street_bays_merged	test/parking.db.test.ts > merges open facilities by trust, then freshness
+view	domains.weather_warnings_en_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+view	domains.weather_warnings_en_merged	test/weather.db.test.ts > joins a German warning to its English text by content, as the old function does
+view	domains.weather_warnings_merged	test/weather.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything
+view	domains.weather_warnings_merged	test/weather.db.test.ts > joins a German warning to its English text by content, as the old function does
+view	domains.webcams_merged	test/road-context-webcams.db.test.ts > has the policies, merged views and grants of the convention, and no reader anything

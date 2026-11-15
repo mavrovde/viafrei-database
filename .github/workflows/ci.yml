@@ -106,6 +106,13 @@ jobs:
           TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
           VF_REQUIRE_DB: "1"
         run: npm run coverage
+      # Every function, trigger, view, check, policy, grant, role and partitioned
+      # table of a database migrated to head has a manifest row naming its test,
+      # or a gap row (test/coverage/; the gap only shrinks).
+      - name: Schema coverage
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
+        run: npm run coverage:schema
       - name: Coverage summary
         if: always() && hashFiles('coverage/coverage-summary.json') != ''
         run: node scripts/coverage-summary.ts coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"

@@ -267,7 +267,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | CI | Lint | `tsc`, ESLint, the shell scripts' syntax, and actionlint (with shellcheck) over every workflow |
 | CI | Unit tests | the unit suite, no database, each case under two seconds |
 | CI | Migration lint | `viafrei-db lint` over the baseline and the migrations |
-| CI | Integration tests (PostGIS) | an empty database (a plain `create database` in a PostGIS cluster) migrated to head through the service, under the coverage gate: lines 100 · branches 93.88 · functions 100 · statements 100 (per cent, minimums; below any one fails the job, and so does a coverage badge that differs from the measured lines figure) |
+| CI | Integration tests (PostGIS) | an empty database (a plain `create database` in a PostGIS cluster) migrated to head through the service, under the coverage gate: lines 100 · branches 93.88 · functions 100 · statements 100 (per cent, minimums; below any one fails the job, and so does a coverage badge that differs from the measured lines figure); then the schema coverage gate (below) |
 | CI | Image (build, scan, healthz) | the image is built, scanned by Trivy (HIGH and CRITICAL fail) and started read-only as a non-root user to answer `/healthz` and `/ready` |
 | Security | CodeQL (TypeScript) | static analysis, the extended query set |
 | Security | Dependency review | a pull request adds no dependency with a known advisory |
@@ -278,6 +278,26 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
 
+## Schema coverage
+
+Every object in the catalogue of a database migrated to head is proved by a
+test here (#32): `npm run coverage:schema` reads the tables, views, functions,
+triggers, checks, policies, grants (to a `viafrei_*` role or PUBLIC), the
+`viafrei_*` roles and the partitioned tables, extension members and partitions
+left out, and judges them against two files:
+
+- `test/coverage/schema.tsv` — `kind`, `object`, `<test file> > <test title>`,
+  one row per object and test that proves it;
+- `test/coverage/gap.tsv` — `kind`, `object`: what has no test yet. It only
+  shrinks, and is empty at the release that closes #32.
+
+It fails on an object with neither row, a row naming an object or a test that
+does not exist, and a gap row the manifest covers or the catalogue no longer
+holds. It refuses (exit 2) a catalogue read with no object of a kind the schema
+always holds, a database that was never migrated or is not at the checkout's
+head, an empty manifest, and a test tree it cannot list. Without `--url` it
+migrates a throwaway database next to `TEST_DATABASE_URL` and drops it.
+
 ## Development
 
 ```bash
@@ -286,7 +306,9 @@ npm run typecheck && npm run lint && npm test        # each unit test < 2 s
 TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
-npm run mutate                                       # the readiness logic's mutants
+npm run mutate                                       # the readiness logic's and the coverage gate's mutants
+TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
+npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
 
 [CONTRIBUTING.md](CONTRIBUTING.md) has the migration rules.
