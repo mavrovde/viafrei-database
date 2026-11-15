@@ -20,9 +20,11 @@
 -- current schema's tick tables only.
 --
 -- public.partition_retention: how long each day partition of a tick table is
--- kept and whether it is archived to the cold store before it is dropped,
--- read by the partition retention job. A tick table of schema domains must
--- have its row: ensure_daily_partitions refuses one that has none.
+-- kept and whether it is archived to the cold store before it is dropped. A
+-- tick table of schema domains must have its row: ensure_daily_partitions
+-- refuses one that has none. No job reads the table yet: the partition
+-- retention job does not retire a day partition of schema domains, so until a
+-- reader lands (viafrei-database#28) these partitions are kept, not retired.
 -- domains.charging_point_status keeps 14 days, then the cold store, as its old
 -- twin public.charging_point_status does.
 --
@@ -138,7 +140,7 @@ create table public.partition_retention (
   constraint partition_retention_reason check (reason <> '')
 );
 
-comment on table public.partition_retention is 'How long the day partitions of a tick table are kept, and whether each is archived to the cold store before it is dropped. Read by the partition retention job; a tick table of schema domains must have its row.';
+comment on table public.partition_retention is 'How long the day partitions of a tick table are kept, and whether each is archived to the cold store before it is dropped. A tick table of schema domains must have its row (ensure_daily_partitions refuses one without). Not read by a retention job yet: until one reads it, a domains day partition is kept.';
 comment on column public.partition_retention.keep_days is 'Day partitions older than this many days are retired.';
 comment on column public.partition_retention.archive is 'True: dumped to the cold store and verified before the drop. False: dropped without a dump.';
 
