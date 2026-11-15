@@ -257,4 +257,27 @@ const text: SchemaMutant[] = [
   { name: "text: street bays skip the fold on update", from: "CREATE TRIGGER street_bays_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER street_bays_postcode BEFORE INSERT ON" },
 ].map((m) => ({ ...m, file: BASELINE, tests: TEXT }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text];
+const FUEL = ["test/fuel-functions.db.test.ts"];
+
+const fuel: SchemaMutant[] = [
+  { name: "fuel: the Land reads a closed place", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n       and g.geom is not null\n       and g.closed_at is null", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n       and g.geom is not null" },
+  { name: "fuel: the Land reads another source", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where true\n" },
+  { name: "fuel: the Land reads a district", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n" },
+  { name: "fuel: the Land is the farthest city", from: "     order by g.geom <-> p\n     limit 1) end", to: "     order by g.geom <-> p desc\n     limit 1) end" },
+  { name: "fuel: the towns reach 30 km", from: "     where n.d <= 20000) end", to: "     where n.d <= 30000) end" },
+  { name: "fuel: the towns are six", from: "             order by g.geom <-> p\n             limit 5) n", to: "             order by g.geom <-> p\n             limit 6) n" },
+  { name: "fuel: the towns farthest first", from: "jsonb_build_object('ags', n.admin_code, 'name', n.name) order by n.d)", to: "jsonb_build_object('ags', n.admin_code, 'name', n.name) order by n.d desc)" },
+  { name: "fuel: the towns read a closed place", from: "             where g.source_id = 'bkg_gvisys'\n               and g.kind = 'city'\n               and g.geom is not null\n               and g.closed_at is null", to: "             where g.source_id = 'bkg_gvisys'\n               and g.kind = 'city'\n               and g.geom is not null" },
+  { name: "fuel: the trigger sets no towns", from: "  new.town_places := fuel_station_town_places(new.geom);\n  return new;", to: "  return new;" },
+  { name: "fuel: the trigger misses a moved station", from: "CREATE TRIGGER fuel_stations_land BEFORE INSERT OR UPDATE OF geom ON", to: "CREATE TRIGGER fuel_stations_land BEFORE INSERT ON" },
+  { name: "fuel: relabel rewrites every station", from: "     and (s.land is distinct from x.land or s.town_places is distinct from x.town_places);", to: ";" },
+  { name: "fuel: relabel ignores the towns", from: "     and (s.land is distinct from x.land or s.town_places is distinct from x.town_places);", to: "     and (s.land is distinct from x.land);" },
+  { name: "fuel: outliers have no history before the window", from: "     where p.observed_at >= now() - since - interval '1 day'", to: "     where p.observed_at >= now() - since" },
+  { name: "fuel: outliers outside the window", from: "   where t.observed_at >= now() - since\n     and (t.price < lo", to: "   where true\n     and (t.price < lo" },
+  { name: "fuel: outliers miss the upper band", from: "     and (t.price < lo or t.price > hi\n", to: "     and (t.price < lo\n" },
+  { name: "fuel: outliers miss the jump", from: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))", to: "          or false)" },
+  { name: "fuel: outliers compare across products", from: "lag(p.price) over (partition by p.station_id, p.product order by p.observed_at) as prev_price", to: "lag(p.price) over (partition by p.station_id order by p.observed_at) as prev_price" },
+  { name: "fuel: outliers oldest first", from: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at desc", to: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at asc" },
+].map((m) => ({ ...m, file: BASELINE, tests: FUEL }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel];

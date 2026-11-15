@@ -4,11 +4,6 @@
 # kind	object
 function	public.charging_status_runs_note()
 function	public.charging_status_runs_recompute()
-function	public.fuel_price_outliers(lo numeric, hi numeric, jump numeric, since interval)
-function	public.fuel_station_land(p geography)
-function	public.fuel_station_town_places(p geography)
-function	public.fuel_stations_relabel_land()
-function	public.fuel_stations_set_land()
 function	public.fuel_warm_cadence(p_city_population_min integer, p_city_radius_min_m double precision, p_city_radius_max_m double precision, p_city_radius_per_sqrt_thousand_m double precision, p_motorway_corridor_m double precision, p_failure_threshold integer, p_days integer)
 function	public.growth_weekly_refresh(p_weeks integer)
 function	public.lez_zone_overlaps_refresh(p_feed text, p_zone text)
@@ -19,7 +14,6 @@ function	public.search_console_weekly_load(doc jsonb)
 trigger	public.charging_point_status.charging_status_runs_forget
 trigger	public.charging_point_status.charging_status_runs_note
 trigger	public.charging_point_status.charging_status_runs_restate
-trigger	public.fuel_stations.fuel_stations_land
 trigger	public.lez_zones.lez_zones_overlaps_insert
 trigger	public.lez_zones.lez_zones_overlaps_update
 view	domains.route_recommendations_merged
