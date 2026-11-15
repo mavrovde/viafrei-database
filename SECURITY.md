@@ -45,7 +45,7 @@ Each check, and what starts it:
 | dependency review | Security | pull requests only (it compares a change with its base) |
 | gitleaks over the full history | Security | every pull request, every push to `main`, and weekly |
 | an OWASP ZAP baseline scan against the built container (DAST) | Security | every pull request, every push to `main`, and weekly |
-| OpenSSF Scorecard | Scorecard | every push to `main`, weekly, and on a branch-protection change |
+| OpenSSF Scorecard | Scorecard | weekly and on a branch-protection change |
 
 The CI workflow has no schedule. The CI, Security and Scorecard workflows can
 also be started by hand.

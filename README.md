@@ -273,7 +273,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Security | Dependency review | a pull request adds no dependency with a known advisory |
 | Security | Secrets in history (gitleaks) | no secret anywhere in the history |
 | Security | DAST (OWASP ZAP against the container) | the running interface, attacked from outside; any alert, at any risk level, fails unless `scripts/zap-rules.tsv` marks its rule IGNORE with a reason |
-| Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository |
+| Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository; the exception to the sentence above, it runs weekly and on a branch-protection change only |
 | Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).

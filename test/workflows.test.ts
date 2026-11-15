@@ -477,10 +477,10 @@ export function triggerFaults(security: string, wf: (name: string) => string): s
   const sc = on(wf("scorecard.yml"));
   if (ci.includes("schedule:") !== !security.includes("The CI workflow has no schedule.")) faults.push("SECURITY.md and ci.yml disagree about a CI schedule");
   if (!sec.includes("schedule:") || !sec.includes("pull_request:") || !/push:\n\s+branches: \[main\]/.test(sec)) faults.push("security.yml no longer runs on pull requests, pushes to main and weekly");
-  if (!sc.includes("schedule:") || !/push:\n\s+branches: \[main\]/.test(sc) || sc.includes("pull_request:")) faults.push("scorecard.yml no longer runs on pushes to main and weekly only");
+  if (!sc.includes("schedule:") || !sc.includes("branch_protection_rule:") || sc.includes("push:") || sc.includes("pull_request:")) faults.push("scorecard.yml no longer runs weekly and on a branch-protection change only");
   if (!job(wf("security.yml"), "dependency-review").includes("\n    if: github.event_name == 'pull_request'\n")) faults.push("dependency review is no longer pull-request only");
   if (!security.includes("| dependency review | Security | pull requests only")) faults.push("SECURITY.md does not say dependency review runs on pull requests only");
-  if (!security.includes("| OpenSSF Scorecard | Scorecard | every push to `main`, weekly")) faults.push("SECURITY.md does not say when Scorecard runs");
+  if (!security.includes("| OpenSSF Scorecard | Scorecard | weekly and on a branch-protection change")) faults.push("SECURITY.md does not say when Scorecard runs");
   return faults;
 }
 
