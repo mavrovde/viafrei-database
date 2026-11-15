@@ -99,6 +99,8 @@
 --   grant select on domains.road_works_merged to viafrei_ingestor;
 --   delete from schema_migrations where version = 298;
 
+-- A domains table a writer reaches: give up rather than queue (migrate retries a 55P03).
+set local lock_timeout = '5s';
 drop view domains.road_works_merged;
 
 alter table domains.road_works

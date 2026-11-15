@@ -195,6 +195,15 @@ describe("rule 6: a file that locks a table it did not create sets lock_timeout 
     ["the bound set only after the statement", "create index t_a on t (a);\nset local lock_timeout = '5s';\n"],
     ["the bound in a comment only", "-- set local lock_timeout = '5s';\ncreate index t_a on t (a);\n"],
     ["a session-wide bound (set, not set local)", "set lock_timeout = '5s';\ncreate index t_a on t (a);\n"],
+    ["a create trigger on a table it did not create", "create trigger t_aud after insert on public.t for each row execute function f();\n"],
+    ["a create or replace trigger", "CREATE OR REPLACE TRIGGER t_aud AFTER UPDATE OF a ON t FOR EACH ROW EXECUTE FUNCTION f();\n"],
+    ["a drop trigger", "drop trigger if exists t_aud on domains.t;\n"],
+    ["a plain drop index", "drop index public.t_a;\n"],
+    ["a plain reindex", "reindex table public.t;\n"],
+    ["a lock table", "lock table domains.a, domains.b in share mode;\n"],
+    ["a truncate", "truncate table public.t;\n"],
+    ["a create or replace view", "create or replace view public.v as select 1;\n"],
+    ["a dynamic alter in a DO block", "do $$ begin execute format('alter table %I.%I add column x int', 'public', 't'); end $$;\n"],
   ])("refuses %s", (_what, body) => {
     expect(fails(body)).toEqual([expect.stringMatching(/locks a table this file did not create, with no 'set local lock_timeout' before it/)]);
   });
@@ -204,18 +213,25 @@ describe("rule 6: a file that locks a table it did not create sets lock_timeout 
     ["a table the file creates", "create table domains.n (a int);\ncreate index n_a on domains.n (a);\nalter table domains.n add column b int;\n"],
     ["a table it creates, named without its schema", "create table n (a int);\ncreate index n_a on public.n (a);\n"],
     ["no locking statement", "create view v as select 1;\n"],
+    ["a trigger on a table the file creates", "create table n (a int);\ncreate trigger n_aud after insert on n for each row execute function f();\ndrop trigger n_aud on public.n;\n"],
+    ["a truncate of a table the file creates", "create table n (a int);\ntruncate n;\n"],
+    ["a column named lock or truncate", "create view v as select t.a as lock from t;\ncreate view w as select t.b as truncate from t;\n"],
+    ["the words in a literal", "comment on table public.t is 'a truncated file; lock the door';\n"],
+    ["a dynamic alter inside a function body, which runs when called", "create or replace function f() returns void language plpgsql as $f$ begin execute format('alter table %I attach partition %I', 'a', 'b'); end $f$;\n"],
   ])("passes %s", (_what, body) => {
     expect(fails(body)).toEqual([]);
   });
 
   it("judges a file from LOCK_RULE_FROM on and not before", () => {
-    expect(LOCK_RULE_FROM).toBe(305);
-    expect(fails("create index t_a on t (a);\n", 305)).toHaveLength(1);
-    expect(fails("create index t_a on t (a);\n", 304)).toEqual([]);
+    expect(LOCK_RULE_FROM).toBe(294);
+    expect(fails("create index t_a on t (a);\n", 294)).toHaveLength(1);
+    expect(fails("create index t_a on t (a);\n", 293)).toEqual([]);
   });
 
   it("names the first locking statement; an index on a table the file created does not count, nor a concurrent build", () => {
     expect(lockingStatement("create table a (x int);\ncreate index a_x on a (x);\nalter table b add y int;\n")?.statement).toBe("alter table b");
     expect(lockingStatement("create index concurrently if not exists a_x on a (x);\n")).toBeNull();
+    expect(lockingStatement("drop index concurrently if exists public.t_a;\nreindex index concurrently public.t_b;\n")).toBeNull();
+    expect(lockingStatement("select 'alter table x';\ndo $$ begin execute format('alter table %I add y int', 't'); end $$;\n")?.statement).toBe("execute format('alter table");
   });
 });

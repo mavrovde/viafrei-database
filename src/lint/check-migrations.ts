@@ -70,30 +70,67 @@ export function likeMatches(pattern: string, name: string): boolean {
 }
 
 /**
- * Rule 6, the lock bound (#31 item 6; main's 0054/0064 precedent and its
- * migration-lock-timeout test): from this number on, a file that builds a
- * plain index on, or alters, a table it did not create itself must set
+ * Rule 6, the lock bound (#31 item 6): from this number on, a file that takes
+ * a write-blocking lock on a table it did not create itself must set
  * `set local lock_timeout` before the first such statement. Without it the
  * statement queues behind a writer's lock and every later writer queues behind
  * it; with it the file gives up with 55P03 and `migrate` retries it
- * (DB_MIGRATE_LOCK_ATTEMPTS, DB_MIGRATE_LOCK_PAUSE_S). The files before it were
- * written without the rule and are not judged; measured over 0293–0304, two
- * would be flagged, 0298 and 0302 (`alter table domains.road_works`, a domains
- * table no writer had reached when they were written).
+ * (DB_MIGRATE_LOCK_ATTEMPTS, DB_MIGRATE_LOCK_PAUSE_S).
+ *
+ * The statements it recognises: a plain (not `concurrently`) `create index`
+ * on, `alter table`, `lock table`, `truncate`, `create trigger` on and
+ * `drop trigger … on` a table the file did not create; a plain `drop index`
+ * and a plain `reindex` (the table is not named, so always); `create or
+ * replace view` (an existing view is replaced under an exclusive lock); and
+ * dynamic `execute format('alter …')`, whose target is a placeholder, so
+ * always.
+ *
+ * Function and procedure bodies are not read: what a body runs, it runs when
+ * it is CALLED, under the caller's bound, not when the file is applied. A DO
+ * block is applied and is read. What it cannot see, and a reviewer must:
+ * dynamic SQL built any other way (`execute 'alter …' || …`, a format string
+ * held in a variable), a function the file itself calls at apply time that
+ * locks (`select f()`, `perform f()` in a DO block),
+ * `drop view`, `drop table`, `alter view`/`alter index`/`alter materialized
+ * view`, `refresh materialized view`, `comment on` and `grant`/`revoke`.
+ *
+ * The files before it were written without the rule and are not judged;
+ * 0294 to 0306 all satisfy it.
  */
-export const LOCK_RULE_FROM = 305;
+export const LOCK_RULE_FROM = 294;
+
+const REL = String.raw`([a-z0-9_."]+)`;
 
 /** The first statement of a text that takes a write-blocking lock on a table the text did not create, or null. */
-export function lockingStatement(text: string): { readonly index: number; readonly statement: string } | null {
-  const own = new Set([...text.matchAll(/create\s+(?:unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_."]+)/gi)].map((m) => bare(m[1] ?? "")));
+export function lockingStatement(source: string): { readonly index: number; readonly statement: string } | null {
+  const text = blankFunctionBodies(source);
+  // A word inside a string literal is not a statement; only the dynamic-alter arm reads into one.
+  const code = text.replace(/'(?:[^']|'')*'/g, (l) => `'${" ".repeat(l.length - 2)}'`);
+  const own = new Set([...code.matchAll(/create\s+(?:unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_."]+)/gi)].map((m) => bare(m[1] ?? "")));
   const found: { index: number; statement: string }[] = [];
-  for (const m of text.matchAll(/create\s+(?:unique\s+)?index\s+(?!concurrently\b)(?:if\s+not\s+exists\s+)?[a-z0-9_"]*\s*on\s+(?:only\s+)?([a-z0-9_."]+)/gi)) {
-    if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
-  }
-  for (const m of text.matchAll(/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?([a-z0-9_."]+)/gi)) {
-    if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
-  }
+  const onTable = (re: RegExp): void => {
+    for (const m of code.matchAll(re)) if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
+  };
+  const always = (re: RegExp, over = code): void => {
+    for (const m of over.matchAll(re)) found.push({ index: m.index, statement: m[0] });
+  };
+  onTable(new RegExp(String.raw`\bcreate\s+(?:unique\s+)?index\s+(?!concurrently\b)(?:if\s+not\s+exists\s+)?[a-z0-9_"]*\s*on\s+(?:only\s+)?${REL}`, "gi"));
+  onTable(new RegExp(String.raw`\balter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?${REL}`, "gi"));
+  // lock and truncate as a statement: at the start of a line or after a semicolon, so a word in a literal is not one
+  onTable(new RegExp(String.raw`(?<=^|;)[^\S\n]*lock\s+(?:table\s+)?(?:only\s+)?${REL}`, "gim"));
+  onTable(new RegExp(String.raw`(?<=^|;)[^\S\n]*truncate\s+(?:table\s+)?(?:only\s+)?${REL}`, "gim"));
+  onTable(new RegExp(String.raw`\bcreate\s+(?:or\s+replace\s+)?(?:constraint\s+)?trigger\s+[a-z0-9_"]+[\s\S]*?\son\s+${REL}`, "gi"));
+  onTable(new RegExp(String.raw`\bdrop\s+trigger\s+(?:if\s+exists\s+)?[a-z0-9_"]+\s+on\s+${REL}`, "gi"));
+  always(/\bdrop\s+index\s+(?!concurrently\b)(?:if\s+exists\s+)?[a-z0-9_."]+/gi);
+  always(/\breindex\s+(?:\([^)]*\)\s*)?(?:table|index|schema|database|system)\s+(?!concurrently\b)[a-z0-9_."]+/gi);
+  always(/\bcreate\s+or\s+replace\s+view\s+[a-z0-9_."]+/gi);
+  always(/\bexecute\s+format\s*\(\s*'\s*alter\s+[a-z]+/gi, text);
   return found.sort((a, b) => a.index - b.index)[0] ?? null;
+}
+
+/** The text with every function or procedure body (`as $tag$ … $tag$`) blanked to spaces, offsets kept: a body runs when it is called, not when the file is applied. A DO block is applied, and stays. */
+export function blankFunctionBodies(text: string): string {
+  return text.replace(/(\bcreate\s+(?:or\s+replace\s+)?(?:function|procedure)\b[\s\S]*?\bas\s+)(\$[a-z_]*\$)([\s\S]*?)(\2)/gi, (_m, head: string, open: string, body: string, close: string) => head + open + body.replace(/[^\n]/g, " ") + close);
 }
 
 const bare = (name: string): string => {

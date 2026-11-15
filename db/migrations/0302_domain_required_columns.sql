@@ -35,6 +35,8 @@
 --   alter table domains.transit_trips_odbl alter column route_id drop not null, alter column service_id drop not null, alter column feed_version drop not null, drop constraint transit_trips_odbl_route_id_nonempty, drop constraint transit_trips_odbl_service_id_nonempty, drop constraint transit_trips_odbl_feed_version_nonempty;
 --   delete from schema_migrations where version = 302;
 
+-- Nine domains tables a writer reaches: give up rather than queue (migrate retries a 55P03).
+set local lock_timeout = '5s';
 lock table domains.road_works, domains.speed_cameras, domains.transit_agencies_odbl, domains.transit_routes_odbl, domains.transit_service_dates_odbl, domains.transit_stop_times_odbl, domains.transit_stops_odbl, domains.transit_trip_updates_odbl, domains.transit_trips_odbl in share mode;
 
 do $$
