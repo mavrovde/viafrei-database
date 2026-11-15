@@ -233,4 +233,28 @@ const ops: SchemaMutant[] = [
   { name: "ops: autosummarize is set twice", from: "       and array_position(coalesce(ic.reloptions, '{}'), 'autosummarize=on') is null\n", to: "\n" },
 ].map((m) => ({ ...m, file: BASELINE, tests: OPS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops];
+const TEXT = ["test/text-functions.db.test.ts"];
+
+const text: SchemaMutant[] = [
+  { name: "text: street key keeps the ß", from: "replace(lower(COALESCE(street, ''::text)), 'ß'::text, 'ss'::text)", to: "lower(COALESCE(street, ''::text))" },
+  { name: "text: street key keeps Strasse", from: "'strasse|str\\.'::text, 'str'::text, 'g'::text)", to: "'str\\.'::text, 'str'::text, 'g'::text)" },
+  { name: "text: street key keeps the digits", from: "'[^a-zäöü]'::text, ''::text, 'g'::text);", to: "'[^a-zäöü0-9]'::text, ''::text, 'g'::text);" },
+  { name: "text: house key prefers the street", from: "RETURN COALESCE(\"substring\"(COALESCE(house_number, ''::text), '[0-9]+'::text), \"substring\"(COALESCE(street, ''::text), '[0-9]+'::text));", to: "RETURN COALESCE(\"substring\"(COALESCE(street, ''::text), '[0-9]+'::text), \"substring\"(COALESCE(house_number, ''::text), '[0-9]+'::text));" },
+  { name: "text: operator tokens keep two letters", from: "WHERE ((length(t.t) >= 3) AND (t.t <> ALL (ARRAY['gmbh'::text,", to: "WHERE ((length(t.t) >= 2) AND (t.t <> ALL (ARRAY['gmbh'::text," },
+  { name: "text: operator tokens keep the legal form", from: "(ARRAY['gmbh'::text, 'mbh'::text,", to: "(ARRAY['mbh'::text," },
+  { name: "text: operator tokens keep duplicates", from: "RETURN ARRAY(SELECT DISTINCT t.t FROM unnest(regexp_split_to_array(lower(COALESCE(charging_operator_tokens.name", to: "RETURN ARRAY(SELECT t.t FROM unnest(regexp_split_to_array(lower(COALESCE(charging_operator_tokens.name" },
+  { name: "text: free of charge only at the start", from: "~ '(^|;)\\s*Kostenlos'::text) END;", to: "~ '^Kostenlos'::text) END;" },
+  { name: "text: free of charge false for no payment text", from: "    RETURN CASE WHEN (NULLIF(btrim(((extras -> 'device'::text) ->> 'payment'::text)), ''::text) IS NULL) THEN NULL::boolean ELSE (btrim(((extras -> 'device'::text) ->> 'payment'::text)) ~ '(^|;)", to: "    RETURN CASE WHEN false THEN NULL::boolean ELSE (btrim(((extras -> 'device'::text) ->> 'payment'::text)) ~ '(^|;)" },
+  { name: "text: card misses the debit card", from: "~ '(Kredit|Debit)karte'::text) END;", to: "~ 'Kreditkarte'::text) END;" },
+  { name: "text: opening hours miss the restricted", from: "WHEN 'Eingeschränkt'::text THEN 'restricted'::text", to: "WHEN 'eingeschränkt'::text THEN 'restricted'::text" },
+  { name: "text: parking untrimmed", from: "WHEN (lower(btrim(((extras -> 'device'::text) ->> 'parking'::text))) = 'keine beschränkung'::text)", to: "WHEN (lower(((extras -> 'device'::text) ->> 'parking'::text)) = 'keine beschränkung'::text)" },
+  { name: "text: postcode keeps four digits", from: "~ '^[0-9]{4}$'::text) THEN ('0'::text ||", to: "~ '^[0-9]{4}$'::text) THEN (''::text ||" },
+  { name: "text: postcode takes the first of two", from: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) = 1)", to: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) >= 1)" },
+  { name: "text: postcode takes six digits", from: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) = 1) THEN \"substring\"(raw, '(?:^|[^0-9])([0-9]{5})(?:[^0-9]|$)'::text)", to: "WHEN (regexp_count(raw, '[0-9]{5}'::text) = 1) THEN \"substring\"(raw, '([0-9]{5})'::text)" },
+  { name: "text: the postcode trigger keeps the raw", from: "  new.postcode := vf_postcode(new.postcode);", to: "  new.postcode := new.postcode;" },
+  { name: "text: charging sites skip the fold on update", from: "CREATE TRIGGER charging_sites_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER charging_sites_postcode BEFORE INSERT ON" },
+  { name: "text: fuel stations skip the fold", from: "CREATE TRIGGER fuel_stations_postcode BEFORE INSERT OR UPDATE OF postcode ON public.fuel_stations FOR EACH ROW", to: "CREATE TRIGGER fuel_stations_postcode BEFORE INSERT OR UPDATE OF postcode ON public.fuel_stations FOR EACH ROW WHEN (false)" },
+  { name: "text: street bays skip the fold on update", from: "CREATE TRIGGER street_bays_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER street_bays_postcode BEFORE INSERT ON" },
+].map((m) => ({ ...m, file: BASELINE, tests: TEXT }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text];

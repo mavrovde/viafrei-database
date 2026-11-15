@@ -658,6 +658,18 @@ function	public.mcp_usage_traffic_class(client text)	test/ops-functions.db.test.
 function	public.transit_odbl_departs_at(service_date date, tz text, departure_s integer)	test/ops-functions.db.test.ts > transit_odbl_departs_at counts GTFS seconds from noon minus twelve hours, across the clock change
 function	public.weather_warning_english(german_id bigint)	test/ops-functions.db.test.ts > weather_warning_english: the English twin of a live German warning by its sending time, validity, cell and event; none when one differs
 function	public.tick_brin_autosummarize(part regclass)	test/ops-functions.db.test.ts > tick_brin_autosummarize turns autosummarize on for a partition's BRIN indexes once, and counts them
+function	public.charging_street_key(street text)	test/text-functions.db.test.ts > charging_street_key: lower case, ß as ss, Straße/Str. folded to str, everything but letters dropped
+function	public.charging_house_key(street text, house_number text)	test/text-functions.db.test.ts > charging_house_key: the first number of the house number, else of the street; none is null
+function	public.charging_operator_tokens(name text)	test/text-functions.db.test.ts > charging_operator_tokens: distinct sorted words of three letters or more, legal forms and filler words dropped
+function	public.charging_register_free_of_charge(extras jsonb)	test/text-functions.db.test.ts > the register's extras: free of charge and card from the payment text, the opening hours and the parking by their register words
+function	public.charging_register_payment_card(extras jsonb)	test/text-functions.db.test.ts > the register's extras: free of charge and card from the payment text, the opening hours and the parking by their register words
+function	public.charging_register_opening_hours(extras jsonb)	test/text-functions.db.test.ts > the register's extras: free of charge and card from the payment text, the opening hours and the parking by their register words
+function	public.charging_register_parking(extras jsonb)	test/text-functions.db.test.ts > the register's extras: free of charge and card from the payment text, the opening hours and the parking by their register words
+function	public.vf_postcode(raw text)	test/text-functions.db.test.ts > vf_postcode: five digits trimmed, four digits get their leading zero, the one five-digit group of a longer text, else null
+function	public.vf_postcode_normalise()	test/text-functions.db.test.ts > the postcode trigger folds on insert and on a postcode update, on every table that carries one
+trigger	public.charging_sites.charging_sites_postcode	test/text-functions.db.test.ts > the postcode trigger folds on insert and on a postcode update, on every table that carries one
+trigger	public.fuel_stations.fuel_stations_postcode	test/text-functions.db.test.ts > the postcode trigger folds on insert and on a postcode update, on every table that carries one
+trigger	public.street_bays.street_bays_postcode	test/text-functions.db.test.ts > the postcode trigger folds on insert and on a postcode update, on every table that carries one
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > partitions ensure --from DATE through the CLI gives every tick table its partition for that day, and the one-argument form still reaches three days back
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > refuses a start date in the future and a count past 400, naming the bound
 function	public.ensure_daily_partitions(days_ahead integer, days_back integer)	test/consumer.db.test.ts > builds three days behind and days_ahead in front, or days_back behind with the two-argument form, and a row stamped in that window is accepted

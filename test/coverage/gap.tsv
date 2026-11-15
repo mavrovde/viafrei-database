@@ -2,15 +2,8 @@
 # npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
 # row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
 # kind	object
-function	public.charging_house_key(street text, house_number text)
-function	public.charging_operator_tokens(name text)
-function	public.charging_register_free_of_charge(extras jsonb)
-function	public.charging_register_opening_hours(extras jsonb)
-function	public.charging_register_parking(extras jsonb)
-function	public.charging_register_payment_card(extras jsonb)
 function	public.charging_status_runs_note()
 function	public.charging_status_runs_recompute()
-function	public.charging_street_key(street text)
 function	public.fuel_price_outliers(lo numeric, hi numeric, jump numeric, since interval)
 function	public.fuel_station_land(p geography)
 function	public.fuel_station_town_places(p geography)
@@ -23,17 +16,12 @@ function	public.lez_zones_overlaps_trigger()
 function	public.ops_rollup_refresh(p_from timestamp with time zone, p_to timestamp with time zone)
 function	public.ops_rollup_usage_fold(b_from date, b_to date)
 function	public.search_console_weekly_load(doc jsonb)
-function	public.vf_postcode(raw text)
-function	public.vf_postcode_normalise()
 trigger	public.charging_point_status.charging_status_runs_forget
 trigger	public.charging_point_status.charging_status_runs_note
 trigger	public.charging_point_status.charging_status_runs_restate
-trigger	public.charging_sites.charging_sites_postcode
 trigger	public.fuel_stations.fuel_stations_land
-trigger	public.fuel_stations.fuel_stations_postcode
 trigger	public.lez_zones.lez_zones_overlaps_insert
 trigger	public.lez_zones.lez_zones_overlaps_update
-trigger	public.street_bays.street_bays_postcode
 view	domains.route_recommendations_merged
 view	domains.speed_cameras_merged
 view	domains.transit_agencies_odbl_merged
