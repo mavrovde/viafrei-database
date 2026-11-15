@@ -1,16 +1,19 @@
 /**
- * Mutation check of the head/readiness logic and of the schema coverage gate:
- * each mutant is one small, plausible bug in src/migrations/plan.ts or
- * scripts/coverage-schema.ts. The tests named for it must fail on every one of
- * them, or they do not guard what they claim to. The file is restored after
+ * Mutation check: each mutant is one small, plausible bug — in the head and
+ * readiness logic, the schema coverage gate, the consumer verbs, the lint, the
+ * migrations and the baseline (the schema behaviour mutants of
+ * scripts/mutants-schema-behaviour.ts: functions, triggers, views). The tests
+ * named for it must fail on every one of them, or they do not guard what they
+ * claim to. The file is restored after
  * each mutant, also on an interrupted run.
  *
  *   npm run mutate                       every mutant
  *   npm run mutate -- --only <text>      the mutants whose name contains <text>
  *
- * A mutant with `config: DB` runs its tests with vitest.db.config.ts, so it
- * needs TEST_DATABASE_URL (and psql) like `npm run test:db`; each such run
- * migrates its own database, about a minute.
+ * A mutant with `config: DB` (every schema behaviour mutant has it) runs its
+ * tests with vitest.db.config.ts and VF_REQUIRE_DB=1, so it needs
+ * TEST_DATABASE_URL (and psql) like `npm run test:db` and cannot pass by being
+ * skipped; each such run migrates its own database.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";

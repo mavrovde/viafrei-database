@@ -364,7 +364,7 @@ npm run typecheck && npm run lint && npm test        # each unit test < 2 s
 TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
-npm run mutate                                       # the readiness logic's and the coverage gate's mutants
+TEST_DATABASE_URL=postgresql://… npm run mutate      # every mutant: readiness, gate, consumer verbs, lint, and the schema behaviour (functions, triggers, views)
 TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
 npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
