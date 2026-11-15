@@ -38,8 +38,16 @@ vi.mock("../src/service.js", () => ({
       state.calls.push(`migrate ${trigger} ${String(dry)}`);
       return Promise.resolve(state.rec);
     }
-    ensurePartitions(trigger: string, days: number): Promise<Rec> {
-      state.calls.push(`partitions ${trigger} ${String(days)}`);
+    ensurePartitions(trigger: string, days: number, back: unknown): Promise<Rec> {
+      state.calls.push(`partitions ${trigger} ${String(days)}${back === null ? "" : ` ${JSON.stringify(back)}`}`);
+      return Promise.resolve(state.rec);
+    }
+    applySettings(trigger: string): Promise<Rec> {
+      state.calls.push(`settings ${trigger}`);
+      return Promise.resolve(state.rec);
+    }
+    applyRoles(trigger: string): Promise<Rec> {
+      state.calls.push(`passwords ${trigger}`);
       return Promise.resolve(state.rec);
     }
     analyze(table: string, trigger: string): Promise<Rec> {
@@ -102,12 +110,28 @@ describe("the one-shot verbs", () => {
     [["migrate", "--dry-run"], "migrate cli true"],
     [["partitions", "ensure"], "partitions cli 7"],
     [["partitions", "ensure", "--days", "3"], "partitions cli 3"],
+    [["partitions", "ensure", "--days-back", "40"], 'partitions cli 7 {"days":40}'],
+    [["partitions", "ensure", "--from", "2026-01-31", "--days", "2"], 'partitions cli 2 {"from":"2026-01-31"}'],
+    [["roles", "settings"], "settings cli"],
     [["analyze", "fuel_prices"], "analyze fuel_prices cli"],
     [["check"], "check cli"],
   ])("%j runs its action, prints its lines on stdout and closes the service", async (argv, call) => {
     expect(await main(argv)).toBe(0);
     expect(state.calls).toEqual(["new", call, "close"]);
     expect(out.join("")).toBe("✓ done\n");
+  });
+
+  it("roles passwords reads the secrets from VF_DB_ROLE_DIR and applies them outside serve", async () => {
+    process.env["VF_DB_ROLE_DIR"] = "/run/secrets/roles";
+    expect(await main(["roles", "passwords"])).toBe(0);
+    expect(state.calls).toEqual(["new", "passwords cli", "close"]);
+  });
+
+  it("roles passwords without VF_DB_ROLE_DIR is a usage error, never a quiet skip", async () => {
+    delete process.env["VF_DB_ROLE_DIR"];
+    expect(await main(["roles", "passwords"])).toBe(2);
+    expect(err.join("")).toContain("roles passwords needs VF_DB_ROLE_DIR");
+    expect(state.calls).toEqual([]);
   });
 
   it("a failed action prints on stderr and returns its own exit code", async () => {

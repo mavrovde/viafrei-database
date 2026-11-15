@@ -5,6 +5,7 @@ import { describeFile } from "../src/migrations/files.js";
 import type { PsqlResult } from "../src/psql.js";
 import { DatabaseService, MIGRATE_LOCK_KEY } from "../src/service.js";
 import { fakePsql } from "./helpers.js";
+import { settingsFile } from "./role-settings.js";
 
 const files = [describeFile("0001_a.sql", Buffer.from("create table a(id int);\n")), describeFile("0002_b.sql", Buffer.from("create table b(id int);\n"))];
 const log = { info: () => undefined, warn: () => undefined, error: () => undefined };
@@ -127,6 +128,17 @@ describe("DatabaseService", () => {
     const m = make({ unlockFails: true });
     const r = await m.svc.migrate("cli");
     expect(r.ok).toBe(true);
+    expect(m.lockCalls.map((c) => c[0])).toContain("select pg_advisory_unlock($1::bigint)");
+  });
+
+  it("a good migrate whose role settings cannot be applied fails with 1, applies the files and still unlocks", async () => {
+    const settings = settingsFile();
+    const m = make({ fail: (sql) => (sql === settings ? { code: 3, stdout: "", stderr: "ERROR:  42704: role \"viafrei_mcp\" does not exist\n" } : null) });
+    const r = await m.svc.migrate("cli");
+    expect(r.ok).toBe(false);
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.at(-1)).toBe('✗ role settings could not be applied (psql exit 3): ERROR:  42704: role "viafrei_mcp" does not exist');
+    expect(m.ledger.map((l) => l.split(" ")[0])).toEqual(["1", "2"]);
     expect(m.lockCalls.map((c) => c[0])).toContain("select pg_advisory_unlock($1::bigint)");
   });
 

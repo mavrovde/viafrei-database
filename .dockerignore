@@ -7,4 +7,5 @@
 !db/migrations/
 !db/baseline/
 !db/roles/
+!db/test-fixtures/
 src/**/*.test.ts

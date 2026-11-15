@@ -1,0 +1,73 @@
+{
+  "_about": "One fixture for the ledger's address mask in BOTH engines: the workers' own mask runs over it in their tests, and test/replays.db.test.ts runs migration 0235's vf_ledger_mask. Addresses are documentation ranges (192.0.2.0/24, 198.51.100.0/24, 2001:db8::/32).",
+  "cases": [
+    {
+      "in": "refused: connect ECONNREFUSED 192.0.2.33:443 (geoportal.example.test, attempt 3/3, 19 ms)",
+      "out": "refused: connect ECONNREFUSED <ip>:443 (geoportal.example.test, attempt 3/3, 19 ms)"
+    },
+    {
+      "in": "refused: connect ECONNREFUSED <ip>:443 (x.test, attempt 3/3, 21 ms) — cause: connect ECONNREFUSED 198.51.100.7:443",
+      "out": "refused: connect ECONNREFUSED <ip>:443 (x.test, attempt 3/3, 21 ms) — cause: connect ECONNREFUSED <ip>:443"
+    },
+    {
+      "in": "Connect Timeout Error (attempted addresses: 192.0.2.1:443, 192.0.2.2:443, timeout: 10000ms)",
+      "out": "Connect Timeout Error (attempted addresses: <ip>:443, <ip>:443, timeout: 10000ms)"
+    },
+    {
+      "in": "connect ENETUNREACH 2001:db8:0:0:0:0:0:1 - Local (:::0)",
+      "out": "connect ENETUNREACH <ip> - Local (<ip>)"
+    },
+    {
+      "in": "connect ENETUNREACH 2001:db8:4a1c:c010::1:443 - Local (:::0)",
+      "out": "connect ENETUNREACH <ip> - Local (<ip>)"
+    },
+    {
+      "in": "connect ENETUNREACH 2001:db8::5:443 - Local (2001:db8::9:51234)",
+      "out": "connect ENETUNREACH <ip> - Local (<ip>)"
+    },
+    {
+      "in": "connect ECONNREFUSED ::1:443",
+      "out": "connect ECONNREFUSED <ip>"
+    },
+    {
+      "in": "connect ETIMEDOUT ::ffff:192.0.2.9:80",
+      "out": "connect ETIMEDOUT <ip><ip>:80"
+    },
+    {
+      "in": "capabilities 1: connect ECONNREFUSED 192.0.2.7:443; capabilities 2: connect ECONNREFUSED 192.0.2.7:443",
+      "out": "capabilities 1: connect ECONNREFUSED <ip>:443; capabilities 2: connect ECONNREFUSED <ip>:443"
+    },
+    {
+      "in": "Straße ü192.0.2.4 (Umlaut davor)",
+      "out": "Straße ü<ip> (Umlaut davor)"
+    },
+    {
+      "in": "a five-part number 1.2.3.4.5",
+      "out": "a five-part number <ip>.5"
+    },
+    {
+      "in": "worker 2.4.9 at 10:17:00, 43/44 admitted",
+      "out": "worker 2.4.9 at 10:17:00, 43/44 admitted"
+    },
+    {
+      "in": "stop de:05334:1986:1:1 and de:14612:28 not paired",
+      "out": "stop de:05334:1986:1:1 and de:14612:28 not paired"
+    },
+    {
+      "in": "newest stamp 2026-10-28T04:14:04.000Z; next probe at 2026-10-29T21:24:29.179Z",
+      "out": "newest stamp 2026-10-28T04:14:04.000Z; next probe at 2026-10-29T21:24:29.179Z"
+    },
+    {
+      "in": "std::vector and deadbeef:cafe:babe and v1.2.3.4",
+      "out": "std::vector and deadbeef:cafe:babe and v1.2.3.4"
+    },
+    {
+      "in": "bound addr:2001:db8::1 and host=[2001:db8::7]:8443",
+      "out": "bound addr:<ip> and host=[<ip>]:8443"
+    },
+    {
+      "in": "",
+      "out": ""
+    }
+  ]
+}

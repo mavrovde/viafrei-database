@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   assembleSchema,
   BaselineError,
@@ -16,24 +16,14 @@ import {
 } from "../src/migrations/baseline.js";
 import { describeFile, sha256Hex, type MigrationFile } from "../src/migrations/files.js";
 import { CREATE_LEDGER, ledgerInsert, migrate } from "../src/migrations/migrate.js";
-import { fakePsql } from "./helpers.js";
+import { fakePsql, flatPlanter } from "./helpers.js";
 
 const sum = (n: number): string => sha256Hex(Buffer.from(`original ${String(n)}`));
 const row = (n: number, name = `${String(n).padStart(4, "0")}_m${String(n)}.sql`): string => `${String(n)}\t${name}\t${sum(n)}`;
 const tsv = (n: number): string => `${LEDGER_HEADER}\n${Array.from({ length: n }, (_, i) => row(i + 1)).join("\n")}\n`;
 const DUMP = "create table a(id int);\nselect pg_catalog.set_config('search_path', '', false);\n";
 
-let dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs) rmSync(d, { recursive: true, force: true });
-  dirs = [];
-});
-const plant = (files: Record<string, string>): string => {
-  const root = mkdtempSync(join(tmpdir(), "vf-baseline-"));
-  dirs.push(root);
-  for (const [n, c] of Object.entries(files)) writeFileSync(join(root, n), c);
-  return root;
-};
+const plant = flatPlanter("vf-baseline-");
 const baseline = (head: number): Baseline => {
   const b = readBaseline(plant({ "ledger.tsv": tsv(head), [`${String(head).padStart(4, "0")}_baseline.sql`]: DUMP }));
   if (b === null) throw new Error("no baseline");

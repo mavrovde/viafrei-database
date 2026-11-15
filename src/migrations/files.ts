@@ -43,7 +43,14 @@ export type MigrationFile = {
   readonly bytes: Buffer;
   /** A version the baseline stands for (db/baseline/ledger.tsv): no bytes of its own, applied only as part of the baseline. */
   readonly baseline?: boolean;
+  /** The other checksums a ledger may hold for this baseline version (db/baseline/aliases.tsv). */
+  readonly aliases?: readonly string[];
 };
+
+/** Whether a ledger row's checksum stands for this entry: its own checksum, or one of its recorded aliases. */
+export function acceptsChecksum(f: Pick<MigrationFile, "checksum" | "aliases">, sum: string): boolean {
+  return sum === f.checksum || (f.aliases ?? []).includes(sum);
+}
 
 export function sha256Hex(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");

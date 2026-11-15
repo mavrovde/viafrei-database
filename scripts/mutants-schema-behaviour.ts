@@ -1,0 +1,486 @@
+/**
+ * The schema behaviour mutants (#32): functions, triggers and views. Each one
+ * plants a small, plausible fault in the baseline (or a migration) and names
+ * the database test that must fail on it. Run by scripts/mutate.ts; a mutant
+ * whose `from` text is not found is counted as surviving, and every `from` is
+ * unique in its file (test/mutants-schema-behaviour.test.ts).
+ */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { VIEW_CASES } from "../test/views-filter.cases.js";
+import { COMPLEX_CASES } from "../test/views-complex.cases.js";
+
+export type SchemaMutant = { readonly name: string; readonly from: string; readonly to: string; readonly file: string; readonly tests: readonly string[] };
+
+const ROOT = join(import.meta.dirname, "..");
+export const BASELINE = join(ROOT, "db", "baseline", "0293_baseline.sql");
+
+const CONTROL = ["test/control-plane.db.test.ts"];
+
+const control: SchemaMutant[] = [
+  { name: "control: admit lets a caller past its cap", from: "    elsif mine >= my_cap then\n        count_hit := 'share';", to: "    elsif mine > my_cap then\n        count_hit := 'share';" },
+  { name: "control: admit ignores the others' unmet floors", from: "elsif total + reserved >= b.ceiling then", to: "elsif total + reserved > b.ceiling + 1000 then" },
+  { name: "control: admit lets the key past its ceiling", from: "if total >= b.ceiling then\n        count_hit := 'ceiling';", to: "if total > b.ceiling then\n        count_hit := 'ceiling';" },
+  { name: "control: admit lets a burst past its maximum", from: "and burst >= b.burst_max then", to: "and burst > b.burst_max then" },
+  { name: "control: admit lets the MCP role name a worker's share", from: "and coalesce(nullif(current_setting('role', true), 'none'), session_user::text) = 'viafrei_mcp' then", to: "and false then" },
+  { name: "control: admit ignores the spacing", from: "and s.last_admitted_at > t - sp then", to: "and s.last_admitted_at > t then" },
+  { name: "control: admit never sets the owed mark", from: "update control.budget_state set owed_by = p_caller, owed_at = t where budget_key = k;", to: "perform 1;" },
+  { name: "control: admit's person stamp never makes the background yield", from: "and s.person_wanted_at > t - 2 * sp then", to: "and s.person_wanted_at > t then" },
+  { name: "control: admit records the wrong outcome in its refusal row", from: "    values (t, k, p_provider, p_caller, p_subject, hit,", to: "    values (t, k, p_provider, p_caller, p_subject, 'share'," },
+  { name: "control: admit's owed mark is not cleared by its owner", from: "owed_by = case when owed_by = p_caller then null else owed_by end", to: "owed_by = owed_by" },
+  { name: "control: hold holds a key without a hold", from: "if k is null or hs = 0 then\n    return null;", to: "if k is null then\n    return null;" },
+  { name: "control: hold takes any reason", from: "if p_reason is null or p_reason not in ('429', '5xx', 'owner') then", to: "if p_reason is null then" },
+  { name: "control: hold shortens a hold in force", from: "set held_until = greatest(coalesce(held_until, clock_timestamp()), clock_timestamp() + make_interval(secs => hs)),", to: "set held_until = clock_timestamp() + make_interval(secs => hs)," },
+  { name: "control: release hands back more than was admitted", from: "and bucket_start = to_timestamp(p_token::bigint) and not_sent < admitted;", to: "and bucket_start = to_timestamp(p_token::bigint);" },
+  { name: "control: want stamps a key without spacing", from: "   where p.provider = p_provider and b.spacing_ms is not null;", to: "   where p.provider = p_provider;" },
+  { name: "control: bucket_width is the window, not a minute of it", from: "coalesce(p_burst_window_s, p_window_s)) / 60) $$;", to: "coalesce(p_burst_window_s, p_window_s)) / 1) $$;" },
+  { name: "control: set_budget takes a ceiling above the licence", from: "      if v > b.licence_max then", to: "      if v > b.licence_max + 1 then" },
+  { name: "control: set_budget does not fit the caps to a lowered ceiling", from: "      update control.budgets set ceiling = v where budget_key = p_budget_key;\n      perform control.fit_shares(p_budget_key);", to: "      update control.budgets set ceiling = v where budget_key = p_budget_key;" },
+  { name: "control: set_budget keeps the floor of a door switched off", from: "floor = case when v = 0 then 0 when floor < 1 then 1 else floor end", to: "floor = case when floor < 1 then 1 else floor end" },
+  { name: "control: set_budget takes a spacing faster than the licence", from: "      if v < b.spacing_licence_ms then", to: "      if v < b.spacing_licence_ms - 1 then" },
+  { name: "control: set_budget takes a cap below the floor", from: "      if v < sh.floor and v > 0 then", to: "      if v < sh.floor and v > 1 then" },
+  { name: "control: set_budget takes a floor above the cap", from: "      if v > sh.cap then", to: "      if v > sh.cap + 1 then" },
+  { name: "control: set_budget takes a fraction", from: "    if p_value <> trunc(p_value) or p_value > 2000000000 then", to: "    if p_value > 2000000000 then" },
+  { name: "control: fit_shares gives no floor to a caller without one", from: "update control.shares sh set floor = 1 where sh.budget_key = p_budget_key and sh.floor < 1 and sh.cap > 0;", to: "perform 1;" },
+  { name: "control: fit_shares lets a ceiling below its callers through", from: "  if c < n then\n    raise exception 'control.fit_shares", to: "  if c < 0 then\n    raise exception 'control.fit_shares" },
+  { name: "control: fit_shares keeps floors that no longer fit", from: "update control.shares sh set floor = 1 where sh.budget_key = p_budget_key and sh.floor > 1 and sh.cap > 0;", to: "perform 1;" },
+  { name: "control: the shape takes a cap over the ceiling", from: "  if mx > ceil_ then", to: "  if mx > ceil_ + 100 then" },
+  { name: "control: the shape takes floors over the ceiling", from: "  if fl > ceil_ then", to: "  if fl > ceil_ + 100 then" },
+  { name: "control: the shape takes a caller without a floor", from: "where sh.budget_key = k and sh.floor < 1 and sh.cap > 0 order by sh.caller limit 1;", to: "where false order by sh.caller limit 1;" },
+  { name: "control: the shape takes a cap that eats the others' floors", from: "where sh.budget_key = k and sh.cap > ceil_ - (fl - sh.floor) order by sh.caller limit 1;", to: "where false order by sh.caller limit 1;" },
+  { name: "control: the budget shape trigger watches another column", from: "CREATE CONSTRAINT TRIGGER budgets_shape AFTER UPDATE OF ceiling ON", to: "CREATE CONSTRAINT TRIGGER budgets_shape AFTER UPDATE OF window_s ON" },
+  { name: "control: the shares shape trigger misses an insert", from: "CREATE CONSTRAINT TRIGGER shares_shape AFTER INSERT OR DELETE OR UPDATE ON", to: "CREATE CONSTRAINT TRIGGER shares_shape AFTER DELETE OR UPDATE ON" },
+  { name: "control: audit_change takes a change without a reason", from: "  if why is null then\n    raise exception 'control.%: a change needs a reason", to: "  if false then\n    raise exception 'control.%: a change needs a reason" },
+  { name: "control: audit_change records unchanged fields", from: "      if (o -> f) is distinct from (n -> f) then", to: "      if true then" },
+  { name: "control: audit_change forgets the actor", from: "who text := coalesce(nullif(current_setting('viafrei.actor', true), ''), current_user);", to: "who text := current_user;" },
+  { name: "control: the callers audit trigger is gone", from: "CREATE TRIGGER callers_audit AFTER INSERT OR DELETE OR UPDATE ON control.callers", to: "CREATE TRIGGER callers_audit AFTER DELETE ON control.callers" },
+  { name: "control: the shares audit trigger misses an update", from: "CREATE TRIGGER shares_audit AFTER INSERT OR DELETE OR UPDATE ON control.shares", to: "CREATE TRIGGER shares_audit AFTER INSERT OR DELETE ON control.shares" },
+  { name: "control: changes may be deleted", from: "CREATE TRIGGER changes_append_only BEFORE DELETE OR UPDATE ON control.changes", to: "CREATE TRIGGER changes_append_only BEFORE UPDATE ON control.changes" },
+  { name: "control: changes_append_only lets the row through", from: "  raise exception 'control.changes is append-only: % refused'", to: "  return null; raise exception 'control.changes is append-only: % refused'" },
+  { name: "control: the audit trigger is skipped under replica", from: "ALTER TABLE control.budgets ENABLE ALWAYS TRIGGER budgets_audit;", to: "" },
+  { name: "control: publish_terms raises a lowered ceiling back", from: "         ceiling            = least(t.ceiling, excluded.licence_max),", to: "         ceiling            = excluded.licence_max," },
+  { name: "control: publish_terms does not fit the keys", from: "  perform control.fit_shares(b.budget_key) from control.budgets b order by b.budget_key;", to: "" },
+  { name: "control: publish_terms takes an empty declaration", from: "     or jsonb_typeof(p -> 'callers') is distinct from 'array' or jsonb_array_length(p -> 'callers') = 0 then", to: "     or false then" },
+  { name: "control: publish_terms makes no budget state", from: "  insert into control.budget_state (budget_key)\n  select x ->> 'budget_key' from jsonb_array_elements(p -> 'budgets') x", to: "  insert into control.budget_state (budget_key)\n  select x ->> 'budget_key' from jsonb_array_elements(p -> 'budgets') x where false" },
+  { name: "control: rollup_refresh counts a share refusal as a ceiling", from: "         count(*) filter (where x.outcome = 'share')::integer,", to: "         count(*) filter (where x.outcome = 'ceiling')::integer," },
+  { name: "control: rollup_refresh keeps usage past 48 h", from: "delete from control.usage where bucket_start < now() - interval '48 hours';", to: "delete from control.usage where bucket_start < now() - interval '49 hours';" },
+  { name: "control: rollup_refresh keeps refusals past 14 days", from: "delete from control.refusals where at < now() - interval '14 days';", to: "delete from control.refusals where at < now() - interval '15 days';" },
+  { name: "control: rollup_refresh deletes the hourly rollup at 89 days", from: "delete from control.usage_hourly where hour < now() - interval '90 days';", to: "delete from control.usage_hourly where hour < now() - interval '88 days';" },
+].map((m) => ({ ...m, file: BASELINE, tests: CONTROL }));
+
+const LEDGERS = ["test/feed-state.db.test.ts"];
+/** Migration 0306 redefines these two functions, so their mutants are planted in its text: the baseline's copy is replaced at migrate time and a fault there could not be seen. */
+const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_finished_change.sql");
+const REDEFINED_BY_0306 = ["CREATE FUNCTION control.feed_state_after_change()", "CREATE FUNCTION control.recompute_feed_state("];
+const liveFile = (from: string): string => {
+  const base = readFileSync(BASELINE, "utf8");
+  const at = base.indexOf(from);
+  const fn = base.lastIndexOf("CREATE FUNCTION", at);
+  return at >= 0 && REDEFINED_BY_0306.some((h) => base.startsWith(h, fn)) ? M0306 : BASELINE;
+};
+
+const ledgers: SchemaMutant[] = [
+  { name: "ledgers: a feed refusal counts as an attempt", from: "                   n.budget_hit is null and n.status in ('ok', 'unchanged', 'degraded', 'error'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or", to: "                   n.status in ('ok', 'unchanged', 'degraded', 'error'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or" },
+  { name: "ledgers: a degraded feed run with no count is a success", from: "                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or (n.status = 'degraded' and n.items_seen is not null)),", to: "                   n.budget_hit is null and (n.status in ('ok', 'unchanged', 'degraded'))," },
+  { name: "ledgers: an error feed run is no attempt", from: "                   n.budget_hit is null and n.status in ('ok', 'unchanged', 'degraded', 'error'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or (n.status = 'degraded' and n.items_seen is not null)),", to: "                   n.budget_hit is null and n.status in ('ok', 'unchanged', 'degraded'),\n                   n.budget_hit is null and (n.status in ('ok', 'unchanged') or (n.status = 'degraded' and n.items_seen is not null))," },
+  { name: "ledgers: a feed change ignores the closed count", from: "                   n.budget_hit is null and coalesce(n.items_inserted, 0) + coalesce(n.items_updated, 0) + coalesce(n.items_closed, 0) > 0,", to: "                   n.budget_hit is null and coalesce(n.items_inserted, 0) > 0," },
+  { name: "ledgers: an interrupted ingest run is a success", from: "                   n.budget_hit is null and n.status in ('ok', 'degraded'),\n                   n.budget_hit is null and coalesce(n.rows, 0) > 0,", to: "                   n.budget_hit is null and n.status in ('ok', 'degraded', 'interrupted'),\n                   n.budget_hit is null and coalesce(n.rows, 0) > 0," },
+  { name: "ledgers: a delete never recomputes", from: "    if cardinality(v_recompute) > 0 then\n      perform control.recompute_feed_state(v_ledger, v_recompute);", to: "    if false then\n      perform control.recompute_feed_state(v_ledger, v_recompute);" },
+  { name: "ledgers: a feed update ignores a new budget hit", from: "                  and (n.finished_at, n.status, n.next_due_at, n.budget_hit, n.items_seen, n.items_inserted, n.items_updated, n.items_closed)\n                      is not distinct from\n                      (o.finished_at, o.status, o.next_due_at, o.budget_hit,", to: "                  and (n.finished_at, n.status, n.next_due_at, n.items_seen, n.items_inserted, n.items_updated, n.items_closed)\n                      is not distinct from\n                      (o.finished_at, o.status, o.next_due_at," },
+  { name: "ledgers: an ingest update never recomputes", from: "                  and (n.finished_at, n.status, n.next_due_at, n.budget_hit, n.rows)\n                      is not distinct from (o.finished_at, o.status, o.next_due_at, o.budget_hit, o.rows)));", to: "                  and true));" },
+  { name: "ledgers: a truncate forgets both ledgers", from: "  delete from control.feed_state where ledger = case when tg_table_name = 'feed_runs' then 'feed' else 'ingest' end;", to: "  delete from control.feed_state;" },
+  { name: "ledgers: the fold takes an older attempt", from: "    if r.att_at is not null and (s.last_attempt_at is null or r.att_at > s.last_attempt_at) then", to: "    if r.att_at is not null then" },
+  { name: "ledgers: the fold takes an older refusal", from: "    if r.ref_at is not null and (s.last_refusal_at is null or r.ref_at > s.last_refusal_at) then", to: "    if r.ref_at is not null then" },
+  { name: "ledgers: the fold's change moves back", from: "greatest(s.last_success_at, r.suc_at), greatest(s.last_changed_at, r.chg_at),", to: "greatest(s.last_success_at, r.suc_at), coalesce(r.chg_at, s.last_changed_at)," },
+  { name: "ledgers: a pause restarts at a refusal before the attempt", from: "       where q.feed_key = r.key and q.finished_at is not null and q.budget_hit is not null and q.finished_at > v_at", to: "       where q.feed_key = r.key and q.finished_at is not null and q.budget_hit is not null" },
+  { name: "ledgers: the pause starts at the last refusal, not the first after the attempt", from: "    select min(x) into v_new from unnest(r.ref_all) x where v_at is null or x > v_at;", to: "    select max(x) into v_new from unnest(r.ref_all) x where v_at is null or x > v_at;" },
+  { name: "ledgers: the ingest budget is the whole key", from: "                 else (select p.budget_key from control.providers p where p.provider = split_part(r.key, ':', 1)) end,", to: "                 else (select p.budget_key from control.providers p where p.provider = r.key) end," },
+  { name: "ledgers: the recompute's feed success takes a degraded run with no count", from: "               and (r.status in ('ok', 'unchanged') or (r.status = 'degraded' and r.items_seen is not null))\n             order by r.finished_at desc limit 1),", to: "               and (r.status in ('ok', 'unchanged', 'degraded'))\n             order by r.finished_at desc limit 1)," },
+  { name: "ledgers: the recompute's feed refusal is the oldest", from: "         where r.feed_key = k.key and r.finished_at is not null and r.budget_hit is not null\n           and r.status in ('ok', 'unchanged', 'degraded', 'error')\n         order by r.finished_at desc limit 1) h on true", to: "         where r.feed_key = k.key and r.finished_at is not null and r.budget_hit is not null\n           and r.status in ('ok', 'unchanged', 'degraded', 'error')\n         order by r.finished_at asc limit 1) h on true" },
+  { name: "ledgers: the recompute's ingest change ignores rows", from: "         where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) > 0", to: "         where r.provider = k.key and r.finished_at is not null and r.budget_hit is null and coalesce(r.rows, 0) >= 0" },
+  { name: "ledgers: an owner pause in runtime_config is not read", from: "WHERE ((rc.key = ANY (ARRAY[(('source.'::text || fs.key) || '.paused'::text), (('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))", to: "WHERE ((rc.key = ANY (ARRAY[(('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))" },
+  { name: "ledgers: an owner pause set to false still pauses", from: "(('mobilithek.'::text || fs.key) || '.paused'::text)])) AND (rc.value = 'true'::text))", to: "(('mobilithek.'::text || fs.key) || '.paused'::text)])))" },
+  { name: "ledgers: a schedule pause is not read", from: "                          WHERE ((ss.source_key = fs.key) AND (ss.state = 'paused'::text))", to: "                          WHERE ((ss.source_key = fs.key) AND (ss.state = 'none'::text))" },
+  { name: "ledgers: a hold comes before the owner", from: "                    WHEN (o.since IS NOT NULL) THEN 'owner'::text\n                    WHEN (bs.held_until > now()) THEN 'hold'::text", to: "                    WHEN (bs.held_until > now()) THEN 'hold'::text\n                    WHEN (o.since IS NOT NULL) THEN 'owner'::text" },
+  { name: "ledgers: an ended hold still pauses", from: "                    WHEN (bs.held_until > now()) THEN 'hold'::text\n                    WHEN (fs.refused_since IS NOT NULL) THEN 'budget'::text", to: "                    WHEN (bs.held_until IS NOT NULL) THEN 'hold'::text\n                    WHEN (fs.refused_since IS NOT NULL) THEN 'budget'::text" },
+  { name: "ledgers: a hold's pause starts at its end", from: "            WHEN 'hold'::text THEN (bs.held_until - make_interval(secs => (b.hold_s)::double precision))", to: "            WHEN 'hold'::text THEN bs.held_until" },
+  { name: "ledgers: a budget pause resumes at the refusal, not after its wait", from: "            WHEN 'budget'::text THEN COALESCE(( SELECT (r.at + make_interval(secs => (((COALESCE(r.wait_ms, 0))::numeric / 1000.0))::double precision))\n               FROM control.refusals r\n              WHERE (r.subject = fs.key)", to: "            WHEN 'budget'::text THEN COALESCE(( SELECT r.at\n               FROM control.refusals r\n              WHERE (r.subject = fs.key)" },
+  { name: "ledgers: a paused feed is stale", from: "    ((pr.reason IS NULL) AND (fs.last_success_at IS NOT NULL) AND", to: "    ((fs.last_success_at IS NOT NULL) AND" },
+  { name: "ledgers: stale after two cadences", from: "> make_interval(secs => ((3 * COALESCE(c.cadence_s, fs.cadence_s)))::double precision))) AS stale", to: "> make_interval(secs => ((2 * COALESCE(c.cadence_s, fs.cadence_s)))::double precision))) AS stale" },
+  { name: "ledgers: feed_checks lists closed feeds", from: "          WHERE ((d.ledger = 'feed'::text) AND (d.key = c.feed_key))), false) AS paused\n   FROM public.feed_catalog c\n  WHERE (closed_at IS NULL);", to: "          WHERE ((d.ledger = 'feed'::text) AND (d.key = c.feed_key))), false) AS paused\n   FROM public.feed_catalog c;" },
+  { name: "ledgers: feed_checks reads the attempt, not the success", from: "    ( SELECT fs.last_success_at\n           FROM control.feed_state fs\n          WHERE ((fs.ledger = 'feed'::text) AND (fs.key = c.feed_key))) AS checked_at,", to: "    ( SELECT fs.last_attempt_at\n           FROM control.feed_state fs\n          WHERE ((fs.ledger = 'feed'::text) AND (fs.key = c.feed_key))) AS checked_at," },
+  { name: "ledgers: the version bumps on unchanged", from: "  if new.status in ('ok', 'degraded') then\n    insert into feed_versions as fv (ledger, key, version, observed_at)", to: "  if new.status in ('ok', 'degraded', 'unchanged') then\n    insert into feed_versions as fv (ledger, key, version, observed_at)" },
+  { name: "ledgers: the observed time moves back", from: "    returning fv.version into v;", to: "    returning fv.version into v; update feed_versions set observed_at = new.finished_at where ledger = l and key = k;" },
+  { name: "ledgers: the extent window is an hour", from: "       and x.started_at > t - interval '48 hours'\n       and x.started_at <= t\n     order by x.items_seen desc, x.started_at desc\n     limit 1;", to: "       and x.started_at > t - interval '1 hour'\n       and x.started_at <= t\n     order by x.items_seen desc, x.started_at desc\n     limit 1;" },
+  { name: "ledgers: the extent takes the newest count, not the largest", from: "     order by x.items_seen desc, x.started_at desc\n     limit 1;\n    insert into feed_run_extents", to: "     order by x.started_at desc\n     limit 1;\n    insert into feed_run_extents" },
+  { name: "ledgers: the bump update ignores the count", from: "OR (old.status IS DISTINCT FROM new.status) OR (old.items_seen IS DISTINCT FROM new.items_seen)))) EXECUTE FUNCTION public.feed_versions_bump();", to: "OR (old.status IS DISTINCT FROM new.status)))) EXECUTE FUNCTION public.feed_versions_bump();" },
+  { name: "ledgers: the ingest bump on update is gone", from: "CREATE TRIGGER feed_versions_bump_update AFTER UPDATE OF finished_at, status ON public.ingest_runs FOR EACH ROW WHEN (((new.finished_at IS NOT NULL)", to: "CREATE TRIGGER feed_versions_bump_update AFTER UPDATE OF finished_at, status ON public.ingest_runs FOR EACH ROW WHEN (false and ((new.finished_at IS NOT NULL)" },
+  { name: "ledgers: the ingest bump on insert is gone", from: "CREATE TRIGGER feed_versions_bump_insert AFTER INSERT ON public.ingest_runs FOR EACH ROW WHEN ((new.finished_at IS NOT NULL))", to: "CREATE TRIGGER feed_versions_bump_insert AFTER INSERT ON public.ingest_runs FOR EACH ROW WHEN (false)" },
+  { name: "ledgers: a delete does not bump the version", from: "  select 'feed', d.feed_key, 1, now() from (select distinct o.feed_key from old_runs o) d", to: "  select 'feed', d.feed_key, 1, now() from (select distinct o.feed_key from old_runs o) d where false" },
+  { name: "ledgers: a delete keeps the forgotten run's extent", from: "   where e.feed_key in (select o.feed_key from old_runs o);\n  return null;", to: "   where false;\n  return null;" },
+  { name: "ledgers: project_run takes another source's run", from: "  if r.source_id is distinct from current_setting('viafrei.source_id', true) then", to: "  if false then" },
+  { name: "ledgers: project_run takes a running run", from: "  if r.status = 'running' then raise exception", to: "  if false then raise exception" },
+  { name: "ledgers: project_run projects twice", from: "  if r.projected_at is not null then raise exception", to: "  if false then raise exception" },
+  { name: "ledgers: project_run takes a feed it did not register", from: "  if not exists (select 1 from public.feed_catalog c where c.feed_key = r.source_id and c.published_by = 'ingestor') then", to: "  if false then" },
+  { name: "ledgers: project_run maps partial to error", from: "          case r.status when 'partial' then 'degraded' when 'limited' then 'held' else r.status end,", to: "          case r.status when 'partial' then 'error' when 'limited' then 'held' else r.status end," },
+  { name: "ledgers: project_run's changed count drops the updates", from: "          r.fetched, coalesce(r.inserted, 0) + coalesce(r.updated, 0) + coalesce(r.closed, 0), r.inserted, r.updated, r.closed,", to: "          r.fetched, coalesce(r.inserted, 0) + coalesce(r.closed, 0), r.inserted, r.updated, r.closed," },
+  { name: "ledgers: register_feed takes a key that is no source", from: "  if not exists (select 1 from ingestor.sources s where s.id = p_feed_key) then", to: "  if false then" },
+  { name: "ledgers: register_feed takes another publisher's key", from: "  if exists (select 1 from public.feed_catalog c where c.feed_key = p_feed_key and c.published_by is distinct from 'ingestor') then", to: "  if false then" },
+  { name: "ledgers: register_feed leaves a closed feed closed", from: "         updated_at = clock_timestamp(), closed_at = null\n   where c.published_by = 'ingestor';", to: "         updated_at = clock_timestamp()\n   where c.published_by = 'ingestor';" },
+  { name: "ledgers: taken_feed_keys names the ingestor's own", from: "   where c.feed_key = any(p_ids) and c.published_by is distinct from 'ingestor'", to: "   where c.feed_key = any(p_ids)" },
+  { name: "ledgers: registered_sources takes another publisher's label", from: "     LEFT JOIN public.feed_catalog c ON (((c.feed_key = s.id) AND (c.published_by = 'ingestor'::text))));", to: "     LEFT JOIN public.feed_catalog c ON ((c.feed_key = s.id)));" },
+  { name: "ledgers: registered_sources calls a disabled source enabled", from: "    (s.status = 'enabled'::text) AS enabled\n   FROM (ingestor.sources s", to: "    true AS enabled\n   FROM (ingestor.sources s" },
+  { name: "ledgers: source bounds take an unknown source", from: "  if known is not true then\n    raise exception 'runtime_config: no source named % is declared', src", to: "  if false then\n    raise exception 'runtime_config: no source named % is declared', src" },
+  { name: "ledgers: source bounds read a closed catalogue row", from: "    left join feed_catalog fc on fc.feed_key = q.k and fc.closed_at is null", to: "    left join feed_catalog fc on fc.feed_key = q.k" },
+  { name: "ledgers: source bounds ignore the schedule's floor", from: "         greatest(coalesce(fc.min_interval_s, 0), coalesce(ss.floor_s, 0), 60),", to: "         greatest(coalesce(fc.min_interval_s, 0), 60)," },
+  { name: "ledgers: source bounds ignore the catalogue's floor", from: "         greatest(coalesce(fc.min_interval_s, 0), coalesce(ss.floor_s, 0), 60),\n", to: "         greatest(coalesce(ss.floor_s, 0), 60),\n" },
+  { name: "ledgers: source bounds stretch five times", from: "    if declared_s is not null and new.value::int > declared_s * 4 then", to: "    if declared_s is not null and new.value::int > declared_s * 5 then" },
+  { name: "ledgers: source bounds are not checked on update", from: "CREATE TRIGGER runtime_config_source_bounds BEFORE INSERT OR UPDATE ON public.runtime_config", to: "CREATE TRIGGER runtime_config_source_bounds BEFORE INSERT ON public.runtime_config" },
+  { name: "ledgers: an ingest feed_state trigger is skipped under replica", from: "ALTER TABLE public.ingest_runs ENABLE ALWAYS TRIGGER ingest_runs_feed_state_insert;", to: "" },
+].map((m) => ({ ...m, file: liveFile(m.from), tests: LEDGERS }));
+
+const ROAD = ["test/road-functions.db.test.ts"];
+
+const road: SchemaMutant[] = [
+  { name: "road: raw_resolve ignores its own raw", from: "           when p_raw is not null then p_raw\n           when p_raw_hash is null then null", to: "           when p_raw_hash is null then null" },
+  { name: "road: raw_resolve reads the previous day", from: "                and e.observed_at >= date_trunc('day', p_observed_at at time zone 'UTC') at time zone 'UTC'\n", to: "\n" },
+  { name: "road: raw_resolve ignores the hash", from: "                and e.raw_hash = p_raw_hash\n", to: "\n" },
+  { name: "road: raw_resolve takes the oldest raw", from: "                and e.raw_hash = p_raw_hash\n              order by e.observed_at desc", to: "                and e.raw_hash = p_raw_hash\n              order by e.observed_at asc" },
+  { name: "road: event_raw prefers a row without its raw", from: "   order by (e.raw is null), e.kind\n   limit 1", to: "   order by (e.raw is not null), e.kind\n   limit 1" },
+  { name: "road: texts_backfill ignores since", from: "     where since is null or e.observed_at >= since\n     group by 1, 2, 3", to: "     where true\n     group by 1, 2, 3" },
+  { name: "road: texts_backfill narrows the first sighting", from: "     set first_seen_at = least(t.first_seen_at, excluded.first_seen_at),", to: "     set first_seen_at = excluded.first_seen_at," },
+  { name: "road: texts_backfill keeps an older position", from: "                           when excluded.last_seen_at > t.last_seen_at then excluded.geom\n", to: "\n" },
+  { name: "road: texts_backfill takes the first sighting's position", from: "             and w.observed_at = f.last_seen_at\n             and coalesce(w.title, '') = f.title", to: "             and w.observed_at = (select min(z.observed_at) from autobahn_events z where z.road = f.road)\n             and coalesce(w.title, '') = f.title" },
+  { name: "road: jam rollup counts a warning without a traffic type", from: "           (e.kind = 'warning' and e.abnormal_traffic_type is not null and e.title is not null) as jam,", to: "           (e.kind = 'warning' and e.title is not null) as jam," },
+  { name: "road: jam rollup counts roadworks", from: "           (e.kind = 'warning' and e.abnormal_traffic_type is not null and e.title is not null) as jam,", to: "           (e.abnormal_traffic_type is not null and e.title is not null) as jam," },
+  { name: "road: jam rollup rewrites unchanged hours", from: "    where (h.jam_titles, h.jam_subtitles) is distinct from (excluded.jam_titles, excluded.jam_subtitles);", to: ";" },
+  { name: "road: jam rollup takes an empty window", from: "  if v_to <= v_from then\n    raise exception 'autobahn_jam_rollup_refresh", to: "  if v_to < v_from then\n    raise exception 'autobahn_jam_rollup_refresh" },
+  { name: "road: jam rollup takes a window over two days", from: "  if v_to - v_from > interval '2 days' then", to: "  if v_to - v_from > interval '3 days' then" },
+  { name: "road: jam rollup leaves the hourless roads out", from: "         coalesce(array_agg(d.title order by d.title, d.subtitle) filter (where d.jam), '{}'),", to: "         array_agg(d.title order by d.title, d.subtitle) filter (where d.jam)," },
+  { name: "road: validity_date takes the 31st of every month", from: "  if di > extract(day from make_date(yi, mi, 1) + interval '1 month' - interval '1 day')::int then return null; end if;", to: "  if di > 31 then return null; end if;" },
+  { name: "road: validity_date takes month 13", from: "  if yi < 1 or mi < 1 or mi > 12 or di < 1 then return null; end if;", to: "  if yi < 1 or mi < 1 or di < 1 then return null; end if;" },
+  { name: "road: validity_date takes a three-digit year", from: "y !~ '^([0-9]{2}|[0-9]{4})$' then return null; end if;", to: "y !~ '^([0-9]{2,4})$' then return null; end if;" },
+  { name: "road: validity_date reads a two-digit year as the 1900s", from: "  yi := case when length(y) = 2 then 2000 + y::int else y::int end;", to: "  yi := case when length(y) = 2 then 1900 + y::int else y::int end;" },
+  { name: "road: validity_time refuses 24:00", from: "  if h::int = 24 and mi::int = 0 then return make_time(24, 0, 0); end if;", to: "" },
+  { name: "road: validity_time takes a minute of 60", from: "  if h::int > 23 or mi::int > 59 then return null; end if;", to: "  if h::int > 23 or mi::int > 60 then return null; end if;" },
+  { name: "road: validity_time takes a one-digit minute", from: "  if h !~ '^[0-9]{1,2}$' or mi !~ '^[0-9]{2}$' then return null; end if;", to: "  if h !~ '^[0-9]{1,2}$' or mi !~ '^[0-9]{1,2}$' then return null; end if;" },
+  { name: "road: validity_overlaps forgets the excepted days", from: "        if dd is not null then except_days := except_days || dd; end if;", to: "        perform 1;" },
+  { name: "road: validity_overlaps ignores the weekday", from: "          if extract(isodow from dd)::int = any(dows) and not (dd = any(except_days)) then", to: "          if not (dd = any(except_days)) then" },
+  { name: "road: validity_overlaps reads Tag as no day", from: "        if m[1] ~* '^Tag$' then\n          dows := array[1, 2, 3, 4, 5, 6, 7];", to: "        if m[1] ~* '^Tag$' then\n          dows := '{}';" },
+  { name: "road: validity_overlaps ends the weekly window past the last date", from: "        while dd <= least(d2, to_day) loop", to: "        while dd <= to_day loop" },
+  { name: "road: validity_overlaps reads Berlin time as UTC", from: "          w_start := (dd + t1) at time zone 'Europe/Berlin';\n          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;", to: "          w_start := (dd + t1) at time zone 'UTC';\n          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'UTC';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;" },
+  { name: "road: validity_overlaps ends an overnight day window the same day", from: "          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;", to: "          w_end := (dd + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;" },
+  { name: "road: validity_overlaps starts the weekly days on the first asked day", from: "        dd := greatest(d1, from_day - 1);", to: "        dd := greatest(d1, from_day);" },
+  { name: "road: validity_overlaps touches a span at its end", from: "        stated := true;\n        if w_start <= to_at and w_end > from_at then return true; end if;", to: "        stated := true;\n        if w_start <= to_at and w_end >= from_at then return true; end if;" },
+  { name: "road: validity_overlaps says false when nothing is stated", from: "  return case when stated then false else null end;", to: "  return false;" },
+  // the 'Zeiträumen gültig' guard is a fast path: without it no line opens a list and the answer is the same null
+  { name: "road: validity_overlaps reads an object as lines", from: "  if description is null or jsonb_typeof(description) <> 'array' or description::text not like '%Zeiträumen gültig%' then", to: "  if description is null or description::text not like '%Zeiträumen gültig%' then" },
+  { name: "road: suspended when any status is suspended", from: "  select exists (select 1 from st)\n     and not exists (select 1 from st where status is distinct from 'suspended')", to: "  select exists (select 1 from st where status = 'suspended')" },
+  { name: "road: suspended with no status at all", from: "  select exists (select 1 from st)\n     and not exists", to: "  select true\n     and not exists" },
+  { name: "road: in force before its start", from: "    when overall_start is not null and overall_start > at then false\n    when overall_end   is not null and overall_end   < at then false\n    else not road_event_suspended(payload)", to: "    when overall_end   is not null and overall_end   < at then false\n    else not road_event_suspended(payload)" },
+  { name: "road: in force after its end", from: "    when overall_end   is not null and overall_end   < at then false\n    else not road_event_suspended(payload)", to: "    else not road_event_suspended(payload)" },
+  { name: "road: in force while suspended", from: "    else not road_event_suspended(payload)\n  end", to: "    else true\n  end" },
+  { name: "road: in force outside its windows", from: "    when valid_windows is not null and not (valid_windows @> at) then false\n    else road_event_in_force(overall_start, overall_end, payload, at)", to: "    when false then false\n    else road_event_in_force(overall_start, overall_end, payload, at)" },
+  { name: "road: known in force outside its windows", from: "    when valid_windows is not null and not (valid_windows @> at) then false\n    when overall_start is not null", to: "    when overall_start is not null" },
+  { name: "road: known in force before its start", from: "    when overall_start is not null and overall_start > at then false\n    when overall_end   is not null and overall_end   < at then false\n    else not coalesce(", to: "    when overall_end   is not null and overall_end   < at then false\n    else not coalesce(" },
+  { name: "road: known in force after its end", from: "    when overall_end   is not null and overall_end   < at then false\n    else not coalesce(", to: "    else not coalesce(" },
+  { name: "road: known ignores the known flag", from: "    else not coalesce(suspended, road_event_suspended(payload))", to: "    else not road_event_suspended(payload)" },
+  { name: "road: known ignores the payload when the flag is unknown", from: "    else not coalesce(suspended, road_event_suspended(payload))", to: "    else not coalesce(suspended, false)" },
+  { name: "road: road_ref_key keeps leading zeros", from: "    when c ~ '^[A-Z]+[0-9]' then regexp_replace(c, '^([A-Z]+)0*([0-9]+)(.*)$', '\\1\\2\\3')", to: "    when false then c" },
+  { name: "road: road_ref_key keeps dots and dashes", from: "regexp_replace(upper(road), '[[:space:]._-]+', '', 'g') as c", to: "regexp_replace(upper(road), '[[:space:]]+', '', 'g') as c" },
+  { name: "road: road_ref_key keeps case", from: "regexp_replace(upper(road), '[[:space:]._-]+', '', 'g') as c", to: "regexp_replace(road, '[[:space:]._-]+', '', 'g') as c" },
+  { name: "road: road_ref_key returns an empty key", from: "    when c = '' then null\n    when c ~ '^[A-Z]+[0-9]'", to: "    when c ~ '^[A-Z]+[0-9]'" },
+  { name: "road: the suspended trigger keeps the writer's flag", from: "  new.suspended := road_event_suspended(new.payload);", to: "  new.suspended := coalesce(new.suspended, road_event_suspended(new.payload));" },
+  { name: "road: the suspended trigger misses a payload update", from: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE OF payload ON public.road_events", to: "CREATE TRIGGER road_events_suspended BEFORE INSERT ON public.road_events" },
+  { name: "road: the suspended trigger fires on every update", from: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE OF payload ON public.road_events", to: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE ON public.road_events" },
+  { name: "road: road_events_current shows the closed", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE (public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));" },
+  { name: "road: road_events_current shows the not in force", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE ((closed_at IS NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));" },
+  { name: "road: road_events_current shows the confidential", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()));" },
+  { name: "road: road_event_locations_live shows a deleted location", from: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));", to: "  WHERE ((EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));" },
+  { name: "road: road_event_locations_live shows a deleted event's location", from: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));", to: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id)))));" },
+].map((m) => ({ ...m, file: BASELINE, tests: ROAD }));
+
+const OPS = ["test/ops-functions.db.test.ts"];
+
+const ops: SchemaMutant[] = [
+  { name: "ops: ops_audit clears an address younger than twelve months", from: "     and old.at < now() - interval '12 months'\n     and old.client_ip is not null", to: "     and old.client_ip is not null" },
+  { name: "ops: ops_audit lets another column change with the address", from: "     and (to_jsonb(new) - 'client_ip') = (to_jsonb(old) - 'client_ip')\n", to: "\n" },
+  { name: "ops: ops_audit lets an address be rewritten", from: "     and new.client_ip is null\n     and (to_jsonb(new)", to: "     and (to_jsonb(new)" },
+  { name: "ops: ops_audit may be deleted", from: "CREATE TRIGGER ops_audit_append_only BEFORE DELETE OR UPDATE ON public.ops_audit", to: "CREATE TRIGGER ops_audit_append_only BEFORE UPDATE ON public.ops_audit" },
+  { name: "ops: forget_ips clears the newer addresses too", from: "   where client_ip is not null\n     and at < now() - interval '12 months';", to: "   where client_ip is not null;" },
+  { name: "ops: forget_ips records a run on every call", from: "  if n > 0 or not exists (\n       select 1 from ingest_runs\n        where provider = 'ops_audit_retention'", to: "  if true or not exists (\n       select 1 from ingest_runs\n        where provider = 'ops_audit_retention'" },
+  { name: "ops: forget_ips records no run when it cleared one", from: "  if n > 0 or not exists (\n", to: "  if not exists (\n" },
+  { name: "ops: passkeys hold eleven", from: "  if (select count(*) from ops_passkeys) >= 10 then", to: "  if (select count(*) from ops_passkeys) >= 11 then" },
+  { name: "ops: the sign counter may go back", from: "  if new.sign_count < old.sign_count then", to: "  if new.sign_count < old.sign_count - 1 then" },
+  { name: "ops: a restart within four minutes", from: "       and r.requested_at > new.requested_at - interval '5 minutes'", to: "       and r.requested_at > new.requested_at - interval '3 minutes'" },
+  { name: "ops: a refused restart counts", from: "       and r.state <> 'refused'\n       and r.requested_at > new.requested_at - interval '5 minutes'", to: "       and r.requested_at > new.requested_at - interval '5 minutes'" },
+  { name: "ops: a restart limits every worker", from: "       and r.target = new.target\n       and r.state <> 'refused'", to: "       and r.state <> 'refused'" },
+  { name: "ops: a run-now of an unknown source goes", from: "  if not found then\n    raise exception 'ops_requests: no engine runs a source named %'", to: "  if false then\n    raise exception 'ops_requests: no engine runs a source named %'" },
+  { name: "ops: a run-now ignores the licence floor", from: "  floor_s := greatest(coalesce(s.min_interval_s, 0), s.floor_s);", to: "  floor_s := s.floor_s;" },
+  { name: "ops: a run-now reads a closed catalogue row", from: "    left join feed_catalog fc on fc.feed_key = ss.source_key and fc.closed_at is null", to: "    left join feed_catalog fc on fc.feed_key = ss.source_key" },
+  { name: "ops: two run-nows wait", from: "     where r.action = 'run-now' and r.target = new.target and r.state = 'pending'", to: "     where false" },
+  { name: "ops: a place slug may be freed", from: "    raise exception 'place_slugs: a slug is assigned once and never freed", to: "    return old; raise exception 'place_slugs: a slug is assigned once and never freed" },
+  { name: "ops: a place slug may be re-pointed", from: "  if new.slug is distinct from old.slug or new.ags is distinct from old.ags then", to: "  if new.slug is distinct from old.slug then" },
+  { name: "ops: a place slug may be renamed", from: "CREATE TRIGGER place_slugs_frozen BEFORE DELETE OR UPDATE ON public.place_slugs", to: "CREATE TRIGGER place_slugs_frozen BEFORE DELETE ON public.place_slugs" },
+  { name: "ops: a station slug may be freed", from: "CREATE TRIGGER station_slugs_frozen BEFORE DELETE OR UPDATE ON public.station_slugs", to: "CREATE TRIGGER station_slugs_frozen BEFORE UPDATE ON public.station_slugs" },
+  { name: "ops: a station slug may be re-pointed", from: "  if new.slug is distinct from old.slug or new.station_no is distinct from old.station_no then", to: "  if new.slug is distinct from old.slug then" },
+  { name: "ops: eleven watches a session", from: "  limit_per_session constant integer := 10;", to: "  limit_per_session constant integer := 11;" },
+  { name: "ops: a stopped watch still counts", from: "   where session_id = new.session_id and stopped_at is null;", to: "   where session_id = new.session_id;" },
+  { name: "ops: watches count across sessions", from: "   where session_id = new.session_id and stopped_at is null;", to: "   where stopped_at is null;" },
+  { name: "ops: the watch event names no event", from: "    format('{\"v\":1,\"watch_id\":%s,\"event_id\":%s}', new.watch_id, new.id)", to: "    format('{\"v\":1,\"watch_id\":%s,\"event_id\":%s}', new.watch_id, new.watch_id)" },
+  { name: "ops: the watch event notifies no channel", from: "CREATE TRIGGER watch_events_notify_insert AFTER INSERT ON public.watch_events", to: "CREATE TRIGGER watch_events_notify_insert AFTER UPDATE ON public.watch_events" },
+  { name: "ops: the mask misses IPv6", from: "(?:[0-9A-Fa-f:]*::[0-9A-Fa-f:]*|[0-9A-Fa-f]{1,4}(?::[0-9A-Fa-f]{1,4}){2,7}:[0-9A-Fa-f]{1,5})(?![0-9A-Za-z_:])'::text, '<ip>'::text", to: "(?:x)(?![0-9A-Za-z_:])'::text, '<ip>'::text" },
+  { name: "ops: the mask takes a version for an address", from: "(?<![0-9A-Za-z_])[0-9]{1,3}(?:\\.[0-9]{1,3}){3}(?![0-9A-Za-z_])'::text", to: "[0-9]{1,3}(?:\\.[0-9]{1,3}){3}'::text" },
+  { name: "ops: the mask takes a six-digit hex run for an address", from: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:", to: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?:" },
+  { name: "ops: the mask takes a five-digit hex group for an address", from: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{5}:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:", to: "(?<![0-9A-Za-z_])(?<![0-9A-Fa-f]:)(?![0-9A-Fa-f:]*[0-9A-Fa-f]{6})(?:" },
+  { name: "ops: the page key skips a byte", from: "|| chr(97 + get_byte(h, 9) % 26);", to: "|| chr(97 + get_byte(h, 10) % 26);" },
+  { name: "ops: the traffic class misses a probe", from: "'viafrei-test-round', 'viafrei-own') then 'own'", to: "'viafrei-test-round') then 'own'" },
+  { name: "ops: the traffic class calls a stateless client real", from: "              when client in ('unknown', 'stateless') then 'scanners'", to: "              when client in ('unknown') then 'scanners'" },
+  { name: "ops: departs_at counts from midnight local", from: "    RETURN ((((service_date + '12:00:00'::time without time zone) AT TIME ZONE tz) - '12:00:00'::interval) + make_interval", to: "    RETURN (((service_date AT TIME ZONE tz)) + make_interval" },
+  { name: "ops: the English twin ignores the event", from: "     and e.event_ii = w.raw->'properties'->>'EC_II'\n", to: "\n" },
+  { name: "ops: the English twin ignores the cell", from: "     and w.warncell_id = any (e.warncell_ids)\n", to: "\n" },
+  { name: "ops: the English twin ignores the sending time", from: "      on e.sent_at = w.published_at\n", to: "      on true\n" },
+  { name: "ops: the English twin of a deleted warning", from: "    from weather_warnings_live w\n    join weather_warnings_en_live e", to: "    from weather_warnings w\n    join weather_warnings_en_live e" },
+  { name: "ops: autosummarize reaches a btree", from: "       and am.amname = 'brin'\n", to: "\n" },
+  { name: "ops: autosummarize is set twice", from: "       and array_position(coalesce(ic.reloptions, '{}'), 'autosummarize=on') is null\n", to: "\n" },
+].map((m) => ({ ...m, file: BASELINE, tests: OPS }));
+
+const TEXT = ["test/text-functions.db.test.ts"];
+
+const text: SchemaMutant[] = [
+  { name: "text: street key keeps the ß", from: "replace(lower(COALESCE(street, ''::text)), 'ß'::text, 'ss'::text)", to: "lower(COALESCE(street, ''::text))" },
+  { name: "text: street key keeps Strasse", from: "'strasse|str\\.'::text, 'str'::text, 'g'::text)", to: "'str\\.'::text, 'str'::text, 'g'::text)" },
+  { name: "text: street key keeps the digits", from: "'[^a-zäöü]'::text, ''::text, 'g'::text);", to: "'[^a-zäöü0-9]'::text, ''::text, 'g'::text);" },
+  { name: "text: house key prefers the street", from: "RETURN COALESCE(\"substring\"(COALESCE(house_number, ''::text), '[0-9]+'::text), \"substring\"(COALESCE(street, ''::text), '[0-9]+'::text));", to: "RETURN COALESCE(\"substring\"(COALESCE(street, ''::text), '[0-9]+'::text), \"substring\"(COALESCE(house_number, ''::text), '[0-9]+'::text));" },
+  { name: "text: operator tokens keep two letters", from: "WHERE ((length(t.t) >= 3) AND (t.t <> ALL (ARRAY['gmbh'::text,", to: "WHERE ((length(t.t) >= 2) AND (t.t <> ALL (ARRAY['gmbh'::text," },
+  { name: "text: operator tokens keep the legal form", from: "(ARRAY['gmbh'::text, 'mbh'::text,", to: "(ARRAY['mbh'::text," },
+  { name: "text: operator tokens keep duplicates", from: "RETURN ARRAY(SELECT DISTINCT t.t FROM unnest(regexp_split_to_array(lower(COALESCE(charging_operator_tokens.name", to: "RETURN ARRAY(SELECT t.t FROM unnest(regexp_split_to_array(lower(COALESCE(charging_operator_tokens.name" },
+  { name: "text: free of charge only at the start", from: "~ '(^|;)\\s*Kostenlos'::text) END;", to: "~ '^Kostenlos'::text) END;" },
+  { name: "text: free of charge false for no payment text", from: "    RETURN CASE WHEN (NULLIF(btrim(((extras -> 'device'::text) ->> 'payment'::text)), ''::text) IS NULL) THEN NULL::boolean ELSE (btrim(((extras -> 'device'::text) ->> 'payment'::text)) ~ '(^|;)", to: "    RETURN CASE WHEN false THEN NULL::boolean ELSE (btrim(((extras -> 'device'::text) ->> 'payment'::text)) ~ '(^|;)" },
+  { name: "text: card misses the debit card", from: "~ '(Kredit|Debit)karte'::text) END;", to: "~ 'Kreditkarte'::text) END;" },
+  { name: "text: opening hours miss the restricted", from: "WHEN 'Eingeschränkt'::text THEN 'restricted'::text", to: "WHEN 'eingeschränkt'::text THEN 'restricted'::text" },
+  { name: "text: parking untrimmed", from: "WHEN (lower(btrim(((extras -> 'device'::text) ->> 'parking'::text))) = 'keine beschränkung'::text)", to: "WHEN (lower(((extras -> 'device'::text) ->> 'parking'::text)) = 'keine beschränkung'::text)" },
+  { name: "text: postcode keeps four digits", from: "~ '^[0-9]{4}$'::text) THEN ('0'::text ||", to: "~ '^[0-9]{4}$'::text) THEN (''::text ||" },
+  { name: "text: postcode takes the first of two", from: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) = 1)", to: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) >= 1)" },
+  { name: "text: postcode takes six digits", from: "WHEN (regexp_count(raw, '(^|[^0-9])[0-9]{5}(?=[^0-9]|$)'::text) = 1) THEN \"substring\"(raw, '(?:^|[^0-9])([0-9]{5})(?:[^0-9]|$)'::text)", to: "WHEN (regexp_count(raw, '[0-9]{5}'::text) = 1) THEN \"substring\"(raw, '([0-9]{5})'::text)" },
+  { name: "text: the postcode trigger keeps the raw", from: "  new.postcode := vf_postcode(new.postcode);", to: "  new.postcode := new.postcode;" },
+  { name: "text: charging sites skip the fold on update", from: "CREATE TRIGGER charging_sites_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER charging_sites_postcode BEFORE INSERT ON" },
+  { name: "text: fuel stations skip the fold", from: "CREATE TRIGGER fuel_stations_postcode BEFORE INSERT OR UPDATE OF postcode ON public.fuel_stations FOR EACH ROW", to: "CREATE TRIGGER fuel_stations_postcode BEFORE INSERT OR UPDATE OF postcode ON public.fuel_stations FOR EACH ROW WHEN (false)" },
+  { name: "text: street bays skip the fold on update", from: "CREATE TRIGGER street_bays_postcode BEFORE INSERT OR UPDATE OF postcode ON", to: "CREATE TRIGGER street_bays_postcode BEFORE INSERT ON" },
+].map((m) => ({ ...m, file: BASELINE, tests: TEXT }));
+
+const VIEWS = ["test/views-filter.db.test.ts"];
+
+/** The view's CREATE VIEW block in the baseline, up to its closing semicolon. */
+function viewBlock(sql: string, view: string): string {
+  const start = sql.indexOf(`\nCREATE VIEW ${view} AS\n`);
+  if (start < 0) throw new Error(`no CREATE VIEW ${view} in the baseline`);
+  const end = sql.indexOf(";\n", start);
+  return sql.slice(start + 1, end + 1);
+}
+
+/** Per filter view: its WHERE negated (or, for a projection, a WHERE false), and each `drops` snippet replaced by true. */
+const views: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  return VIEW_CASES.flatMap((k) => {
+    const block = viewBlock(sql, k.view);
+    const where = block.lastIndexOf("\n  WHERE ");
+    const negated =
+      where < 0
+        ? { name: `views: ${k.view} shows nothing`, from: block, to: `${block.slice(0, -1)} WHERE false;` }
+        : { name: `views: ${k.view} shows what it should leave out`, from: block, to: `${block.slice(0, where)}\n  WHERE NOT ${block.slice(where + "\n  WHERE ".length)}` };
+    const drops = (k.drops ?? []).map((d) => {
+      if (block.split(d).length !== 2) throw new Error(`${k.view}: the drop ${d} is not once in its block`);
+      return { name: `views: ${k.view} without ${d}`, from: block, to: block.replace(d, d.endsWith(")") && !d.startsWith("(") ? "true)" : d.endsWith(" AND") ? "true AND" : "true") };
+    });
+    return [negated, ...drops];
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: VIEWS }));
+
+const COMPLEX = ["test/views-complex.db.test.ts"];
+
+/** Per joined or aggregating view: each of its case's snippets broken alone, inside the view's (or materialized view's) block. */
+const complex: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  return COMPLEX_CASES.flatMap((k) => {
+    const at = [`\nCREATE VIEW ${k.view} AS\n`, `\nCREATE MATERIALIZED VIEW ${k.view} AS\n`].map((h) => sql.indexOf(h)).find((i) => i >= 0);
+    if (at === undefined) throw new Error(`no CREATE VIEW ${k.view} in the baseline`);
+    const block = sql.slice(at + 1, sql.indexOf(";\n", at) + 1);
+    return k.mutants.map(([what, from, to]) => {
+      if (block.split(from).length !== 2) throw new Error(`${k.view}: ${from} is not once in its block`);
+      return { name: `views: ${k.view} shows ${what}`, from: block, to: block.replace(from, to) };
+    });
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: COMPLEX }));
+
+const FUEL = ["test/fuel-functions.db.test.ts"];
+
+const fuel: SchemaMutant[] = [
+  { name: "fuel: the Land reads a closed place", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n       and g.geom is not null\n       and g.closed_at is null", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n       and g.geom is not null" },
+  { name: "fuel: the Land reads another source", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where true\n" },
+  { name: "fuel: the Land reads a district", from: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n       and g.kind = 'city'\n", to: "    select left(g.admin_code, 2)\n      from gazetteer_places g\n     where g.source_id = 'bkg_gvisys'\n" },
+  { name: "fuel: the Land is the farthest city", from: "     order by g.geom <-> p\n     limit 1) end", to: "     order by g.geom <-> p desc\n     limit 1) end" },
+  { name: "fuel: the towns reach 30 km", from: "     where n.d <= 20000) end", to: "     where n.d <= 30000) end" },
+  { name: "fuel: the towns are six", from: "             order by g.geom <-> p\n             limit 5) n", to: "             order by g.geom <-> p\n             limit 6) n" },
+  { name: "fuel: the towns farthest first", from: "jsonb_build_object('ags', n.admin_code, 'name', n.name) order by n.d)", to: "jsonb_build_object('ags', n.admin_code, 'name', n.name) order by n.d desc)" },
+  { name: "fuel: the towns read a closed place", from: "             where g.source_id = 'bkg_gvisys'\n               and g.kind = 'city'\n               and g.geom is not null\n               and g.closed_at is null", to: "             where g.source_id = 'bkg_gvisys'\n               and g.kind = 'city'\n               and g.geom is not null" },
+  { name: "fuel: the trigger sets no towns", from: "  new.town_places := fuel_station_town_places(new.geom);\n  return new;", to: "  return new;" },
+  { name: "fuel: the trigger misses a moved station", from: "CREATE TRIGGER fuel_stations_land BEFORE INSERT OR UPDATE OF geom ON", to: "CREATE TRIGGER fuel_stations_land BEFORE INSERT ON" },
+  { name: "fuel: relabel rewrites every station", from: "     and (s.land is distinct from x.land or s.town_places is distinct from x.town_places);", to: ";" },
+  { name: "fuel: relabel ignores the towns", from: "     and (s.land is distinct from x.land or s.town_places is distinct from x.town_places);", to: "     and (s.land is distinct from x.land);" },
+  { name: "fuel: outliers have no history before the window", from: "     where p.observed_at >= now() - since - interval '1 day'", to: "     where p.observed_at >= now() - since" },
+  { name: "fuel: outliers outside the window", from: "   where t.observed_at >= now() - since\n     and (t.price < lo", to: "   where true\n     and (t.price < lo" },
+  { name: "fuel: outliers miss the upper band", from: "     and (t.price < lo or t.price > hi\n", to: "     and (t.price < lo\n" },
+  { name: "fuel: outliers miss the jump", from: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))", to: "          or false)" },
+  { name: "fuel: outliers compare across products", from: "lag(p.price) over (partition by p.station_id, p.product order by p.observed_at) as prev_price", to: "lag(p.price) over (partition by p.station_id order by p.observed_at) as prev_price" },
+  { name: "fuel: outliers oldest first", from: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at desc", to: "          or (t.prev_price is not null and t.prev_price > 0 and abs(t.price - t.prev_price) / t.prev_price > jump))\n   order by t.observed_at asc" },
+].map((m) => ({ ...m, file: BASELINE, tests: FUEL }));
+
+const DERIVED = ["test/derived-tables.db.test.ts"];
+
+const derived: SchemaMutant[] = [
+  { name: "derived: a snapshot run stated by last_updated", from: "max(least(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at), n.observed_at)),", to: "max(least(coalesce(n.last_updated, n.observed_at), n.observed_at))," },
+  { name: "derived: a run stated later than its tick", from: "max(least(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at), n.observed_at)),", to: "max(coalesce(case when d.is_delta then n.last_updated else n.feed_ts end, n.observed_at))," },
+  { name: "derived: the note counts the confidential", from: "   where coalesce(n.confidentiality, 'noRestriction') = 'noRestriction'\n   group by n.", to: "   where true\n   group by n." },
+  { name: "derived: the note misses a padded delta", from: "(select coalesce(lower(btrim(n.exchange_protocol)) = 'deltapull', false) as is_delta) d", to: "(select coalesce(n.exchange_protocol = 'deltapull', false) as is_delta) d" },
+  { name: "derived: a second insert replaces the ticks", from: "         ticks = s.ticks + excluded.ticks;", to: "         ticks = excluded.ticks;" },
+  { name: "derived: a second insert keeps the stated time", from: "     set stated_at = greatest(s.stated_at, excluded.stated_at),", to: "     set stated_at = s.stated_at," },
+  { name: "derived: the run ledger is never pruned", from: "    delete from charging_status_runs where observed_at < now() - interval '35 days';", to: "    null;" },
+  { name: "derived: an update forgets the new run", from: "    insert into charging_status_runs_keys select distinct n.observed_at, n.source_feed, n.source_run_id from new_ticks n;", to: "    null;" },
+  { name: "derived: the recompute counts the confidential", from: "   where coalesce(t.confidentiality, 'noRestriction') = 'noRestriction'", to: "   where true" },
+  { name: "derived: a delete recomputes nothing", from: "CREATE TRIGGER charging_status_runs_forget AFTER DELETE ON public.charging_point_status REFERENCING OLD TABLE AS old_ticks FOR EACH STATEMENT", to: "CREATE TRIGGER charging_status_runs_forget AFTER INSERT ON public.charging_point_status REFERENCING NEW TABLE AS old_ticks FOR EACH STATEMENT" },
+  { name: "derived: an update recomputes nothing", from: "CREATE TRIGGER charging_status_runs_restate AFTER UPDATE ON public.charging_point_status REFERENCING OLD TABLE AS old_ticks NEW TABLE AS new_ticks FOR EACH STATEMENT EXECUTE FUNCTION public.charging_status_runs_recompute();", to: "" },
+  { name: "derived: overlaps within one feed", from: "      on b.source_feed <> a.source_feed\n", to: "      on a.zone_id <> b.zone_id\n" },
+  { name: "derived: overlaps with a road", from: "     and b.role = 'zone'\n", to: "" },
+  { name: "derived: overlaps with a closed zone", from: "     and b.closed_at is null\n     and b.geom && a.geom", to: "     and b.geom && a.geom" },
+  { name: "derived: overlaps along a touching edge", from: "     and not st_touches(a.geom, b.geom)\n", to: "" },
+  { name: "derived: overlaps one way", from: "(values (a.source_feed, a.zone_id, b.source_feed, b.zone_id),\n                              (b.source_feed, b.zone_id, a.source_feed, a.zone_id)) x(f1, z1, f2, z2)", to: "(values (a.source_feed, a.zone_id, b.source_feed, b.zone_id)) x(f1, z1, f2, z2)" },
+  { name: "derived: the larger area", from: "least(st_area(a.geom), st_area(b.geom)) as smaller_area", to: "greatest(st_area(a.geom), st_area(b.geom)) as smaller_area" },
+  { name: "derived: a closed zone keeps its overlaps", from: "     and a.role = 'zone'\n     and a.closed_at is null;", to: "     and a.role = 'zone';" },
+  { name: "derived: a road zone gets overlaps", from: "     and a.role = 'zone'\n     and a.closed_at is null;", to: "     and a.closed_at is null;" },
+  { name: "derived: an unchanged update refreshes", from: "  if tg_op = 'UPDATE'\n     and old.geom is not distinct from new.geom", to: "  if false\n     and old.geom is not distinct from new.geom" },
+  { name: "derived: only a move refreshes", from: "AFTER UPDATE OF geom, role, closed_at, source_feed, zone_id ON public.lez_zones", to: "AFTER UPDATE OF geom ON public.lez_zones" },
+  { name: "derived: an insert refreshes nothing", from: "CREATE TRIGGER lez_zones_overlaps_insert AFTER INSERT ON public.lez_zones", to: "CREATE TRIGGER lez_zones_overlaps_insert AFTER DELETE ON public.lez_zones" },
+  { name: "derived: warm without a population floor", from: " and g.population >= p_city_population_min\n", to: "\n" },
+  { name: "derived: warm radius not clamped up", from: "greatest(p_city_radius_min_m, p_city_radius_per_sqrt_thousand_m * sqrt(g.population::float8 / 1000))", to: "p_city_radius_per_sqrt_thousand_m * sqrt(g.population::float8 / 1000)" },
+  { name: "derived: warm without the motorway", from: "on ST_DWithin(s.geom, m.geom, p_motorway_corridor_m)", to: "on false" },
+  { name: "derived: gaps outside the days", from: "     where p.observed_at >= now() - make_interval(days => p_days)\n       and p.station_id in (select id from warm_ids)", to: "     where true\n       and p.station_id in (select id from warm_ids)" },
+  { name: "derived: gaps of every station", from: "       and p.station_id in (select id from warm_ids)\n", to: "\n" },
+  { name: "derived: gaps across products", from: "partition by p.station_id, p.product order by p.observed_at)) as gap_s", to: "partition by p.station_id order by p.observed_at)) as gap_s" },
+].map((m) => ({ ...m, file: BASELINE, tests: DERIVED }));
+
+const MERGED = ["test/views-merged.db.test.ts"];
+
+/** Per `_merged` view: each rule of its ranking and its filter, broken alone. */
+const merged: SchemaMutant[] = (() => {
+  const sql = readFileSync(BASELINE, "utf8");
+  const views = ["route_recommendations", "speed_cameras", "transit_agencies_odbl", "transit_routes_odbl", "transit_service_dates_odbl", "transit_stop_times_odbl", "transit_stops_odbl", "transit_trip_updates_odbl", "transit_trips_odbl"];
+  const rules: readonly [string, string, string][] = [
+    ["the least trusted wins", "ORDER BY l.trust DESC NULLS LAST,", "ORDER BY l.trust ASC NULLS LAST,"],
+    ["an unknown source wins", "ORDER BY l.trust DESC NULLS LAST,", "ORDER BY l.trust DESC NULLS FIRST,"],
+    ["the oldest wins", " l.observed_at DESC,", " l.observed_at ASC,"],
+    ["the last id wins", " l.source_id, l.external_id) AS rn,", " l.source_id, l.external_id DESC) AS rn,"],
+    ["a closed row counts", "WHERE (r.closed_at IS NULL)", "WHERE true"],
+    ["the match key is ignored", "COALESCE(r.match_key, ", "COALESCE(NULL::text, "],
+  ];
+  return views.flatMap((v) => {
+    const block = viewBlock(sql, `domains.${v}_merged`);
+    const own: [string, string, string][] = v === "route_recommendations" ? [["the emptier wins", "l.published_at)) DESC,", "l.published_at)) ASC,"]] : [];
+    return [...rules, ...own].map(([what, from, to]) => {
+      if (block.split(from).length !== 2) throw new Error(`domains.${v}_merged: ${from} is not once in its block`);
+      return { name: `merged: ${v}: ${what}`, from: block, to: block.replace(from, to) };
+    });
+  });
+})().map((m) => ({ ...m, file: BASELINE, tests: MERGED }));
+
+const LOADS = ["test/rollup-loads.db.test.ts"];
+
+const loads: SchemaMutant[] = [
+  { name: "loads: the fold takes an inverted range", from: "  if b_from is null or b_to is null or b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:", to: "  if b_from is null or b_to is null then\n    raise exception 'ops_rollup_usage_fold:" },
+  { name: "loads: the fold takes no range", from: "  if b_from is null or b_to is null or b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:", to: "  if b_to < b_from then\n    raise exception 'ops_rollup_usage_fold:" },
+  { name: "loads: the fold's days are UTC", from: "  select (m.period_start at time zone 'Europe/Berlin')::date,\n         case when m.tool ~", to: "  select (m.period_start at time zone 'UTC')::date,\n         case when m.tool ~" },
+  { name: "loads: the fold keeps any tool name", from: "         case when m.tool ~ '^[a-z][a-z0-9_]{0,63}$' then m.tool else 'other' end,", to: "         m.tool," },
+  { name: "loads: the fold counts the caller's own errors", from: "         sum(greatest(coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage), 0)", to: "         sum(coalesce(m.tool_errors, 0)" },
+  { name: "loads: the fold's errors go below zero", from: "         sum(greatest(coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage), 0)", to: "         sum((coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage))" },
+  { name: "loads: the fold misses the server errors", from: "             + coalesce(m.server_errors, 0)),\n         sum(m.ms_le_100)", to: "             + 0),\n         sum(m.ms_le_100)" },
+  { name: "loads: the fold reads the day rows", from: "   where m.period = 'hour'\n     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from", to: "   where true\n     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from" },
+  { name: "loads: the fold reads every rpc", from: "     and m.rpc = 'tools/call'\n     and m.period_start >= (b_from", to: "     and m.period_start >= (b_from" },
+  { name: "loads: the fold reads the day before", from: "     and m.period_start >= (b_from::timestamp at time zone 'Europe/Berlin')", to: "     and m.period_start >= ((b_from - 1)::timestamp at time zone 'Europe/Berlin')" },
+  { name: "loads: the fold reads the day after", from: "     and m.period_start < ((b_to + 1)::timestamp at time zone 'Europe/Berlin')", to: "     and m.period_start < ((b_to + 2)::timestamp at time zone 'Europe/Berlin')" },
+  { name: "loads: a refold adds", from: "  on conflict (day, tool, class) do update set\n    calls = excluded.calls,", to: "  on conflict (day, tool, class) do update set\n    calls = t.calls + excluded.calls," },
+  { name: "loads: a week needs no state", from: "  if w is null or s is null then\n    raise exception 'search_console_weekly_load:", to: "  if w is null then\n    raise exception 'search_console_weekly_load:" },
+  { name: "loads: an unread week overwrites a read one", from: "  if s <> 'read' and exists (select 1 from search_console_weekly where week = w and state = 'read') then", to: "  if false then" },
+  { name: "loads: a kept week notes no try", from: "    update search_console_weekly set tried_at = now() where week = w;\n    return s || ' parts=0 kept=read';", to: "    return s || ' parts=0 kept=read';" },
+  { name: "loads: a read week keeps its old parts", from: "  delete from search_console_weekly where week = w;\n  insert into search_console_weekly (week", to: "  delete from search_console_weekly_parts where false;\n  insert into search_console_weekly (week" },
+  { name: "loads: an unread week stores its parts", from: "  if s = 'read' then\n    insert into search_console_weekly_parts", to: "  if true then\n    insert into search_console_weekly_parts" },
+  { name: "loads: growth takes more than 105 weeks", from: "if p_weeks is null or p_weeks < 1 or p_weeks > 105 then", to: "if p_weeks is null or p_weeks < 1 then" },
+  { name: "loads: growth takes no week", from: "if p_weeks is null or p_weeks < 1 or p_weeks > 105 then", to: "if p_weeks is null or p_weeks > 105 then" },
+  { name: "loads: growth's week starts on Sunday", from: "this_w  date := today - (extract(isodow from today)::integer - 1);", to: "this_w  date := today - (extract(isodow from today)::integer % 7);" },
+  { name: "loads: growth skips this week", from: "    w := this_w - 7 * i;\n    w_from := w::timestamp", to: "    w := this_w - 7 * (i + 1);\n    w_from := w::timestamp" },
+  { name: "loads: growth calls every week complete", from: "    select w, now(), w + 7 <= today,", to: "    select w, now(), true," },
+  { name: "loads: growth's clicks are the impressions", from: "           case when sc.state = 'read' then sc.clicks end,", to: "           case when sc.state = 'read' then sc.impressions end," },
+  { name: "loads: growth calls an unlabelled week read", from: "case when sv.labelled = 7 then 'read' when sv.days > 0 then 'partial' else 'unread' end,", to: "case when sv.labelled >= 0 and sv.days > 0 then 'read' when sv.days > 0 then 'partial' else 'unread' end," },
+  { name: "loads: growth's people include our own views", from: "           case when sv.days > 0 then sv.page_views - coalesce(sv.own, 0) end,", to: "           case when sv.days > 0 then sv.page_views end," },
+  { name: "loads: growth's automation includes the crawlers", from: "           case when sv.days > 0 then sv.automated - coalesce(sv.crawler, 0) end,", to: "           case when sv.days > 0 then sv.automated end," },
+  { name: "loads: growth's home is any two-letter prefix", from: "(sum(r.views) filter (where r.route = '/' or r.route ~ '^/[a-z]{2}$'))::integer as home,", to: "(sum(r.views) filter (where r.route = '/' or r.route ~ '^/[a-z]{2}'))::integer as home," },
+  { name: "loads: growth's connect is any route", from: "(sum(r.views) filter (where r.route ~ '^/[a-z]{2}/connect$'))::integer as connect", to: "(sum(r.views) filter (where r.route ~ 'connect|x'))::integer as connect" },
+  { name: "loads: growth reads the site day before the week", from: "         where d.day >= w and d.day < w + 7\n      ) sv on true", to: "         where d.day >= w - 1 and d.day < w + 7\n      ) sv on true" },
+  { name: "loads: growth reads the route day before the week", from: "         where r.day >= w and r.day < w + 7\n      ) rt on true", to: "         where r.day >= w - 1 and r.day < w + 7\n      ) rt on true" },
+  { name: "loads: growth reads MCP in a week the hours do not cover", from: "           case when oldest is not null and oldest <= w_from then 'read' else 'unread' end,", to: "           case when oldest is not null then 'read' else 'unread' end," },
+  { name: "loads: growth counts the scanners' sessions", from: "(sum(m.sessions) filter (where m.rpc = 'initialize' and mcp_usage_traffic_class(m.client) = 'real'))::integer as init_ext,", to: "(sum(m.sessions) filter (where m.rpc = 'initialize'))::integer as init_ext," },
+  { name: "loads: growth counts every class's calls", from: "(sum(m.requests) filter (where m.rpc = 'tools/call' and mcp_usage_traffic_class(m.client) = 'real'))::integer as calls_ext,", to: "(sum(m.requests) filter (where m.rpc = 'tools/call'))::integer as calls_ext," },
+  { name: "loads: growth counts the caller's own errors", from: "(sum(greatest(coalesce(m.tool_errors, 0) - (m.tool_error_invalid_input + m.tool_error_not_found + m.tool_error_out_of_coverage), 0)\n                    + coalesce(m.server_errors, 0)) filter", to: "(sum(coalesce(m.tool_errors, 0)\n                    + coalesce(m.server_errors, 0)) filter" },
+  { name: "loads: growth misses the server errors", from: "                    + coalesce(m.server_errors, 0)) filter (where m.rpc = 'tools/call'", to: "                    + 0) filter (where m.rpc = 'tools/call'" },
+  { name: "loads: growth counts a client with no session", from: "filter (where m.rpc = 'initialize' and m.sessions > 0 and mcp_usage_traffic_class(m.client) = 'real')", to: "filter (where m.rpc = 'initialize' and mcp_usage_traffic_class(m.client) = 'real')" },
+  { name: "loads: growth's own calls are the real ones", from: "mcp_usage_traffic_class(m.client) = 'own'))::integer as calls_own", to: "mcp_usage_traffic_class(m.client) = 'real'))::integer as calls_own" },
+  { name: "loads: growth reads the MCP day rows", from: "         where m.period = 'hour' and m.period_start >= w_from and m.period_start < w_to", to: "         where m.period_start >= w_from and m.period_start < w_to" },
+  { name: "loads: growth reads MCP past the week", from: "         where m.period = 'hour' and m.period_start >= w_from and m.period_start < w_to", to: "         where m.period = 'hour' and m.period_start >= w_from and m.period_start < w_to + interval '7 days'" },
+  { name: "loads: growth keeps 105 weeks", from: "  delete from growth_weekly where week < this_w - 7 * 104;", to: "  delete from growth_weekly where week < this_w - 7 * 105;" },
+  { name: "loads: growth keeps the Search Console weeks", from: "  delete from search_console_weekly where week < this_w - 7 * 104;", to: "  delete from search_console_weekly where week < this_w - 7 * 105;" },
+  { name: "loads: growth's refresh keeps the old site state", from: "      site_state = excluded.site_state, site_days = excluded.site_days,", to: "      site_state = g.site_state, site_days = excluded.site_days," },
+  { name: "loads: growth's refresh keeps the old MCP state", from: "      mcp_state = excluded.mcp_state, mcp_initialize_ext = excluded.mcp_initialize_ext,", to: "      mcp_state = g.mcp_state, mcp_initialize_ext = excluded.mcp_initialize_ext," },
+  { name: "loads: growth counts no week", from: "    n := n + 1;\n  end loop;\n  delete from growth_weekly", to: "  end loop;\n  delete from growth_weekly" },
+  { name: "loads: refresh takes an empty window", from: "  if p_from is null or p_to is null or p_to <= p_from then\n    raise exception 'ops_rollup_refresh:", to: "  if p_from is null or p_to is null or p_to < p_from then\n    raise exception 'ops_rollup_refresh:" },
+  { name: "loads: refresh takes nine days", from: "  if p_to - p_from > interval '8 days' then", to: "  if p_to - p_from > interval '9 days' then" },
+  { name: "loads: refresh does not bin the window's start", from: "  v_from := date_bin('5 minutes', p_from, origin);", to: "  v_from := p_from;" },
+  { name: "loads: refresh counts no partition made", from: "      n_made := n_made + 1;", to: "      n_made := n_made;" },
+  { name: "loads: refresh counts unchanged as ok", from: "             count(*) filter (where r.status = 'ok')::integer as ok,\n             count(*) filter (where r.status = 'unchanged')", to: "             count(*) filter (where r.status in ('ok', 'unchanged'))::integer as ok,\n             count(*) filter (where r.status = 'unchanged')" },
+  { name: "loads: refresh's quiet misses a held run", from: "count(*) filter (where r.status in ('pending', 'held', 'skipped'))::integer as quiet,", to: "count(*) filter (where r.status in ('pending', 'skipped'))::integer as quiet," },
+  { name: "loads: refresh's feed success misses degraded", from: "max(r.started_at) filter (where r.status in ('ok', 'unchanged', 'degraded')) as last_success", to: "max(r.started_at) filter (where r.status in ('ok', 'unchanged')) as last_success" },
+  { name: "loads: refresh reads the feed runs before the window", from: "       where r.feed_key = keys.k and r.started_at >= v_from and r.started_at < v_to", to: "       where r.feed_key = keys.k and r.started_at >= v_from - interval '5 minutes' and r.started_at < v_to" },
+  { name: "loads: refresh reads the ingest runs after the window", from: "       where r.provider = keys.k and r.started_at >= v_from and r.started_at < v_to", to: "       where r.provider = keys.k and r.started_at >= v_from and r.started_at < v_to + interval '1 day'" },
+  { name: "loads: refresh keeps a feed key of any shape", from: "   where keys.k is not null\n     and keys.k ~ '^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,79}$'\n  on conflict (bucket_day, bucket_start, ledger, key) do update set\n    runs = excluded.runs, ok = excluded.ok, unchanged", to: "   where keys.k is not null\n  on conflict (bucket_day, bucket_start, ledger, key) do update set\n    runs = excluded.runs, ok = excluded.ok, unchanged" },
+  { name: "loads: refresh's feed bucket keeps its old errors", from: "    error = excluded.error, quiet = excluded.quiet, running = excluded.running,", to: "    error = t.error, quiet = excluded.quiet, running = excluded.running," },
+  { name: "loads: refresh's last status is the oldest", from: "             (array_agg(r.status order by r.started_at desc))[1] as last_status,\n             max(r.started_at) filter (where r.status in ('ok', 'unchanged', 'degraded'))", to: "             (array_agg(r.status order by r.started_at asc))[1] as last_status,\n             max(r.started_at) filter (where r.status in ('ok', 'unchanged', 'degraded'))" },
+  { name: "loads: refresh's ingest quiet counts the running", from: "count(*) filter (where r.status not in ('ok', 'degraded', 'error', 'running'))::integer as quiet,", to: "count(*) filter (where r.status not in ('ok', 'degraded', 'error'))::integer as quiet," },
+  { name: "loads: refresh's ingest duration has no fallback", from: "coalesce(sum(coalesce(r.duration_ms, (extract(epoch from (r.finished_at - r.started_at)) * 1000)::integer)), 0) as dsum,", to: "coalesce(sum(r.duration_ms), 0) as dsum," },
+  { name: "loads: refresh's ingest duration count has no fallback", from: "count(coalesce(r.duration_ms::numeric, extract(epoch from (r.finished_at - r.started_at))))::integer as dn,", to: "count(r.duration_ms)::integer as dn," },
+  { name: "loads: refresh's ingest success misses degraded", from: "max(r.started_at) filter (where r.status in ('ok', 'degraded')) as last_success", to: "max(r.started_at) filter (where r.status in ('ok')) as last_success" },
+  { name: "loads: refresh's ingest sees no rows", from: "             coalesce(sum(r.rows), 0) as seen,", to: "             0::bigint as seen," },
+  { name: "loads: refresh counts the ingest buckets only", from: "  n_bucket := n_bucket + n_tmp;", to: "  n_bucket := n_tmp;" },
+  { name: "loads: refresh's day quiet is its runs", from: "         sum(f.error)::integer, sum(f.quiet)::integer,", to: "         sum(f.error)::integer, sum(f.runs)::integer," },
+  { name: "loads: refresh's day success is its first", from: "         max(f.last_success_at), now()\n    from ops_rollup_feed f", to: "         min(f.last_success_at), now()\n    from ops_rollup_feed f" },
+  { name: "loads: refresh's day keeps its old errors", from: "    error = excluded.error, quiet = excluded.quiet, items_seen = excluded.items_seen,\n    items_inserted = excluded.items_inserted", to: "    error = t.error, quiet = excluded.quiet, items_seen = excluded.items_seen,\n    items_inserted = excluded.items_inserted" },
+  { name: "loads: refresh folds no usage", from: "  n_usage := ops_rollup_usage_fold(b_from, b_to);", to: "  n_usage := 0;" },
+  { name: "loads: refresh's held rows are yesterday's", from: "      select (now() at time zone 'Europe/Berlin')::date, rel.kind,", to: "      select (now() at time zone 'Europe/Berlin')::date - 1, rel.kind," },
+  { name: "loads: refresh counts no held row", from: "      n_held := n_held + 1;", to: "      n_held := n_held;" },
+  { name: "loads: refresh keeps the 90-day-old partitions", from: "'YYYYMMDD') < (now() at time zone 'UTC')::date - 90", to: "'YYYYMMDD') < (now() at time zone 'UTC')::date - 9000" },
+  { name: "loads: refresh counts no partition dropped", from: "    n_dropped := n_dropped + 1;", to: "    n_dropped := n_dropped;" },
+  { name: "loads: refresh keeps the old days", from: "  delete from ops_rollup_daily where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_daily where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
+  { name: "loads: refresh keeps the old usage", from: "  delete from ops_rollup_usage where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_usage where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
+  { name: "loads: refresh keeps the old held rows", from: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 400;", to: "  delete from ops_rollup_held  where day < (now() at time zone 'Europe/Berlin')::date - 402;" },
+].map((m) => ({ ...m, file: BASELINE, tests: LOADS }));
+
+/** Migration 0306: the fold and the recompute agree on a finished run's change, whatever its status (#32 finding). */
+const fold0306: SchemaMutant[] = [
+  { name: "0306: the fold skips a finished pending feed run again", from: "where n.finished_at is not null and not (n.feed_key = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.feed_key = any(v_recompute))));" },
+  { name: "0306: the fold skips a finished running or pending ingest run again", from: "where n.finished_at is not null and not (n.provider = any(v_recompute))));", to: "where n.finished_at is not null and n.status not in ('running', 'pending') and not (n.provider = any(v_recompute))));" },
+  { name: "0306: the feed recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  else", to: "     where a.finished_at is not null or h.finished_at is not null;\n  else" },
+  { name: "0306: the ingest recompute drops a key whose only fact is a change", from: "     where a.finished_at is not null or h.finished_at is not null or g.finished_at is not null;\n  end if;", to: "     where a.finished_at is not null or h.finished_at is not null;\n  end if;" },
+  { name: "0306: the backfill recomputes no feed key", from: "r.budget_hit is null and r.status = 'pending'", to: "r.budget_hit is null and false" },
+  { name: "0306: the backfill recomputes no ingest key", from: "r.budget_hit is null and r.status in ('running', 'pending')", to: "r.budget_hit is null and false" },
+  { name: "0306: the backfill forgets a feed key with a change and no feed_state row", from: "and not exists (select 1 from control.feed_state s where s.ledger = 'feed' and s.key = r.feed_key)));", to: "and false));" },
+  { name: "0306: the backfill forgets an ingest key with a change and no feed_state row", from: "and not exists (select 1 from control.feed_state s where s.ledger = 'ingest' and s.key = r.provider)));", to: "and false));" },
+].map((m) => ({ ...m, file: M0306, tests: LEDGERS }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306];

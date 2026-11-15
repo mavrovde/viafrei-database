@@ -24,8 +24,8 @@ import { assembleSchema, loadSchema, type Baseline, type Schema } from "./migrat
 import { migrate, type MigrateResult } from "./migrations/migrate.js";
 import { compare, readiness, serviceReadiness, type AppliedRow, type Readiness, type SchemaState, type ServiceReadiness } from "./migrations/plan.js";
 import { psqlRunner, type PsqlRunner } from "./psql.js";
-import { ensurePartitions } from "./partitions.js";
-import { applyRolePasswords, type RolesResult } from "./roles.js";
+import { ensurePartitions, ensureSubject, type Back } from "./partitions.js";
+import { applyRolePasswords, applyRoleSettings, type RolesResult } from "./roles.js";
 import { analyzeTable, check, type ActionResult } from "./actions.js";
 import { collect, type Diagnostics } from "./diagnostics.js";
 import type { Config } from "./config.js";
@@ -169,6 +169,13 @@ export class DatabaseService {
             out: (l) => lines.push(l),
             err: (l) => lines.push(l),
           });
+          // The role settings live per database: a copy made from a template has
+          // none and no file pending, so they are applied after every good run.
+          if (r.exitCode === 0 && !dryRun) {
+            const s = await applyRoleSettings(this.psql, this.d.config.rolesSqlDir);
+            lines.push(s.line);
+            if (!s.ok) return { ok: false, lines, exitCode: 1 };
+          }
         } finally {
           await lockClient.query("select pg_advisory_unlock($1::bigint)", [MIGRATE_LOCK_KEY]).catch(() => undefined);
         }
@@ -179,9 +186,9 @@ export class DatabaseService {
     });
   }
 
-  ensurePartitions(trigger: RunRecord["trigger"], days = this.d.config.partitionDays): Promise<RunRecord> {
-    return this.exclusive("partitions", String(days), trigger, async () => {
-      const r = await ensurePartitions(this.psql, days);
+  ensurePartitions(trigger: RunRecord["trigger"], days = this.d.config.partitionDays, back: Back = null): Promise<RunRecord> {
+    return this.exclusive("partitions", ensureSubject(days, back), trigger, async () => {
+      const r = await ensurePartitions(this.psql, days, back);
       // Not sticky: once boot has run the step, every later ensure (the daily one,
       // or the owner's) sets it, so a failing ensure clears /ready and the next
       // one that succeeds restores it.
@@ -201,6 +208,14 @@ export class DatabaseService {
       this.roles = await applyRolePasswords({ psql: this.psql, secretDir: dir, sqlDir: this.d.config.rolesSqlDir, log: (l) => lines.push(l) });
       this.steps.roles = this.roles.ok;
       return { ok: this.roles.ok, lines };
+    });
+  }
+
+  /** `roles settings`: the role settings alone, for this database. */
+  applySettings(trigger: RunRecord["trigger"]): Promise<RunRecord> {
+    return this.exclusive("roles", "settings", trigger, async () => {
+      const s = await applyRoleSettings(this.psql, this.d.config.rolesSqlDir);
+      return { ok: s.ok, lines: [s.line] };
     });
   }
 

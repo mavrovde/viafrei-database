@@ -1,0 +1,4 @@
+# The schema coverage gap (#32): every catalogue object with no test here yet, measured by
+# npm run coverage:schema -- --gap at head. It only shrinks: a row whose object gains a manifest
+# row, or leaves the catalogue, fails the gate until it is removed. Empty at v0.2.0.
+# kind	object

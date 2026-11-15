@@ -85,16 +85,37 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | Command | What it does |
 |---|---|
 | `serve` (default) | Runs migrate, then partitions ensure (30 days ahead), then the role passwords. Then it serves `/healthz` and `/ready` on 8080, and the interface on 8090 when `DB_HOST` is set. A failed step is retried with backoff while the process stays up and not ready |
-| `migrate [--dry-run]` | Applies the pending migrations in order, each in its own transaction (except files marked `-- no-transaction:`) |
-| `partitions ensure [--days N]` | Creates the daily partitions of every tick table from 3 days back through today + N |
+| `migrate [--dry-run]` | Applies the pending migrations in order, each in its own transaction (except files marked `-- no-transaction:`), and reads the ledger back after each: a file psql reports as run but whose version is not in `schema_migrations` (it quit psql with `\q`, or switched `ON_ERROR_STOP` off before an error) fails the run with exit 1, naming the file. After every successful run (not a dry run) it applies the role settings of `db/roles/settings.sql` to this database, so a database copied from a template (`CREATE DATABASE … TEMPLATE`, which copies no role setting) gets them even when nothing is pending |
+| `partitions ensure [--days N] [--days-back B \| --from YYYY-MM-DD]` | Creates the daily partitions of every tick table from 3 days back (or B days back, or from the given date; at most 400) through today + N, so a test or a restore that needs a dated past row gets its partition without writing `partition of` |
+| `roles settings` | Applies the role settings (`ALTER ROLE … IN DATABASE`: timeouts, memory, `jit`, read-only) and the one database-wide setting production holds (PostGIS's `search_path`) to this database alone |
+| `roles passwords` | Applies the role passwords from `VF_DB_ROLE_DIR` outside `serve`, the same step `serve` runs at boot; without `VF_DB_ROLE_DIR` it is a usage error (exit 2) |
 | `check` | A verdict: schema at head, and today and tomorrow covered on every tick table (the tick tables have no default partition on purpose: a tick outside the window is refused, so a default partition is reported as a warning) |
 | `head` | Prints `READY <head>` (exit 0) or `NOT READY: <why>` (exit 1) |
 | `status` | All the diagnostics below, as JSON |
 | `analyze <table>` | `ANALYZE` on one table, found by name in the catalogue |
-| `lint [--root DIR]` | The migration lint: naming, contiguous numbering, a carried file equal to its `ledger.tsv` row, a rollback note that names its own ledger row, `concurrently` only where marked, and no edit to a file already on `origin/main` |
+| `lint [--root DIR]` | The migration lint: naming, contiguous numbering, a carried file equal to its `ledger.tsv` row, a rollback note that names its own ledger row, `concurrently` only where marked, no edit to a file already on `origin/main`, and (rule 6, from 0294) a `set local lock_timeout` before the first statement that takes a strong lock on a table the file did not create — a non-concurrent `create index`, `alter table`, `create`/`drop trigger`, `lock table`, `truncate`, a non-concurrent `drop index` or `reindex`, `create or replace view`, or an `execute format('alter …')` in a `do` block (function bodies are not read; the rule's header in `src/lint/check-migrations.ts` names what it cannot see) — so a migration gives up on a writer's lock instead of queueing behind it; `migrate` retries a lock timeout (SQLSTATE 55P03) `DB_MIGRATE_LOCK_ATTEMPTS` times and stops with 75 after the last |
+| `test-fixtures install` | Test databases only: installs the fixture functions of `db/test-fixtures/vf_test.sql` (see [Test fixtures](#test-fixtures)). Refused with exit 2, before any connection, unless `VF_TEST_FIXTURES=1` is set and the database `DATABASE_URL` names starts with `test_`; the file refuses again on the server's own database name. Never run by `migrate` or `serve` |
 | `export-migrations` | Writes the baseline and the migrations this image carries to stdout as a tar, so another project's tests can build a throwaway database from the exact same files |
 | `version` | Prints `viafrei-database <version> schema-head <N>` |
 | `ledger-compare <file\|->` | Read-only, needs no database: compares an exported ledger (`version`, `name`, `checksum`, tab- or `\|`-separated, e.g. `psql -At -c "select version, name, checksum from schema_migrations order by version"`) with the baseline's `ledger.tsv` and names every version that differs. Exit 0 when all are equal |
+
+### Partition index names
+
+`partitions ensure` creates a day as `CREATE TABLE <table>_YYYYMMDD PARTITION OF <table>`,
+and PostgreSQL names each index it clones onto that day from the parent index alone
+(`test/index-names.ts`, held against every partition by `test/partitioned.db.test.ts`):
+`<partition>_pkey` for the primary key, `<partition>_<columns>_key` for a unique
+constraint, `<partition>_<columns>_idx` for any other index. `<columns>` is the key's
+column names joined by `_` (an expression by its function's name, `left`), and the whole
+is cut to 63 bytes by shortening the longer part. On a clash the label takes the first
+free number in the schema (`_idx1`).
+
+The names are a function of the day everywhere but four parent indexes of schema
+`domains` — `charging_point_status_owner_key`, `parking_occupancy_sid_owner_key`,
+`road_weather_forecast_owner_key` and `road_weather_forecast_station` — where the cut
+reaches the day, so every day's clone shares one base and is numbered in the order the
+days were made (`charging_point_status_2026111_source_id_feed_external_id_o_key3`).
+Name a partition's index by its parent (`pg_inherits`), never by the clone's name.
 
 ## The baseline
 
@@ -267,7 +288,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | CI | Lint | `tsc`, ESLint, the shell scripts' syntax, and actionlint (with shellcheck) over every workflow |
 | CI | Unit tests | the unit suite, no database, each case under two seconds |
 | CI | Migration lint | `viafrei-db lint` over the baseline and the migrations |
-| CI | Integration tests (PostGIS) | an empty database (a plain `create database` in a PostGIS cluster) migrated to head through the service, under the coverage gate: lines 100 · branches 93.88 · functions 100 · statements 100 (per cent, minimums; below any one fails the job, and so does a coverage badge that differs from the measured lines figure) |
+| CI | Integration tests (PostGIS) | an empty database (a plain `create database` in a PostGIS cluster) migrated to head through the service, under the coverage gate: lines 100 · branches 93.88 · functions 100 · statements 100 (per cent, minimums; below any one fails the job, and so does a coverage badge that differs from the measured lines figure); then the schema coverage gate (below) |
 | CI | Image (build, scan, healthz) | the image is built, scanned by Trivy (HIGH and CRITICAL fail) and started read-only as a non-root user to answer `/healthz` and `/ready` |
 | Security | CodeQL (TypeScript) | static analysis, the extended query set |
 | Security | Dependency review | a pull request adds no dependency with a known advisory |
@@ -278,6 +299,63 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
 
+## Schema coverage
+
+Every object in the catalogue of a database migrated to head is proved by a
+test here (#32): `npm run coverage:schema` reads the tables, views, functions,
+triggers, checks, policies, grants (to a `viafrei_*` role or PUBLIC), the
+`viafrei_*` roles and the partitioned tables, extension members and partitions
+left out, and judges them against two files:
+
+- `test/coverage/schema.tsv` — `kind`, `object`, `<test file> > <test title>`,
+  one row per object and test that proves it;
+- `test/coverage/gap.tsv` — `kind`, `object`: what has no test yet. It only
+  shrinks, and is empty at the release that closes #32.
+
+It fails on an object with neither row, a row naming an object or a test that
+does not exist, and a gap row the manifest covers or the catalogue no longer
+holds. It refuses (exit 2) a catalogue read with no object of a kind the schema
+always holds, a database that was never migrated or is not at the checkout's
+head, an empty manifest, and a test tree it cannot list. Without `--url` it
+migrates a throwaway database next to `TEST_DATABASE_URL` and drops it.
+
+The `fixture` kind is the test-only functions of `db/test-fixtures/vf_test.sql`,
+read from the file because no served catalogue holds them: the gate refuses a
+catalogue that does (the fixtures were installed on it), and a file that
+defines none.
+
+## Test fixtures
+
+A test that must plant a row a guard refuses (a frozen slug, a value outside a
+licence floor, a postcode as a feed wrote it, a row from before a CHECK
+existed) lifts that one guard through a fixture function, inside its own
+transaction, and rolls back. `viafrei-db test-fixtures install` (with
+`VF_TEST_FIXTURES=1`, on a `test_` database) puts them in the schemas
+`vf_test`, `vf_test_clock` and `vf_test_shadow`; no other verb does.
+
+```sql
+begin;
+set local vf_test.armed = 'on';
+select vf_test.unfreeze_station_slugs();
+-- the plant and the test
+rollback;
+```
+
+Every function first calls `vf_test.armed()`, which refuses outside a `test_`
+database (42501), without `vf_test.armed = 'on'` (55000) and in autocommit
+(25P01), so a lift cannot outlive the test that asked for it.
+
+| Function | Lifts |
+|---|---|
+| `vf_test.unfreeze_station_slugs()` | the trigger `station_slugs_frozen` |
+| `vf_test.lift_runtime_config_source_bounds()` | the trigger `runtime_config_source_bounds` |
+| `vf_test.lift_postcode_trigger(relation)` | that table's `vf_postcode_normalise` trigger |
+| `vf_test.drop_check(relation, name)` | one CHECK constraint (a key or a foreign key is refused) |
+| `vf_test.set_n_distinct(relation, column, n)` | one column's `n_distinct` (applied by the next `ANALYZE`) |
+| `vf_test.set_clock(at)` | `now()` in an unqualified query reads `at` (`vf_test_clock.now()` first on the search path) |
+| `vf_test.shadow_rows(relation, rows)` / `shadow_slow(relation, seconds)` / `shadow_put(relation, body)` | an unqualified read of the relation sees the given rows, waits first, or reads the given query (a view in `vf_test_shadow`, granted to the original's readers) |
+| `vf_test.revoke_select(relation, role)` | one role's SELECT on one relation |
+
 ## Development
 
 ```bash
@@ -286,7 +364,9 @@ npm run typecheck && npm run lint && npm test        # each unit test < 2 s
 TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
-npm run mutate                                       # the readiness logic's mutants
+TEST_DATABASE_URL=postgresql://… npm run mutate      # every mutant: readiness, gate, consumer verbs, lint, and the schema behaviour (functions, triggers, views)
+TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
+npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
 
 [CONTRIBUTING.md](CONTRIBUTING.md) has the migration rules.

@@ -10,7 +10,10 @@
  *      run without a gap up to the head — see src/migrations/baseline.ts)
  *   B. db/baseline, when present: a valid ledger.tsv (contiguous from 1) and
  *      exactly one NNNN_baseline.sql numbered at its last version; under
- *      rule 4 both are frozen once on origin/main, like an applied file
+ *      rule 4 both are frozen once on origin/main, like an applied file;
+ *      an optional aliases.tsv must parse against that ledger (it is not
+ *      frozen: a row is added when a database is found holding an edited
+ *      file's checksum)
  *   3. every file has a `-- rollback:` note
  *   4. a file already present on origin/main is byte-identical (never edited)
  *   5. a rollback note naming `schema_migrations where version = N` names THIS file's number
@@ -35,7 +38,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASELINE_FILE, BaselineError, carriedFault, LEDGER_TSV, parseLedgerTsv, type LedgerRow } from "../migrations/baseline.js";
+import { ALIASES_TSV, BASELINE_COMPANIONS, BASELINE_FILE, BaselineError, carriedFault, LEDGER_TSV, parseAliasesTsv, parseLedgerTsv, type LedgerRow } from "../migrations/baseline.js";
 import { sha256Hex } from "../migrations/files.js";
 
 export const LEDGER_GRANDFATHERED = new Set(["0003_fuel_watch_asked.sql", "0004_fuel_health.sql", "0005_fuel_detail.sql", "0008_transit_delays_licence.sql", "0019_status_role.sql"]);
@@ -65,6 +68,75 @@ export function likeMatches(pattern: string, name: string): boolean {
   const re = new RegExp(`^${pattern.split("%").map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`);
   return re.test(name);
 }
+
+/**
+ * Rule 6, the lock bound (#31 item 6): from this number on, a file that takes
+ * a write-blocking lock on a table it did not create itself must set
+ * `set local lock_timeout` before the first such statement. Without it the
+ * statement queues behind a writer's lock and every later writer queues behind
+ * it; with it the file gives up with 55P03 and `migrate` retries it
+ * (DB_MIGRATE_LOCK_ATTEMPTS, DB_MIGRATE_LOCK_PAUSE_S).
+ *
+ * The statements it recognises: a plain (not `concurrently`) `create index`
+ * on, `alter table`, `lock table`, `truncate`, `create trigger` on and
+ * `drop trigger … on` a table the file did not create; a plain `drop index`
+ * and a plain `reindex` (the table is not named, so always); `create or
+ * replace view` (an existing view is replaced under an exclusive lock); and
+ * dynamic `execute format('alter …')`, whose target is a placeholder, so
+ * always.
+ *
+ * Function and procedure bodies are not read: what a body runs, it runs when
+ * it is CALLED, under the caller's bound, not when the file is applied. A DO
+ * block is applied and is read. What it cannot see, and a reviewer must:
+ * dynamic SQL built any other way (`execute 'alter …' || …`, a format string
+ * held in a variable), a function the file itself calls at apply time that
+ * locks (`select f()`, `perform f()` in a DO block),
+ * `drop view`, `drop table`, `alter view`/`alter index`/`alter materialized
+ * view`, `refresh materialized view`, `comment on` and `grant`/`revoke`.
+ *
+ * The files before it were written without the rule and are not judged;
+ * 0294 to 0306 all satisfy it.
+ */
+export const LOCK_RULE_FROM = 294;
+
+const REL = String.raw`([a-z0-9_."]+)`;
+
+/** The first statement of a text that takes a write-blocking lock on a table the text did not create, or null. */
+export function lockingStatement(source: string): { readonly index: number; readonly statement: string } | null {
+  const text = blankFunctionBodies(source);
+  // A word inside a string literal is not a statement; only the dynamic-alter arm reads into one.
+  const code = text.replace(/'(?:[^']|'')*'/g, (l) => `'${" ".repeat(l.length - 2)}'`);
+  const own = new Set([...code.matchAll(/create\s+(?:unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_."]+)/gi)].map((m) => bare(m[1] ?? "")));
+  const found: { index: number; statement: string }[] = [];
+  const onTable = (re: RegExp): void => {
+    for (const m of code.matchAll(re)) if (!own.has(bare(m[1] ?? ""))) found.push({ index: m.index, statement: m[0] });
+  };
+  const always = (re: RegExp, over = code): void => {
+    for (const m of over.matchAll(re)) found.push({ index: m.index, statement: m[0] });
+  };
+  onTable(new RegExp(String.raw`\bcreate\s+(?:unique\s+)?index\s+(?!concurrently\b)(?:if\s+not\s+exists\s+)?[a-z0-9_"]*\s*on\s+(?:only\s+)?${REL}`, "gi"));
+  onTable(new RegExp(String.raw`\balter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?${REL}`, "gi"));
+  // lock and truncate as a statement: at the start of a line or after a semicolon, so a word in a literal is not one
+  onTable(new RegExp(String.raw`(?<=^|;)[^\S\n]*lock\s+(?:table\s+)?(?:only\s+)?${REL}`, "gim"));
+  onTable(new RegExp(String.raw`(?<=^|;)[^\S\n]*truncate\s+(?:table\s+)?(?:only\s+)?${REL}`, "gim"));
+  onTable(new RegExp(String.raw`\bcreate\s+(?:or\s+replace\s+)?(?:constraint\s+)?trigger\s+[a-z0-9_"]+[\s\S]*?\son\s+${REL}`, "gi"));
+  onTable(new RegExp(String.raw`\bdrop\s+trigger\s+(?:if\s+exists\s+)?[a-z0-9_"]+\s+on\s+${REL}`, "gi"));
+  always(/\bdrop\s+index\s+(?!concurrently\b)(?:if\s+exists\s+)?[a-z0-9_."]+/gi);
+  always(/\breindex\s+(?:\([^)]*\)\s*)?(?:table|index|schema|database|system)\s+(?!concurrently\b)[a-z0-9_."]+/gi);
+  always(/\bcreate\s+or\s+replace\s+view\s+[a-z0-9_."]+/gi);
+  always(/\bexecute\s+format\s*\(\s*'\s*alter\s+[a-z]+/gi, text);
+  return found.sort((a, b) => a.index - b.index)[0] ?? null;
+}
+
+/** The text with every function or procedure body (`as $tag$ … $tag$`) blanked to spaces, offsets kept: a body runs when it is called, not when the file is applied. A DO block is applied, and stays. */
+export function blankFunctionBodies(text: string): string {
+  return text.replace(/(\bcreate\s+(?:or\s+replace\s+)?(?:function|procedure)\b[\s\S]*?\bas\s+)(\$[a-z_]*\$)([\s\S]*?)(\2)/gi, (_m, head: string, open: string, body: string, close: string) => head + open + body.replace(/[^\n]/g, " ") + close);
+}
+
+const bare = (name: string): string => {
+  const n = name.replaceAll('"', "").toLowerCase();
+  return n.includes(".") ? n : `public.${n}`;
+};
 
 const stripComments = (text: string): string => text.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
 
@@ -98,13 +170,21 @@ export function lint(io: LintIo): LintResult {
   let ledgerRows: LedgerRow[] = [];
   if (baselineNames !== null) {
     const sqls = baselineNames.filter((n) => BASELINE_FILE.test(n));
-    const stray = baselineNames.filter((n) => n !== LEDGER_TSV && !BASELINE_FILE.test(n) && !n.startsWith("."));
-    for (const n of stray) fail(`db/baseline/${n}: only ${LEDGER_TSV} and one NNNN_baseline.sql belong in db/baseline`);
+    const stray = baselineNames.filter((n) => !BASELINE_COMPANIONS.includes(n) && !BASELINE_FILE.test(n) && !n.startsWith("."));
+    for (const n of stray) fail(`db/baseline/${n}: only ${BASELINE_COMPANIONS.join(", ")} and one NNNN_baseline.sql belong in db/baseline`);
     if (!baselineNames.includes(LEDGER_TSV)) fail(`db/baseline: ${LEDGER_TSV} is missing`);
     else {
       try {
         ledgerRows = parseLedgerTsv(io.read("baseline", LEDGER_TSV).toString("utf8"));
         baselineHead = ledgerRows.length;
+      } catch (e) {
+        if (!(e instanceof BaselineError)) throw e;
+        fail(`db/baseline/${e.message}`);
+      }
+    }
+    if (baselineNames.includes(ALIASES_TSV) && ledgerRows.length > 0) {
+      try {
+        parseAliasesTsv(io.read("baseline", ALIASES_TSV).toString("utf8"), ledgerRows);
       } catch (e) {
         if (!(e instanceof BaselineError)) throw e;
         fail(`db/baseline/${e.message}`);
@@ -183,6 +263,16 @@ export function lint(io: LintIo): LintResult {
       }
       if (!/concurrently/i.test(text)) fail(`${name}: is marked '-- no-transaction:' but runs nothing that needs it — the marker costs atomicity, so it is only for statements PostgreSQL refuses inside a transaction`);
       if (!/if not exists|or replace/i.test(text)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace')`);
+    }
+    if (num >= LOCK_RULE_FROM) {
+      const code = stripComments(text);
+      const locking = lockingStatement(code);
+      const bound = /set\s+local\s+lock_timeout\b/i.exec(code);
+      if (locking !== null && (bound === null || bound.index > locking.index)) {
+        fail(
+          `${name}: '${locking.statement.replace(/\s+/g, " ")}' locks a table this file did not create, with no 'set local lock_timeout' before it — it would queue behind a writer and every later writer behind it; set the bound first (migrate retries a 55P03)`,
+        );
+      }
     }
     if (base.kind === "ok") {
       const was = io.baseBlob("migrations", name);

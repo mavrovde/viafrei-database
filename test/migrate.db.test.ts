@@ -62,7 +62,9 @@ describe.skipIf(url === undefined)("from empty to head", () => {
     const r = await svc.migrate("cli");
     expect(r.ok).toBe(true);
     expect(r.lines.filter((l) => l.startsWith("applying"))).toEqual([]);
-    expect(r.lines.at(-1)).toBe(`✓ 0 migration(s) applied; head = ${String(svc.files.length)}`);
+    expect(r.lines.at(-2)).toBe(`✓ 0 migration(s) applied; head = ${String(svc.files.length)}`);
+    // The role settings follow every good run, a run with nothing pending included (#31).
+    expect(r.lines.at(-1)).toMatch(/^ {2}role settings: \d+ applied to this database/);
   });
 
   // A refusal the database itself raises reaches the caller as a sentence of

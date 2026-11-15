@@ -18,7 +18,8 @@
     "test:db": "vitest run --config vitest.db.config.ts",
     "coverage": "vitest run --config vitest.coverage.config.ts --coverage",
     "lint:migrations": "tsx src/cli.ts lint",
-    "mutate": "tsx scripts/mutate.ts"
+    "mutate": "tsx scripts/mutate.ts",
+    "coverage:schema": "tsx scripts/coverage-schema.ts"
   },
   "dependencies": {
     "pg": "^8.23.0"

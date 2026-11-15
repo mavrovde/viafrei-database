@@ -57,6 +57,26 @@ describe("migrate", () => {
     expect(err.at(-1)).toBe("✗ 0002_b.sql is applied with a different checksum — never edit an applied migration");
   });
 
+  it("fails, naming the file, when psql exits 0 but the file never reached its ledger insert", async () => {
+    // The fake records an insert only when it sees one: a file that swallows it (an
+    // unterminated dollar quote) is a script psql "ran" without recording anything.
+    const fake = fakePsql({ fail: (s) => (s.startsWith("begin;") && s.includes("0003_c.sql") ? { code: 0, stdout: "", stderr: "" } : null) });
+    const err: string[] = [];
+    const r = await migrate({ psql: fake.run, files, out: () => undefined, err: (l) => err.push(l) });
+    expect(r.exitCode).toBe(1);
+    expect(r.applied).toEqual(["0001_a.sql", "0002_b.sql"]);
+    expect(err.at(-1)).toMatch(/^✗ 0003_c\.sql: psql exited 0 but version 3 is not in schema_migrations/);
+    expect(fake.ledger.map((l) => l.split(" ")[0])).toEqual(["1", "2"]);
+  });
+
+  it("fails when the ledger cannot be read back after a file", async () => {
+    const fake = fakePsql({ fail: (_s, n) => (n > 2 && (fake.calls[n - 1]?.args ?? []).join(" ").includes("select version||") ? { code: 2, stdout: "", stderr: "FATAL:  gone\n" } : null) });
+    const err: string[] = [];
+    const r = await migrate({ psql: fake.run, files, out: () => undefined, err: (l) => err.push(l) });
+    expect(r.exitCode).toBe(1);
+    expect(err.at(-1)).toMatch(/^✗ 0001_a\.sql: schema_migrations could not be read/);
+  });
+
   it("dry-run applies nothing and lists what it would", async () => {
     const fake = fakePsql();
     const out: string[] = [];
