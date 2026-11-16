@@ -3312,116 +3312,116 @@ grant	api_reader@contract.weather_warning	test/roles-grants.db.test.ts > api_rea
 role	api_access	test/roles-grants.db.test.ts > api_access: as 0308 creates it
 role	api_reader	test/roles-grants.db.test.ts > api_reader: as 0307 creates it
 table	access.api_key	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.api_key	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.api_key	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.audit	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.audit	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.audit	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.console_enrolment	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.console_enrolment	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.console_enrolment	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.console_passkey	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.console_passkey	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.console_passkey	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.plan	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.plan	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.plan	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.schema_version	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.schema_version	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.schema_version	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.terms_acceptance	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.terms_acceptance	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.terms_acceptance	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 table	access.usage	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-table	access.usage	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+table	access.usage	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.admin_region	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.admin_region	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.admin_region	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.admin_region	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.call_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.call_observation	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.call_observation	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.call_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.charge_point	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.charge_point	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charge_point	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.charge_point	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.charging_site	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.charging_site	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charging_site	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.charging_site	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.contract_info	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.contract_info	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.contract_info	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.contract_info	test/api-schemas.db.test.ts > contract_info states version 0.3, once, as the API's readiness reads it
 view	contract.fuel_price_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.fuel_price_observation	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_price_observation	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.fuel_price_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.fuel_product	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.fuel_product	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_product	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.fuel_product	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.fuel_station	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.fuel_station	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_station	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.fuel_station	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.journey	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.journey	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.journey	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.journey	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.junction	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.junction	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.junction	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.junction	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.licence	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.licence	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.licence	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.licence	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.message_coverage	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.message_coverage	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.message_coverage	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.message_coverage	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.occupancy_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.occupancy_observation	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.occupancy_observation	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.occupancy_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.parking_facility	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.parking_facility	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.parking_facility	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.parking_facility	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.place	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.place	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.place	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.place	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.place_alias	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.place_alias	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.place_alias	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.place_alias	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.publisher	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.publisher	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.publisher	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.publisher	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.road	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.road	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.road	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.road	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.rule_statement	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.rule_statement	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.rule_statement	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.rule_statement	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.rule_topic	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.rule_topic	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.rule_topic	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.rule_topic	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.scheduled_call	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.scheduled_call	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.scheduled_call	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.scheduled_call	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.source	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.source	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.source	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.source_freshness	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.source_freshness	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source_freshness	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.source_freshness	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.source_note	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.source_note	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source_note	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.source_note	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.station_facility	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.station_facility	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.station_facility	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.station_facility	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.stop_place	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.stop_place	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.stop_place	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.stop_place	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.stop_point	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.stop_point	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.stop_point	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.stop_point	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.traffic_event	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.traffic_event	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.traffic_event	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.traffic_event	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.traffic_event_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.traffic_event_observation	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.traffic_event_observation	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.traffic_event_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.transit_line	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.transit_line	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.transit_line	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.transit_line	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.weather_warning	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.weather_warning	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.weather_warning	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.weather_warning	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 check	access.api_key.api_key_key_id_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
 check	access.api_key.api_key_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
@@ -3476,7 +3476,7 @@ view	public.contract_source_domains	test/contract-mapping.db.test.ts > source: t
 view	public.contract_sources	test/contract-mapping.db.test.ts > source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID public behind its per-request terms gate; an excluded source has no row
 view	public.contract_sources	test/contract-mapping.db.test.ts > source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)
 view	contract.terms	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
-view	contract.terms	test/api-schemas.db.test.ts > contract holds views only, 33 of them; access holds its 8 tables, and neither holds anything else
+view	contract.terms	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
 view	contract.terms	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
 view	contract.terms	test/contract-mapping.db.test.ts > terms: sid-terms-1 in German (binding) and English, the verbatim section A.2, and every SID row's terms_gate names it
 grant	api_reader@contract.terms	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
@@ -3556,3 +3556,15 @@ function	public.contract_search_fold(t text)	test/contract-mapping.db.test.ts > 
 function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: a KVB Haltestelle DELFI keeps no parent for maps to its first parentless stop
 function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: an OpenStation lift with its state, and a FaSta escalator
 fixture	vf_test.ensure_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+view	contract.departure	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.departure	test/api-schemas.db.test.ts > contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else
+view	contract.departure	test/contract-mapping.db.test.ts > departure: Trip Updates, the newest row of the latest earlier stop when the stop has none; SKIPPED here or a newer CANCELED trip cancels
+view	contract.departure	test/contract-mapping.db.test.ts > departure: a SIRI ET call of the line in the minute wins over Trip Updates, with its platform change; every carrier is credited
+grant	api_reader@contract.departure	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.departure	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+function	public.contract_transport_mode(route_type integer)	test/contract-mapping.db.test.ts > departure: with no feed up, the timetable's call, its line and mode, says no figure
+function	public.contract_transport_mode(route_type integer)	test/contract-mapping.db.test.ts > stop_place, stop_point and transit_line from the static GTFS
+fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > a departure seeded with a realtime source reads back with its figure, its platform and its carriers
+view	contract.traffic_event	test/contract-mapping.db.test.ts > severity: a closed or blocked road, an accident, a long jam, roadworks, a short jam, a restriction, a hazard; a lane deviation is no closure
+view	public.contract_source_domains	test/contract-mapping.db.test.ts > domain: station equipment and stop accessibility sources answer for accessibility, the timetable for transit

@@ -49,13 +49,16 @@
 --
 -- Views read their tables with their owner's rights, never api_reader's, so
 -- api_reader keeps its grants on contract alone (0307). No view calls a
--- function that reads a table (it would run with the caller's rights): the
--- Autobahn payload is resolved inline, as autobahn_raw_resolve() does.
+-- function that reads a table with the caller's rights: the Autobahn payload
+-- is resolved inline, as autobahn_raw_resolve() does, and the one function
+-- that reads a table, contract_stop_place_of(), is a security definer.
 --
 -- rollback: re-run the create view statements of 0307 as create or replace
 -- view after dropping the appended columns, i.e. drop and recreate each
 -- replaced view from 0307 (then grant select on all tables in schema
--- contract to api_reader), then drop view contract.terms,
+-- contract to api_reader), then drop view contract.terms, contract.departure,
+-- functions public.contract_transport_mode(integer),
+-- public.contract_stop_place_of(text), public.contract_search_fold(text),
 -- public.contract_sources, public.contract_source_domains,
 -- public.contract_source_rules; drop trigger autobahn_sweeps_note on
 -- public.autobahn_events, drop function public.autobahn_sweeps_note(),
@@ -102,6 +105,20 @@ create function public.contract_stop_place_of(ref text) returns text
 comment on function public.contract_stop_place_of(text) is
   'The contract stop_place_id of a station feed''s DHID-bearing id (#29): the DELFI stop of that DHID, else the first parentless stop under it, else NULL.';
 
+create function public.contract_transport_mode(route_type integer) returns text
+  language sql immutable strict parallel safe
+  return case
+           when route_type = 109 then 'sbahn'
+           when route_type = 2 or route_type between 100 and 199 then 'rail'
+           when route_type = 1 or route_type between 400 and 405 then 'subway'
+           when route_type = 0 or route_type between 900 and 906 then 'tram'
+           when route_type in (3, 11, 800) or route_type between 200 and 209 or route_type between 700 and 716 then 'bus'
+           when route_type = 4 or route_type between 1000 and 1021 or route_type = 1200 then 'ferry'
+           else 'other'
+         end;
+comment on function public.contract_transport_mode(integer) is
+  'The contract transport_mode of a GTFS route_type (basic and extended), as contract.transit_line and contract.departure name it (#29).';
+
 -- ------------------------------------------------------------ the rules
 
 create view public.contract_source_rules as
@@ -130,6 +147,7 @@ select t.priority, t.pattern, t.domain
     (30, '(afir|ocpdb|tankerkoenig|h2_stations|hydrogen|emobility|charg|bnetza_lsr)', 'energy'),
     (40, '(park|_pls$|_pr_|truckpark|toll_collect_sid|trk_lkw|reisebus|lieferzonen)', 'parking'),
     (50, '^(geonames|destatis_.*|bkg_.*|osm|osm_streets|ags_.*)$', 'places'),
+    (55, '(^db_fasta$|aufzug|lifts|^openstation_|^bfrk_)', 'accessibility'),
     (60, '(delfi|^db_|gtfs|siri|_rt$|^vbb|^vrn|flix|bfrk|haltestellen|lifts|openstation|mvv_|vdv|streckennetz|underground|^vbn_|^gbfs_)', 'transit'),
     (90, '.', 'roads')
   ) as t(priority, pattern, domain);
@@ -425,6 +443,18 @@ select x.road, x.kind, x.at
 -- same hash, exactly as autobahn_raw_resolve() reads it.
 -- DATEX II (Mobilithek): every row of road_events we did not retract, with
 -- the provider's own end as withdrawn_at and its marking as confidentiality.
+-- event_kind follows the platform's road vocabulary (ingest analysis
+-- road-now: roadNowKindOf): an Autobahn warning is a jam only with a standing
+-- or crawling traffic type; a DATEX roadOrCarriagewayOrLaneManagement record
+-- is a restriction, not a closure (its only recorded type is lanesDeviated);
+-- a police message's own German type names a closure (Sperrung) or an
+-- accident (Unfall). severity is the platform's ranking band (bandOf) on the
+-- API's scale: a closed road (an Autobahn closure, an item the provider marks
+-- blocked, a Sperrung) road_closed; an accident, a jam of ten minutes or more
+-- (LONG_JAM_SECONDS) and a closed entry or exit major; roadworks, the band
+-- between the long and the short jam, lane_closed; a shorter or unmeasured jam
+-- and a restriction minor; a hazard or the weather info; anything else other
+-- (not graded).
 create or replace view contract.traffic_event as
 with newest as (
   -- The newest sweep of the last day per road and event kind (autobahn_sweeps).
@@ -446,11 +476,21 @@ with newest as (
          case
            when a.kind like 'closure%' then 'closure'
            when a.kind = 'roadworks' then 'roadworks'
-           when a.abnormal_traffic_type is not null then 'jam'
+           when a.kind = 'warning'
+                and a.abnormal_traffic_type in ('QUEUING_TRAFFIC', 'STATIONARY_TRAFFIC', 'SLOW_TRAFFIC', 'HEAVY_TRAFFIC') then 'jam'
            when a.kind = 'warning' then 'hazard'
            else 'other'
          end                                                         as event_kind,
-         case when a.kind like 'closure%' then 'road_closed' else 'other' end as severity,
+         case
+           when a.kind = 'closure' or a.p->>'isBlocked' = 'true' then 'road_closed'
+           when a.kind = 'closure_entry_exit' then 'major'
+           when a.kind = 'roadworks' then 'lane_closed'
+           when a.kind = 'warning'
+                and a.abnormal_traffic_type in ('QUEUING_TRAFFIC', 'STATIONARY_TRAFFIC', 'SLOW_TRAFFIC', 'HEAVY_TRAFFIC')
+             then case when a.delay_s >= 600 then 'major' else 'minor' end
+           when a.kind = 'warning' then 'info'
+           else 'other'
+         end                                                         as severity,
          a.road                                                      as road_ref,
          'motorway'::text                                            as road_class,
          'unknown'::text                                             as direction,
@@ -487,15 +527,22 @@ with newest as (
   select 'datex:' || e.source_id || ':' || e.publication_id,
          case
            when e.event_type ~* '(maintenance|roadworks|construction)' then 'roadworks'
-           when e.event_type ~* 'accident' then 'accident'
+           when e.event_type ~* '(accident|unfall)' then 'accident'
            when e.event_type ~* 'abnormaltraffic' then 'jam'
            when e.event_type ~* '(weather|environment)' then 'weather'
-           when e.event_type ~* '(closure|carriagewayorlanemanagement)' then 'closure'
-           when e.event_type ~* '(speedmanagement|restriction|reroutingmanagement)' then 'restriction'
+           when e.event_type ~* '(closure|sperrung)' then 'closure'
+           when e.event_type ~* '(speedmanagement|restriction|reroutingmanagement|carriagewayorlanemanagement|networkmanagement)' then 'restriction'
            when e.event_type ~* '(obstruction|hazard|animal|vehicle|equipment)' then 'hazard'
            else 'other'
          end,
-         'other',
+         case
+           when e.event_type ~* '(closure|sperrung)' then 'road_closed'
+           when e.event_type ~* '(accident|unfall)' then 'major'
+           when e.event_type ~* '(maintenance|roadworks|construction)' then 'lane_closed'
+           when e.event_type ~* '(abnormaltraffic|speedmanagement|restriction|reroutingmanagement|carriagewayorlanemanagement|networkmanagement)' then 'minor'
+           when e.event_type ~* '(weather|environment|obstruction|hazard|animal|vehicle|equipment)' then 'info'
+           else 'other'
+         end,
          e.road_number,
          case
            when e.road_number ~ '^A ?[0-9]' then 'motorway'
@@ -802,15 +849,7 @@ select s.gtfs_feed_key || ':' || s.id                         as stop_point_id,
 create or replace view contract.transit_line as
 select r.gtfs_feed_key || ':' || r.id                                         as line_id,
        coalesce(nullif(btrim(r.short_name), ''), nullif(btrim(r.long_name), ''), r.id) as line_name,
-       case
-         when r.route_type = 109 then 'sbahn'
-         when r.route_type = 2 or r.route_type between 100 and 199 then 'rail'
-         when r.route_type = 1 or r.route_type between 400 and 405 then 'subway'
-         when r.route_type = 0 or r.route_type between 900 and 906 then 'tram'
-         when r.route_type in (3, 11, 800) or r.route_type between 200 and 209 or r.route_type between 700 and 716 then 'bus'
-         when r.route_type = 4 or r.route_type between 1000 and 1021 or r.route_type = 1200 then 'ferry'
-         else 'other'
-       end                                                                    as transport_mode,
+       public.contract_transport_mode(r.route_type)                           as transport_mode,
        f.source_feed                                                          as source_ref,
        'open'::text                                                           as display_class,
        'public'::text                                                         as audience
@@ -873,6 +912,178 @@ select '1:' || d.trip_id || ':' || to_char((d.observed_at at time zone 'Europe/B
    and c.call_order = d.stop_sequence
   left join lateral (select k.* from public.contract_source_rules k where coalesce(d.source, '') ~ k.pattern order by k.priority limit 1) k on true
  where d.stop_sequence is not null and not coalesce(k.excluded, false);
+
+-- ------------------------------------------------------------- departures
+
+-- One row per scheduled call of the static GTFS, with its line and mode and
+-- the live figure of the call, as the platform's departure board composes it
+-- (packages/ingest analysis/live-departures.ts, shared by get_departures,
+-- get_train_departures and the station page): one figure from ONE feed by
+-- precedence, DELFI SIRI ET > DELFI GTFS-RT Trip Updates > the timetable,
+-- and every feed that carried the call credited in source_refs.
+--
+--   * Trip Updates (delfi_rt_tu, through transit_delays_live, the last six
+--     hours): a row of the trip observed within 12 h of the planned instant
+--     (a stop row carries no service date; a trip row's start_date must be
+--     the service date). A CANCELED or DELETED trip row newer than every stop
+--     row cancels the call; else the stop's own row, or the newest row of the
+--     latest earlier stop (SKIPPED earlier stops passed over): NO_DATA is no
+--     figure, SKIPPED on the stop itself cancels it, a delay is the figure,
+--     the stop's own absolute time is the figure when within 12 h.
+--   * SIRI ET (delfi_siri_et*, delfi_siri_et_calls_latest, the last eight
+--     hours, not yet recorded): a call at one of the stop's refs (its DHID,
+--     its station's DHID, the DB station's EVA numbers, or an EVA the
+--     EVA-DHID bridge pairs with them) of the same line (blanks dropped,
+--     upper case) planned in the same minute. A call reached through the
+--     bridge must name the same destination; a call that names it wins over
+--     one that does not. Its platform, where it carries one, is the live
+--     platform: two known and different are a platform change.
+--   * Neither figure is read while its feed is down (feed_checks: its last
+--     check older than three cadences, a missing cadence read as 600 s),
+--     and a delay beyond six hours is no figure (no_forecast).
+--
+-- Not carried here, the caller's: grouping a station's stops into one board,
+-- one row per train when several stops list it, the SIRI ET calls the
+-- timetable does not list, and dropping departed rows.
+--
+-- The ids are built with ::text so that the stop's ids are index
+-- expressions (0313): a board is read by stop_place_id or stop_point_id.
+
+create view contract.departure as
+select s.gtfs_feed_key::text || ':' || coalesce(s.parent_id, s.id)                    as stop_place_id,
+       s.gtfs_feed_key::text || ':' || s.id                                           as stop_point_id,
+       t.gtfs_feed_key::text || ':' || t.id || ':' || to_char(d.service_date, 'YYYYMMDD') as journey_id,
+       st.stop_sequence                                                               as call_order,
+       r.gtfs_feed_key::text || ':' || r.id                                           as line_id,
+       coalesce(nullif(btrim(r.short_name), ''), nullif(btrim(r.long_name), ''), r.id) as line_name,
+       public.contract_transport_mode(r.route_type)                                   as transport_mode,
+       r.route_type                                                                   as route_type,
+       nullif(btrim(t.trip_short_name), '')                                           as train_number,
+       sc.category                                                                    as train_category,
+       coalesce(nullif(btrim(t.headsign), ''), sc.destination)                        as destination_label,
+       pl.arr                                                                         as planned_arrival_at,
+       pl.dep                                                                         as planned_departure_at,
+       nullif(btrim(s.platform_code), '')                                             as planned_platform,
+       coalesce(sc.platform, nullif(btrim(s.platform_code), ''))                      as platform,
+       coalesce(sc.platform <> btrim(s.platform_code), false)                         as platform_changed,
+       st.departure is not null and st.pickup_type <> 1                               as boarding,
+       not exists (select 1 from public.stop_times nx
+                    where nx.gtfs_feed_key = st.gtfs_feed_key and nx.trip_id = st.trip_id
+                      and nx.stop_sequence > st.stop_sequence and nx.deleted_at is null) as terminates,
+       fig.feed is not null                                                           as realtime,
+       fig.feed                                                                       as realtime_source,
+       coalesce(fig.cancelled, false)                                                 as cancelled,
+       fig.delay_s                                                                    as delay_s,
+       round(fig.delay_s / 60.0)::integer                                             as delay_min,
+       pl.arr + make_interval(secs => fig.delay_s)                                    as expected_arrival_at,
+       pl.dep + make_interval(secs => fig.delay_s)                                    as expected_departure_at,
+       fig.refused or (fig.feed is null and sc.call_at is not null)                   as no_forecast,
+       fig.observed_at                                                                as observed_at,
+       src.feed                                                                       as source_ref,
+       array_remove(array[src.feed,
+                          case when tu.carried then 'delfi_rt_tu' end,
+                          case when sc.call_at is not null then sc.source_feed end], null) as source_refs,
+       coalesce(k.display_class, 'open')                                              as display_class,
+       coalesce(k.audience, 'public')                                                 as audience
+  from public.stops s
+  join public.stop_times st on st.gtfs_feed_key = s.gtfs_feed_key and st.stop_id = s.id and st.deleted_at is null
+  join public.trips t on t.gtfs_feed_key = st.gtfs_feed_key and t.id = st.trip_id and t.deleted_at is null
+  join public.routes r on r.gtfs_feed_key = t.gtfs_feed_key and r.id = t.route_id and r.deleted_at is null
+  join public.gtfs_service_dates d on d.gtfs_feed_key = t.gtfs_feed_key and d.service_id = t.service_id
+  -- the timetable's feed, read per row: joined, its key would let the planner pair
+  -- service dates and routes with the stop times by the feed key alone
+  cross join lateral (select (select f.source_feed from public.feeds f where f.gtfs_feed_key = s.gtfs_feed_key) as feed offset 0) src
+  cross join lateral (
+    select ((d.service_date + time '12:00') at time zone 'Europe/Berlin') - interval '12 hours' + st.arrival   as arr,
+           ((d.service_date + time '12:00') at time zone 'Europe/Berlin') - interval '12 hours' + st.departure as dep
+  ) pl
+  -- DELFI GTFS-RT Trip Updates: the DELFI timetable's trips only, while the feed is up
+  left join lateral (
+    with run as (
+      select u.stop_sequence, u.delay_s, upper(u.schedule_relationship) as rel, u.event_at, u.observed_at
+        from public.transit_delays_live u
+       where s.gtfs_feed_key = 1 and u.trip_id = t.id
+         and abs(extract(epoch from u.observed_at - coalesce(pl.dep, pl.arr))) <= 43200
+         and (u.stop_sequence is not null or u.start_date is null or u.start_date = to_char(d.service_date, 'YYYYMMDD'))
+         and exists (select 1 from public.feed_checks c
+                      where c.feed_key = 'tripupdates' and c.checked_at is not null
+                        and (c.paused or c.checked_at >= now() - 3 * make_interval(secs => coalesce(nullif(c.cadence_s, 0), 600))))
+    ),
+    trip_row as (select x.rel, x.observed_at from run x where x.stop_sequence is null order by x.observed_at desc limit 1),
+    stop_row as (
+      select x.stop_sequence, x.delay_s, x.rel, x.event_at, x.observed_at from run x
+       where x.stop_sequence <= st.stop_sequence and not (x.rel = 'SKIPPED' and x.stop_sequence <> st.stop_sequence)
+       order by x.stop_sequence desc limit 1
+    )
+    select exists (select 1 from run) as carried,
+           case
+             when tr.rel in ('CANCELED', 'CANCELLED', 'DELETED')
+                  and tr.observed_at >= coalesce((select max(x.observed_at) from run x where x.stop_sequence is not null), '-infinity') then true
+             when sr.rel = 'SKIPPED' then true
+           end as cancelled,
+           case
+             when tr.rel in ('CANCELED', 'CANCELLED', 'DELETED')
+                  and tr.observed_at >= coalesce((select max(x.observed_at) from run x where x.stop_sequence is not null), '-infinity') then null
+             when sr.rel in ('NO_DATA', 'SKIPPED') then null
+             when sr.delay_s is not null then sr.delay_s
+             when sr.stop_sequence = st.stop_sequence and sr.event_at is not null
+                  and abs(extract(epoch from sr.event_at - coalesce(pl.dep, pl.arr))) <= 43200
+               then round(extract(epoch from sr.event_at - coalesce(pl.dep, pl.arr)))::integer
+           end as delay_s,
+           coalesce(case when tr.rel in ('CANCELED', 'CANCELLED', 'DELETED') then tr.observed_at end, sr.observed_at) as observed_at
+      from (select 1) one
+      left join trip_row tr on true
+      left join stop_row sr on true
+  ) tu on true
+  -- DELFI SIRI ET: the call of this stop, line and planned minute, while its feed is up
+  left join lateral (
+    select c.platform, c.category, c.destination, c.source_feed, c.aimed_dep as call_at, c.observed_at,
+           case when c.cancelled or c.journey_cancelled then null
+                else coalesce(c.delay_s, round(extract(epoch from c.expected_dep - c.aimed_dep))::integer) end as delay_s,
+           c.cancelled or c.journey_cancelled as cancelled
+      from (select s.id as ref, false as bridged
+            union select coalesce(s.parent_id, s.id), false
+            union select e.eva, false
+                    from public.db_stations x, unnest(x.eva_nos) e(eva)
+                   where x.ifopt = coalesce(s.parent_id, substring(s.id from '^[a-z]{2}:[0-9]{5}:[0-9]+'), s.id) and x.closed_at is null
+            union select p.eva, true
+                    from public.delfi_siri_et_stop_pairs p
+                   where p.dhid = s.id or p.station_dhid = coalesce(s.parent_id, substring(s.id from '^[a-z]{2}:[0-9]{5}:[0-9]+'), s.id)) refs
+      join public.delfi_siri_et_calls_latest c
+        on c.stop_ref = refs.ref
+       and coalesce(c.expected_dep, c.aimed_dep) >= pl.dep - interval '1 hour'
+       and coalesce(c.expected_dep, c.aimed_dep) <= pl.dep + interval '6 hours 1 minute'
+       and c.aimed_dep > pl.dep - interval '1 minute' and c.aimed_dep < pl.dep + interval '1 minute'
+     where s.gtfs_feed_key = 1 and pl.dep is not null
+       and not c.recorded
+       and c.observed_at > now() - interval '8 hours' and c.observed_at <= now()
+       and upper(regexp_replace(c.line, '\s+', '', 'g')) = upper(regexp_replace(coalesce(nullif(btrim(r.short_name), ''), nullif(btrim(r.long_name), ''), ''), '\s+', '', 'g'))
+       and (not refs.bridged or c.destination = btrim(t.headsign))
+       and exists (select 1 from public.feed_checks k
+                    where k.feed_key = c.source_feed and k.checked_at is not null
+                      and (k.paused or k.checked_at >= now() - 3 * make_interval(secs => coalesce(nullif(k.cadence_s, 0), 600))))
+     order by (c.destination = btrim(t.headsign)) desc nulls last, refs.bridged, c.observed_at desc
+     limit 1
+  ) sc on true
+  cross join lateral (
+    select case when sc.call_at is not null and (sc.cancelled or abs(coalesce(sc.delay_s, 0)) <= 21600)
+                     and (sc.cancelled or sc.delay_s is not null) then 'siri'
+                when tu.carried and (tu.cancelled or (tu.delay_s is not null and abs(tu.delay_s) <= 21600)) then 'tu'
+           end as pick,
+           (sc.delay_s is not null and abs(sc.delay_s) > 21600) or (tu.delay_s is not null and abs(tu.delay_s) > 21600) as over
+  ) pk
+  cross join lateral (
+    select case pk.pick when 'siri' then sc.source_feed when 'tu' then 'delfi_rt_tu' end as feed,
+           case pk.pick when 'siri' then sc.cancelled when 'tu' then coalesce(tu.cancelled, false) end as cancelled,
+           case pk.pick when 'siri' then sc.delay_s when 'tu' then tu.delay_s end as delay_s,
+           case pk.pick when 'siri' then sc.observed_at when 'tu' then tu.observed_at end as observed_at,
+           pk.pick is null and pk.over as refused
+  ) fig
+  -- the envelope of the feed whose figure is shown (the timetable's rows are open and public)
+  left join lateral (select k.display_class, k.audience from public.contract_source_rules k
+                      where fig.feed is not null and fig.feed ~ k.pattern order by k.priority limit 1) k on true
+ where s.deleted_at is null;
+grant select on contract.departure to api_reader;
 
 -- ------------------------------------------------------------- stations
 
@@ -1039,6 +1250,7 @@ BEGIN
     ('transit_line', 'public.routes; transport_mode as transit_stop_modes types it.'),
     ('journey', 'A trip on each of its service dates. extra: the static timetable has no extra trips (false).'),
     ('scheduled_call', 'public.stop_times on each service date of its trip, in absolute time.'),
+    ('departure', 'One row per scheduled call of the static GTFS with its line, mode and the live figure by the platform''s precedence (SIRI ET > GTFS-RT Trip Updates > timetable), the realtime platform and platform change, cancellation, delay in seconds and minutes; source_refs credits every feed that carried the call. The caller groups a station''s stops, keeps one row per train and drops departed rows.'),
     ('call_observation', 'DELFI GTFS-RT stop-time ticks (CC BY-SA), expected = planned + delay on the tick''s Berlin date.'),
     ('station_facility', 'Lifts and escalators of DB OpenStation and KVB with their state, and DB FaSta. stop_place_id: the DELFI stop of the equipment''s DHID (contract_stop_place_of), FaSta''s through its DB station''s IFOPT; NULL when the timetable holds no such stop.'),
     ('weather_warning', 'DWD warnings per warn cell (German text). English warnings: no level, not mapped.'),

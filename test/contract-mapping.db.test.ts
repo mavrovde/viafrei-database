@@ -133,7 +133,7 @@ describe("register views", () => {
     const all = "consumer,non_commercial,commercial";
     const year3 = null;
     expect(r).toEqual([
-      { source_ref: "db_fasta", domain: "transit", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-20", display_class: "open", audience: "public" },
+      { source_ref: "db_fasta", domain: "accessibility", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-20", display_class: "open", audience: "public" },
       { source_ref: "destatis_gv_laender", domain: "places", licence_code: "dl-de/by-2-0", uses: all, acc: false, stale_after_s: year3, rev: "2026-11-03", display_class: "open", audience: "public" },
       { source_ref: "dwd", domain: "weather", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-23", display_class: "open", audience: "public" },
       { source_ref: "geonames", domain: "places", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-08", display_class: "open", audience: "public" },
@@ -429,6 +429,83 @@ describe("0312 additions (owner decisions 2026-11-16)", () => {
   });
 });
 
+describe("traffic_event: the platform's kind and ranking band on the API's severity scale (#29)", () => {
+  it("severity: a closed or blocked road, an accident, a long jam, roadworks, a short jam, a restriction, a hazard; a lane deviation is no closure", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      await c.query("delete from public.autobahn_sweeps");
+      const ab = async (kind: string, id: string, extra: { type?: string; delay?: number; blocked?: boolean } = {}): Promise<void> => {
+        await c.query(
+          `insert into public.autobahn_events (observed_at, road, kind, ext_id, title, geom, source, abnormal_traffic_type, delay_s, raw, raw_hash)
+           values (now(), 'A8', '${kind}', '${id}', 't', ${PT(9.17, 48.73)}, 'autobahn', ${extra.type === undefined ? "null" : `'${extra.type}'`},
+                   ${extra.delay === undefined ? "null" : String(extra.delay)}, '{"isBlocked": "${String(extra.blocked ?? false)}"}'::jsonb, decode(md5('${id}'), 'hex'))`,
+        );
+      };
+      await ab("closure", "S1");
+      await ab("closure_entry_exit", "S2");
+      await ab("roadworks", "S3");
+      await ab("roadworks", "S4", { blocked: true });
+      await ab("warning", "S5", { type: "QUEUING_TRAFFIC", delay: 600 });
+      await ab("warning", "S6", { type: "SLOW_TRAFFIC", delay: 540 });
+      await ab("warning", "S7");
+      await ab("warning", "S8", { type: "UNKNOWN_TRAFFIC", delay: 900 });
+      const dx = async (id: string, type: string): Promise<void> => {
+        await c.query(
+          `insert into public.road_events (id, feed_key, source_id, publication_id, version, payload, event_type, road_number, geom, source_feed) overriding system value
+           values (${String(900 + Number(id.slice(1)))}, 'mobilithek_bab_messages', 'DE-SEV', '${id}', 1, '{}', '${type}', 'A8', st_setsrid(st_makepoint(9.17, 48.73), 4326), 'mobilithek_bab_messages')`,
+        );
+      };
+      await dx("D1", "roadOrCarriagewayOrLaneManagement");
+      await dx("D2", "accident");
+      await dx("D3", "Straßensperrung");
+      await dx("D4", "Unfall");
+      await dx("D5", "abnormalTraffic");
+      await dx("D6", "vehicleObstruction");
+      await dx("D7", "publicEvent");
+      const r = await c.query<{ id: string; kind: string; sev: string }>(
+        "select event_id as id, event_kind as kind, severity as sev from contract.traffic_event where event_id ~ '^(autobahn:S|datex:DE-SEV:)' order by 1",
+      );
+      expect(r.rows.map((x) => `${x.id} ${x.kind} ${x.sev}`)).toEqual([
+        "autobahn:S1 closure road_closed",
+        "autobahn:S2 closure major",
+        "autobahn:S3 roadworks lane_closed",
+        "autobahn:S4 roadworks road_closed",
+        "autobahn:S5 jam major",
+        "autobahn:S6 jam minor",
+        "autobahn:S7 hazard info",
+        "autobahn:S8 hazard info",
+        "datex:DE-SEV:D1 restriction minor",
+        "datex:DE-SEV:D2 accident major",
+        "datex:DE-SEV:D3 closure road_closed",
+        "datex:DE-SEV:D4 accident major",
+        "datex:DE-SEV:D5 jam minor",
+        "datex:DE-SEV:D6 hazard info",
+        "datex:DE-SEV:D7 other other",
+      ]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
+  it("domain: station equipment and stop accessibility sources answer for accessibility, the timetable for transit", async () => {
+    const { rows: r } = await db.pool.query<{ k: string; d: string }>(
+      `select k, (select d.domain from public.contract_source_domains d where k ~ d.pattern order by d.priority limit 1) as d
+         from unnest(array['db_fasta', 'kvb_aufzugsstoerung', 'openstation_netex', 'openstation_siri_fm', 'bfrk_spnv', 'delfi_rt_tu', 'db_ris_stations']) k order by 1`,
+    );
+    expect(r.map((x) => `${x.k} ${x.d}`)).toEqual([
+      "bfrk_spnv accessibility",
+      "db_fasta accessibility",
+      "db_ris_stations transit",
+      "delfi_rt_tu transit",
+      "kvb_aufzugsstoerung accessibility",
+      "openstation_netex accessibility",
+      "openstation_siri_fm accessibility",
+    ]);
+  });
+});
+
 describe("search_fold and the stop place lookups (#29)", () => {
   it("search_fold: lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only", async () => {
     const r = await read<{ a: string; b: string; c: string; d: string; e: string; f: string }>(
@@ -463,5 +540,93 @@ describe("search_fold and the stop place lookups (#29)", () => {
       await c.query("rollback");
       c.release();
     }
+  });
+});
+
+describe("departure (#29): the platform's live departure, one figure from one feed", () => {
+  // A departure planned 30 minutes from now at Stuttgart Hbf platform 1, line S1, then a later stop; a feed is up
+  // when its catalogue row has a fresh success. Each case runs in a transaction it rolls back.
+  const DEP = `((now() + interval '30 minutes') - ((${TODAY} + time '12:00') at time zone 'Europe/Berlin' - interval '12 hours'))`;
+  const PLAN = [
+    `insert into public.trips (gtfs_feed_key, id, route_id, service_id, headsign, trip_short_name) values (1, 'd1', 'r1', 'svc1', 'Herrenberg', '7123')`,
+    `insert into public.stop_times (gtfs_feed_key, trip_id, stop_sequence, stop_id, arrival, departure) values
+       (1, 'd1', 1, 'de:08111:9000:1', ${DEP} - interval '10 minutes', ${DEP} - interval '10 minutes'),
+       (1, 'd1', 2, 'de:08111:6115:1:1', ${DEP}, ${DEP}), (1, 'd1', 3, 'de:08111:9001:1', ${DEP} + interval '9 minutes', ${DEP} + interval '9 minutes')`,
+  ];
+  const UP = (feed: string): string[] => [
+    `insert into public.feed_catalog (feed_key, provider, display_name, licence_id, cadence_s) values ('${feed}', 'delfi', '${feed}', 'cc-by-sa', 120) on conflict do nothing`,
+    `insert into control.feed_state (ledger, key, last_success_at, updated_at) values ('feed', '${feed}', now(), now()) on conflict (ledger, key) do update set last_success_at = now()`,
+  ];
+  const TU = (seq: number | null, rel: string, delay: number | null): string =>
+    `insert into public.transit_delays (observed_at, feed_ts, trip_id, stop_sequence, delay_s, schedule_relationship, source) values (now(), now(), 'd1', ${seq === null ? "null" : String(seq)}, ${delay === null ? "null" : String(delay)}, '${rel}', 'delfi_rt_tu')`;
+  const SIRI = (ref: string, o: { platform?: string; delayMin?: number; cancelled?: boolean; destination?: string; line?: string; feed?: string }): string => {
+    const at = `((${TODAY} + time '12:00') at time zone 'Europe/Berlin' - interval '12 hours' + ${DEP})`;
+    return `insert into public.delfi_siri_et_calls_latest (stop_ref, service_day, journey_ref, visit, source_feed, observed_at, line, category, destination, platform, aimed_dep, expected_dep, delay_s, recorded, cancelled, journey_cancelled)
+      values ('${ref}', ${TODAY}, 'j-${ref}', 1, '${o.feed ?? "delfi_siri_et"}', now(), '${o.line ?? "S 1"}', 'S', '${o.destination ?? "Herrenberg"}', ${o.platform === undefined ? "null" : `'${o.platform}'`},
+              ${at}, ${at} + interval '${String(o.delayMin ?? 0)} minutes', null, false, ${String(o.cancelled ?? false)}, false)`;
+  };
+  type Dep = {
+    stop_place_id: string; line_name: string; transport_mode: string; train_number: string | null; train_category: string | null; destination_label: string;
+    planned_platform: string | null; platform: string | null; platform_changed: boolean; boarding: boolean; terminates: boolean; realtime: boolean;
+    realtime_source: string | null; cancelled: boolean; delay_s: number | null; delay_min: number | null; mins: number | null; no_forecast: boolean; source_refs: string[];
+  };
+  const board = async (setup: readonly string[]): Promise<Dep[]> => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      for (const q of [...PLAN, ...setup]) await c.query(q);
+      const r = await c.query<Dep>(
+        `select stop_place_id, line_name, transport_mode, train_number, train_category, destination_label, planned_platform, platform, platform_changed, boarding, terminates,
+                realtime, realtime_source, cancelled, delay_s, delay_min,
+                round(extract(epoch from expected_departure_at - planned_departure_at) / 60)::int as mins, no_forecast, source_refs
+           from contract.departure where stop_point_id = '1:de:08111:6115:1:1' and journey_id like '1:d1:%'`,
+      );
+      return r.rows;
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  };
+  const BASE = { stop_place_id: "1:de:08111:6115", line_name: "S1", transport_mode: "sbahn", train_number: "7123", destination_label: "Herrenberg", planned_platform: "1", boarding: true, terminates: false };
+
+  it("departure: with no feed up, the timetable's call, its line and mode, says no figure", async () => {
+    expect(await board([TU(2, "SCHEDULED", 300)])).toEqual([
+      { ...BASE, train_category: null, platform: "1", platform_changed: false, realtime: false, realtime_source: null, cancelled: false, delay_s: null, delay_min: null, mins: null, no_forecast: false, source_refs: ["delfi_static"] },
+    ]);
+  });
+
+  it("departure: Trip Updates, the newest row of the latest earlier stop when the stop has none; SKIPPED here or a newer CANCELED trip cancels", async () => {
+    const live = { ...BASE, train_category: null, platform: "1", platform_changed: false, realtime: true, realtime_source: "delfi_rt_tu", no_forecast: false, source_refs: ["delfi_static", "delfi_rt_tu"] };
+    expect(await board([...UP("tripupdates"), TU(1, "SCHEDULED", 240)])).toEqual([{ ...live, cancelled: false, delay_s: 240, delay_min: 4, mins: 4 }]);
+    expect(await board([...UP("tripupdates"), TU(1, "SCHEDULED", 240), TU(2, "SKIPPED", null)])).toEqual([{ ...live, cancelled: true, delay_s: null, delay_min: null, mins: null }]);
+    expect(await board([...UP("tripupdates"), TU(1, "SCHEDULED", 240), TU(null, "CANCELED", null)])).toEqual([{ ...live, cancelled: true, delay_s: null, delay_min: null, mins: null }]);
+    expect(await board([...UP("tripupdates"), TU(2, "NO_DATA", 120), TU(1, "SCHEDULED", 240)])).toEqual([
+      { ...live, realtime: false, realtime_source: null, cancelled: false, delay_s: null, delay_min: null, mins: null },
+    ]);
+  });
+
+  it("departure: a SIRI ET call of the line in the minute wins over Trip Updates, with its platform change; every carrier is credited", async () => {
+    const r = await board([...UP("tripupdates"), ...UP("delfi_siri_et"), TU(1, "SCHEDULED", 240), SIRI("de:08111:6115", { platform: "3", delayMin: 7 })]);
+    expect(r).toEqual([
+      { ...BASE, train_category: "S", platform: "3", platform_changed: true, realtime: true, realtime_source: "delfi_siri_et", cancelled: false, delay_s: 420, delay_min: 7, mins: 7, no_forecast: false, source_refs: ["delfi_static", "delfi_rt_tu", "delfi_siri_et"] },
+    ]);
+    const cancelled = await board([...UP("delfi_siri_et"), SIRI("de:08111:6115", { cancelled: true })]);
+    expect(cancelled.map((d) => [d.cancelled, d.realtime_source])).toEqual([[true, "delfi_siri_et"]]);
+  });
+
+  it("departure: a SIRI ET call is the departure's only by its line, through the EVA bridge only naming the same end, and only while its feed is up", async () => {
+    const pairs = `insert into public.delfi_siri_et_stop_pairs (eva, dhid, station_dhid, matches, first_seen_at, confirmed_at) values ('8000096', 'de:08111:6115:1:1', 'de:08111:6115', 1, now(), now())`;
+    const src = async (setup: string[]): Promise<(string | null)[]> => (await board(setup)).map((d) => d.realtime_source);
+    expect(await src([...UP("delfi_siri_et"), pairs, SIRI("8000096", {})])).toEqual(["delfi_siri_et"]);
+    expect(await src([...UP("delfi_siri_et"), pairs, SIRI("8000096", { destination: "Schorndorf" })])).toEqual([null]);
+    expect(await src([...UP("delfi_siri_et"), SIRI("de:08111:6115", { line: "S2" })])).toEqual([null]);
+    expect(await src([SIRI("de:08111:6115", {})])).toEqual([null]);
+    // the DB station's EVA number (db_stations 1071 names 8000096) is a ref of its own
+    expect(await src([...UP("delfi_siri_et"), "update public.db_stations set eva_nos = '{8000096}' where station_no = '1071'", SIRI("8000096", { destination: "Schorndorf" })])).toEqual(["delfi_siri_et"]);
+  });
+
+  it("departure: a delay beyond six hours is no figure, and the board says so", async () => {
+    const r = await board([...UP("tripupdates"), TU(2, "SCHEDULED", 7 * 3600)]);
+    expect(r.map((d) => [d.realtime, d.delay_s, d.no_forecast, d.source_refs])).toEqual([[false, null, true, ["delfi_static", "delfi_rt_tu"]]]);
   });
 });

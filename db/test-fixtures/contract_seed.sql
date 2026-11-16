@@ -247,7 +247,9 @@ END $$;
 
 -- event_id "autobahn:<ext_id>" is a tick of the newest Autobahn sweep (now);
 -- "datex:<source_id>:<publication_id>" a DATEX II road event, whose headline
--- is its event type (the view reads it so).
+-- is its event type (the view reads it so). An Autobahn jam is a warning with
+-- a standing traffic type; severity is derived from the kind, the delay and
+-- isBlocked, never stored.
 CREATE OR REPLACE FUNCTION vf_test.seed_traffic_event() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   kind text;
@@ -259,7 +261,7 @@ BEGIN
     PERFORM vf_test.ensure_day('public.autobahn_events', coalesce(NEW.recorded_at, now()));
     INSERT INTO public.autobahn_events (observed_at, road, kind, ext_id, title, subtitle, abnormal_traffic_type, delay_s, geom, raw, raw_hash, source)
     VALUES (coalesce(NEW.recorded_at, now()), NEW.road_ref, kind, vf_test.after_colon(NEW.event_id), NEW.headline, NEW.subtitle,
-            NEW.traffic_type, coalesce(NEW.delay_s, NEW.delay_min * 60), vf_test.point(NEW.location),
+            coalesce(NEW.traffic_type, CASE WHEN NEW.event_kind = 'jam' THEN 'QUEUING_TRAFFIC' END), coalesce(NEW.delay_s, NEW.delay_min * 60), vf_test.point(NEW.location),
             jsonb_strip_nulls(jsonb_build_object(
               'startTimestamp', to_char(NEW.valid_from at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
               'isBlocked', NEW.is_blocked::text,
@@ -268,7 +270,7 @@ BEGIN
   ELSE
     dtype := coalesce(NEW.headline, CASE NEW.event_kind
       WHEN 'roadworks' THEN 'MaintenanceWorks' WHEN 'accident' THEN 'Accident' WHEN 'jam' THEN 'AbnormalTraffic'
-      WHEN 'weather' THEN 'WeatherRelatedRoadConditions' WHEN 'closure' THEN 'RoadOrCarriagewayOrLaneManagement'
+      WHEN 'weather' THEN 'WeatherRelatedRoadConditions' WHEN 'closure' THEN 'Straßensperrung'
       WHEN 'restriction' THEN 'SpeedManagement' WHEN 'hazard' THEN 'GeneralObstruction' ELSE 'Other' END);
     INSERT INTO public.road_events (feed_key, source_id, publication_id, version, payload, event_type, road_number, geom,
                                     overall_start, overall_end, source_feed, feed_ts, first_seen_at, updated_at, closed_at, confidentiality)
@@ -542,6 +544,71 @@ BEGIN
   VALUES (NEW.observed_at, NEW.observed_at, trip, vf_test.after_colon(c.stop_point_id), NEW.call_order,
           coalesce(extract(epoch FROM coalesce(NEW.expected_arrival_at - c.planned_arrival_at, NEW.expected_departure_at - c.planned_departure_at))::integer, 0),
           upper(coalesce(NEW.call_status, 'scheduled')), coalesce(NEW.source_ref, 'delfi_rt_tu'));
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- A departure is the stop, line, trip, service date and stop time the view
+-- reads, plus a later stop unless it terminates there. A realtime figure is
+-- seeded through the feed it names, which is marked up: delfi_rt_tu writes a
+-- tick of the call (SKIPPED when cancelled), delfi_siri_et* a call at the
+-- stop's DHID with the platform; either applies only to a call planned within
+-- six hours of now, as the view reads them.
+CREATE OR REPLACE FUNCTION vf_test.seed_departure() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  k smallint := split_part(NEW.journey_id, ':', 1)::smallint;
+  trip text := substr(NEW.journey_id, length(split_part(NEW.journey_id, ':', 1)) + 2, length(NEW.journey_id) - length(split_part(NEW.journey_id, ':', 1)) - 10);
+  day date := to_date(right(NEW.journey_id, 8), 'YYYYMMDD');
+  base timestamptz := ((to_date(right(NEW.journey_id, 8), 'YYYYMMDD') + time '12:00') at time zone 'Europe/Berlin') - interval '12 hours';
+  point text := vf_test.after_colon(NEW.stop_point_id);
+  place text := vf_test.after_colon(coalesce(NEW.stop_place_id, NEW.stop_point_id));
+  line text := coalesce(vf_test.after_colon(NEW.line_id), 'seed-line:' || trip);
+  feed text;
+BEGIN
+  PERFORM vf_test.ensure_feed(k, NEW.source_ref);
+  IF place <> point THEN
+    INSERT INTO public.stops (gtfs_feed_key, id, name, geom, location_type) VALUES (k, place, 'Bahnhof', vf_test.point(NULL), 1) ON CONFLICT DO NOTHING;
+  END IF;
+  INSERT INTO public.stops (gtfs_feed_key, id, name, geom, location_type, parent_id, platform_code)
+  VALUES (k, point, 'Bahnhof', vf_test.point(NULL), 0, nullif(place, point), NEW.planned_platform)
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.routes (gtfs_feed_key, id, route_type, short_name)
+  VALUES (k, line, coalesce(NEW.route_type, CASE NEW.transport_mode WHEN 'sbahn' THEN 109 WHEN 'rail' THEN 2 WHEN 'subway' THEN 1 WHEN 'tram' THEN 0
+                                                                    WHEN 'bus' THEN 3 WHEN 'ferry' THEN 4 ELSE 7 END), coalesce(NEW.line_name, line))
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.trips (gtfs_feed_key, id, route_id, service_id, headsign, trip_short_name)
+  VALUES (k, trip, line, 'seed:' || trip, NEW.destination_label, NEW.train_number)
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.gtfs_service_dates (service_date, gtfs_feed_key, service_id) VALUES (day, k, 'seed:' || trip) ON CONFLICT DO NOTHING;
+  INSERT INTO public.stop_times (gtfs_feed_key, trip_id, stop_sequence, stop_id, arrival, departure, pickup_type)
+  VALUES (k, trip, NEW.call_order, point, coalesce(NEW.planned_arrival_at, NEW.planned_departure_at) - base, NEW.planned_departure_at - base,
+          CASE WHEN NEW.boarding = false THEN 1 ELSE 0 END);
+  IF NOT coalesce(NEW.terminates, false) THEN
+    INSERT INTO public.stop_times (gtfs_feed_key, trip_id, stop_sequence, stop_id, arrival, departure)
+    VALUES (k, trip, NEW.call_order + 1, point || ':next', coalesce(NEW.planned_departure_at, NEW.planned_arrival_at) - base + interval '5 minutes',
+            coalesce(NEW.planned_departure_at, NEW.planned_arrival_at) - base + interval '5 minutes')
+    ON CONFLICT DO NOTHING;
+  END IF;
+  feed := CASE WHEN NEW.realtime_source = 'delfi_rt_tu' THEN 'tripupdates' WHEN NEW.realtime_source LIKE 'delfi_siri_et%' THEN NEW.realtime_source END;
+  IF feed IS NOT NULL THEN
+    INSERT INTO public.feed_catalog (feed_key, provider, display_name, licence_id, cadence_s)
+    VALUES (feed, 'delfi', feed, 'cc-by-sa', 120) ON CONFLICT DO NOTHING;
+    INSERT INTO control.feed_state (ledger, key, last_success_at, updated_at) VALUES ('feed', feed, now(), now())
+    ON CONFLICT (ledger, key) DO UPDATE SET last_success_at = now();
+  END IF;
+  IF NEW.realtime_source = 'delfi_rt_tu' THEN
+    PERFORM vf_test.ensure_day('public.transit_delays', now());
+    INSERT INTO public.transit_delays (observed_at, feed_ts, trip_id, stop_id, stop_sequence, delay_s, schedule_relationship, source)
+    VALUES (now(), now(), trip, point, NEW.call_order, CASE WHEN coalesce(NEW.cancelled, false) THEN NULL ELSE coalesce(NEW.delay_s, NEW.delay_min * 60, 0) END,
+            CASE WHEN coalesce(NEW.cancelled, false) THEN 'SKIPPED' ELSE 'SCHEDULED' END, 'delfi_rt_tu');
+  ELSIF NEW.realtime_source LIKE 'delfi_siri_et%' THEN
+    INSERT INTO public.delfi_siri_et_calls_latest (stop_ref, service_day, journey_ref, visit, source_feed, observed_at, line, category, destination, platform,
+                                                   aimed_dep, expected_dep, delay_s, recorded, cancelled, journey_cancelled)
+    VALUES (point, day, 'seed:' || trip, 1, NEW.realtime_source, now(), coalesce(NEW.line_name, line), NEW.train_category, NEW.destination_label,
+            CASE WHEN NEW.platform IS DISTINCT FROM NEW.planned_platform THEN NEW.platform END,
+            NEW.planned_departure_at, NEW.planned_departure_at + make_interval(secs => coalesce(NEW.delay_s, NEW.delay_min * 60, 0)), NULL, false,
+            coalesce(NEW.cancelled, false), false);
+  END IF;
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;

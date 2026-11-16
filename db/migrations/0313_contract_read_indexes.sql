@@ -17,7 +17,8 @@
 --     junction) that must not walk the stops sharing the table;
 --   * a name's search form (contract_search_fold, 0312), trigram-indexed for
 --     the API's substring search of stations and place names.
--- All on reference or current-state tables, none on a tick table: a tick
+-- All on reference or current-state tables (delfi_siri_et_calls_latest holds
+-- each call's newest row), none on a tick table: a tick
 -- read is a probe of the tick table's own primary key.
 --
 -- A concurrent build holds SHARE UPDATE EXCLUSIVE, which blocks no writer.
@@ -38,6 +39,10 @@
 --   drop index concurrently if exists public.gazetteer_places_bkg_municipality_geom;
 --   drop index concurrently if exists public.stops_contract_search_fold;
 --   drop index concurrently if exists public.stops_contract_location;
+--   drop index concurrently if exists public.stops_contract_stop_place;
+--   drop index concurrently if exists public.stops_contract_stop_point;
+--   drop index concurrently if exists public.db_stations_contract_ifopt;
+--   drop index concurrently if exists public.delfi_siri_et_calls_latest_contract_ref_aimed;
 --   drop index concurrently if exists public.gazetteer_places_contract_search_fold;
 --   delete from schema_migrations where version = 313;
 
@@ -55,7 +60,8 @@ select format('drop index concurrently if exists public.%I', i.relname)
                      'parking_facilities_contract_id', 'parking_facilities_odbl_contract_id',
                      'parking_facilities_sid_contract_id', 'road_events_contract_location',
                      'road_events_contract_event_id', 'tmc_locations_contract_junction_location',
-                     'gazetteer_places_bkg_municipality_geom', 'stops_contract_search_fold', 'stops_contract_location',
+                     'gazetteer_places_bkg_municipality_geom', 'stops_contract_search_fold', 'stops_contract_location', 'stops_contract_stop_place', 'stops_contract_stop_point',
+                     'db_stations_contract_ifopt', 'delfi_siri_et_calls_latest_contract_ref_aimed',
                      'gazetteer_places_contract_search_fold')
 \gexec
 
@@ -124,3 +130,24 @@ create index concurrently if not exists gazetteer_places_contract_search_fold
 create index concurrently if not exists stops_contract_location
   on public.stops using gist (((geom::geometry(Point, 4326))::geography))
   where deleted_at is null;
+
+-- contract.departure: a board is read by stop_place_id or stop_point_id, each the stop's key and id
+-- (::text, so the expression is immutable); from the stop, its stop times are the stop_times_stop index.
+create index concurrently if not exists stops_contract_stop_place
+  on public.stops ((gtfs_feed_key::text || ':' || coalesce(parent_id, id)))
+  where deleted_at is null;
+create index concurrently if not exists stops_contract_stop_point
+  on public.stops ((gtfs_feed_key::text || ':' || id))
+  where deleted_at is null;
+
+-- contract.stop_place and contract.departure: the DB station whose IFOPT is a stop's DHID
+-- (8 761 stations, read per stop row: without it every row walked them all).
+create index concurrently if not exists db_stations_contract_ifopt
+  on public.db_stations (ifopt)
+  where ifopt is not null;
+
+-- contract.departure: the SIRI ET call of a stop's ref planned in a departure's minute
+-- (the existing (stop_ref, expected time) index reads every call of the ref within the
+-- six-hour delay bound; this one reads the minute).
+create index concurrently if not exists delfi_siri_et_calls_latest_contract_ref_aimed
+  on public.delfi_siri_et_calls_latest (stop_ref, aimed_dep);

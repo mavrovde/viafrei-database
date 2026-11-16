@@ -81,6 +81,35 @@ describe("test-fixtures seed: the round trip", () => {
   });
 });
 
+describe("test-fixtures seed: a live departure", () => {
+  it("a departure seeded with a realtime source reads back with its figure, its platform and its carriers", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      const day = (await c.query<{ d: string }>("select to_char((now() at time zone 'Europe/Berlin')::date, 'YYYYMMDD') as d")).rows[0]?.d ?? "";
+      const at = "date_trunc('minute', now()) + interval '40 minutes'";
+      for (const [trip, src, extra] of [
+        ["seed-rt1", "delfi_siri_et", "platform, delay_min, train_category"],
+        ["seed-rt2", "delfi_rt_tu", "cancelled"],
+      ] as const) {
+        const vals = src === "delfi_siri_et" ? "'7', 3, 'IC'" : "true";
+        await c.query(
+          `insert into contract.departure (stop_point_id, journey_id, call_order, line_id, line_name, transport_mode, destination_label, planned_departure_at, planned_platform, realtime_source, source_ref, ${extra})
+           values ('1:de:09162:live:${trip}', '1:${trip}:${day}', 2, '1:${trip}-line', 'IC 2013', 'rail', 'Stuttgart Hbf', ${at}, '5', '${src}', 'delfi_static', ${vals})`,
+        );
+      }
+      const r = await c.query("select journey_id, realtime, delay_min, cancelled, platform, platform_changed, source_refs from contract.departure where journey_id like '1:seed-rt%' order by 1");
+      expect(r.rows).toEqual([
+        { journey_id: `1:seed-rt1:${day}`, realtime: true, delay_min: 3, cancelled: false, platform: "7", platform_changed: true, source_refs: ["delfi_static", "delfi_siri_et"] },
+        { journey_id: `1:seed-rt2:${day}`, realtime: true, delay_min: null, cancelled: true, platform: "5", platform_changed: false, source_refs: ["delfi_static", "delfi_rt_tu"] },
+      ]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+});
+
 describe("test-fixtures seed: the refusals", () => {
   it("a row the contract cannot read back as given is refused, naming the column, and writes nothing", async () => {
     const c = await db.pool.connect();

@@ -1622,6 +1622,7 @@ public.db_stations	column	last_seen_at	timestamp with time zone not null
 public.db_stations	column	updated_at	timestamp with time zone not null
 public.db_stations	column	closed_at	timestamp with time zone
 public.db_stations	constraint	db_stations_pkey	p PRIMARY KEY (station_no)
+public.db_stations	index	db_stations_contract_ifopt	CREATE INDEX db_stations_contract_ifopt ON public.db_stations USING btree (ifopt) WHERE (ifopt IS NOT NULL)
 public.db_stations	index	db_stations_evas	CREATE INDEX db_stations_evas ON public.db_stations USING gin (eva_nos)
 public.db_stations	index	db_stations_geom_open	CREATE INDEX db_stations_geom_open ON public.db_stations USING gist (geom) WHERE (closed_at IS NULL)
 public.db_stations	index	db_stations_pkey	CREATE UNIQUE INDEX db_stations_pkey ON public.db_stations USING btree (station_no)
@@ -1704,6 +1705,7 @@ public.delfi_siri_et_calls_latest	column	recorded	boolean not null
 public.delfi_siri_et_calls_latest	column	cancelled	boolean not null
 public.delfi_siri_et_calls_latest	column	journey_cancelled	boolean not null
 public.delfi_siri_et_calls_latest	constraint	delfi_siri_et_calls_latest_pkey	p PRIMARY KEY (stop_ref, service_day, journey_ref, visit, source_feed)
+public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_contract_ref_aimed	CREATE INDEX delfi_siri_et_calls_latest_contract_ref_aimed ON public.delfi_siri_et_calls_latest USING btree (stop_ref, aimed_dep)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_departed	CREATE INDEX delfi_siri_et_calls_latest_departed ON public.delfi_siri_et_calls_latest USING btree (aimed_dep)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_next	CREATE INDEX delfi_siri_et_calls_latest_next ON public.delfi_siri_et_calls_latest USING btree (stop_ref, COALESCE(expected_dep, aimed_dep))
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_pkey	CREATE UNIQUE INDEX delfi_siri_et_calls_latest_pkey ON public.delfi_siri_et_calls_latest USING btree (stop_ref, service_day, journey_ref, visit, source_feed)
@@ -3902,6 +3904,8 @@ public.stops	column	extras	jsonb not null default '{}'::jsonb
 public.stops	constraint	stops_pkey	p PRIMARY KEY (gtfs_feed_key, id)
 public.stops	index	stops_contract_location	CREATE INDEX stops_contract_location ON public.stops USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE (deleted_at IS NULL)
 public.stops	index	stops_contract_search_fold	CREATE INDEX stops_contract_search_fold ON public.stops USING gin (public.contract_search_fold(name) public.gin_trgm_ops) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_stop_place	CREATE INDEX stops_contract_stop_place ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || COALESCE(parent_id, id)))) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_stop_point	CREATE INDEX stops_contract_stop_point ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || id))) WHERE (deleted_at IS NULL)
 public.stops	index	stops_deleted	CREATE INDEX stops_deleted ON public.stops USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.stops	index	stops_geom_gist	CREATE INDEX stops_geom_gist ON public.stops USING gist (geom)
 public.stops	index	stops_id_prefix	CREATE INDEX stops_id_prefix ON public.stops USING btree (gtfs_feed_key, id text_pattern_ops)

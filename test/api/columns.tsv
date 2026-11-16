@@ -2,6 +2,7 @@
 # access store version 3: db/access 0001-0004), read off that database's catalogue: relation, position, column, type.
 # 0307 and 0308 must build exactly these (test/api-schemas.db.test.ts). A change here is a change of the API's contract.
 # contract.terms is new in 0312 (the SID terms text, owner 2026-11-16): the API's DDL adds it with contract 0.3.
+# contract.departure is new in 0312 (the live departure board, #29): the API's DDL adds it with contract 0.3.
 access.api_key	1	key_id	text
 access.api_key	2	environment	text
 access.api_key	3	plan_name	text
@@ -95,6 +96,33 @@ contract.charging_site	9	changed_at	timestamp with time zone
 contract.charging_site	10	withdrawn_at	timestamp with time zone
 contract.contract_info	1	contract_version	text
 contract.contract_info	2	published_at	timestamp with time zone
+contract.departure	1	stop_place_id	text
+contract.departure	2	stop_point_id	text
+contract.departure	3	journey_id	text
+contract.departure	4	call_order	integer
+contract.departure	5	line_id	text
+contract.departure	6	line_name	text
+contract.departure	7	transport_mode	text
+contract.departure	8	route_type	integer
+contract.departure	9	train_number	text
+contract.departure	10	train_category	text
+contract.departure	11	destination_label	text
+contract.departure	12	planned_arrival_at	timestamp with time zone
+contract.departure	13	planned_departure_at	timestamp with time zone
+contract.departure	14	planned_platform	text
+contract.departure	15	platform	text
+contract.departure	16	platform_changed	boolean
+contract.departure	17	boarding	boolean
+contract.departure	18	terminates	boolean
+contract.departure	19	realtime	boolean
+contract.departure	20	realtime_source	text
+contract.departure	21	cancelled	boolean
+contract.departure	22	delay_s	integer
+contract.departure	23	delay_min	integer
+contract.departure	24	expected_arrival_at	timestamp with time zone
+contract.departure	25	expected_departure_at	timestamp with time zone
+contract.departure	26	no_forecast	boolean
+contract.departure	27	observed_at	timestamp with time zone
 contract.fuel_price_observation	1	station_id	text
 contract.fuel_price_observation	2	product_code	text
 contract.fuel_price_observation	3	observed_at	timestamp with time zone

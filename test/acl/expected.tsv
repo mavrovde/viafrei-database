@@ -18,6 +18,7 @@ api_reader	relation	contract.charge_point	SELECT
 api_reader	relation	contract.charge_point_state_observation	SELECT
 api_reader	relation	contract.charging_site	SELECT
 api_reader	relation	contract.contract_info	SELECT
+api_reader	relation	contract.departure	SELECT
 api_reader	relation	contract.fuel_price_observation	SELECT
 api_reader	relation	contract.fuel_product	SELECT
 api_reader	relation	contract.fuel_station	SELECT

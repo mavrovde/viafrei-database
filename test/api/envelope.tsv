@@ -20,6 +20,10 @@ contract.charging_site	13	audience	text
 contract.charging_site	14	confidentiality	text
 contract.charging_site	15	access_private	boolean
 contract.charging_site	16	operator_is_person	boolean
+contract.departure	28	source_ref	text
+contract.departure	29	source_refs	text[]
+contract.departure	30	display_class	text
+contract.departure	31	audience	text
 contract.fuel_price_observation	7	display_class	text
 contract.fuel_price_observation	8	audience	text
 contract.fuel_station	13	display_class	text
