@@ -32,6 +32,7 @@ const at = (...p: string[]): string => join(ROOT, ...p);
 const GATE = join(ROOT, "scripts", "coverage-schema.ts");
 const GATE_TESTS = ["test/coverage-schema.test.ts"];
 const API_TESTS = ["test/api-schemas.db.test.ts"];
+const MAP_TESTS = ["test/contract-mapping.db.test.ts"];
 const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -157,7 +158,17 @@ const MUTANTS: readonly Mutant[] = [
   ...SCHEMA_BEHAVIOUR_MUTANTS.map((m) => ({ ...m, config: DB })),
   // #29: viafrei-api's contract (0307) and access store (0308), and their roles' password step.
   { name: "db: 0307 states contract 0.1", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "select '0.2'::text", to: "select '0.1'::text" },
-  { name: "db: 0307 publishes a row of contract.publisher", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "as website\n where false;", to: "as website\n where true;" },
+  { name: "db: 0307 publishes a row of contract.rule_topic", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "as reviewed_on\n where false;", to: "as reviewed_on\n where true;" },
+  { name: "db: 0309 releases Toll Collect SID before the API's terms exist", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "'sid-terms-1', 'no_api_terms'", to: "'sid-terms-1', null" },
+  { name: "db: 0309 gives Tankerkoenig fuel to every key", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "(30, 'tankerkoenig', false, 'own'", to: "(30, 'tankerkoenig', false, 'public'" },
+  { name: "db: 0309 maps the CC BY-NC-SA fuel history", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "enerando_stat)', true,", to: "enerando_stat)', false," },
+  { name: "db: 0309 lets a confidential road event show", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "case when coalesce(b.confidentiality, 'noRestriction') <> 'noRestriction' then 'withhold'", to: "case when false then 'withhold'" },
+  { name: "db: 0309 lets a private charging site show", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: " or s.access_private then 'withhold'", to: " then 'withhold'" },
+  { name: "db: 0309 drops the Autobahn payload a tick does not store", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "and r.raw_hash = e.raw_hash", to: "and r.raw_hash <> e.raw_hash" },
+  { name: "db: 0309 keeps Autobahn events that left the newest sweep", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "n.at = e.observed_at", to: "n.at >= e.observed_at" },
+  { name: "db: 0309 publishes a road event we retracted", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "    from public.road_events e\n   where e.deleted_at is null\n", to: "    from public.road_events e\n" },
+  { name: "db: 0309 counts GTFS times from midnight", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "- interval '12 hours' + st.arrival", to: "+ st.arrival" },
+  { name: "db: 0309 calls a source stale after twice its cadence", config: DB, file: at("db", "migrations", "0309_contract_mapping.sql"), tests: MAP_TESTS, from: "3 * coalesce(c.cadence_s", to: "2 * coalesce(c.cadence_s" },
   { name: "db: 0307 drifts a contract column's type", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "null::numeric(6,1)                     as length_km,", to: "null::numeric                          as length_km," },
   { name: "db: 0307 grants api_reader no contract view", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "grant select on all tables in schema contract to api_reader;\n", to: "" },
   { name: "db: 0307 lets api_reader write the contract", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "grant select on all tables in schema contract to api_reader;", to: "grant select, insert on all tables in schema contract to api_reader;" },

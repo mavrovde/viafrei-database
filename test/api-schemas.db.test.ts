@@ -3,8 +3,9 @@
  *
  *   contract (0307)  32 views in the API's contract 0.2 shape, column for
  *                    column (test/api/columns.tsv, read off the API's own
- *                    DDL); contract_info states 0.2 and every other view
- *                    publishes no row yet; api_reader reads them and nothing
+ *                    DDL); contract_info states 0.2; 0309 maps the
+ *                    others onto the platform's tables (contract-mapping.db.test.ts)
+ *                    and appends the licence envelope (test/api/envelope.tsv); api_reader reads them and nothing
  *                    else;
  *   access (0308)    the access store as the API's four steps left it: its
  *                    tables, checks, the append-only audit, the two prune
@@ -56,7 +57,7 @@ async function as<R>(role: string, fn: (c: pg.PoolClient) => Promise<R>): Promis
 }
 
 describe("the shape: the API's own DDL, column for column", () => {
-  it("every column of schemas contract and access is the one the API's DDL built, in its position and type, and no other", async () => {
+  it("every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0309 appends, and no other", async () => {
     const r = await db.pool.query<{ l: string }>(
       `select n.nspname || '.' || c.relname || E'\\t' || a.attnum || E'\\t' || a.attname || E'\\t' || format_type(a.atttypid, a.atttypmod) as l
          from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -66,7 +67,18 @@ describe("the shape: the API's own DDL, column for column", () => {
     );
     const want = expectedColumns();
     expect(want).toHaveLength(292);
-    expect(r.rows.map((x) => x.l)).toEqual(want);
+    const envelope = readFileSync(join(REPO, "test", "api", "envelope.tsv"), "utf8")
+      .split("\n")
+      .filter((l) => l.trim() !== "" && !l.startsWith("#"));
+    expect(envelope).toHaveLength(78);
+    const key = (l: string): [string, number] => [l.split("\t")[0] ?? "", Number(l.split("\t")[1])];
+    const merged = [...want, ...envelope].sort((a, b) => key(a)[0].localeCompare(key(b)[0]) || key(a)[1] - key(b)[1]);
+    expect(r.rows.map((x) => x.l)).toEqual(merged);
+    // The API's own columns come first in every view: the envelope only appends.
+    for (const e of envelope) {
+      const [rel, pos] = key(e);
+      expect(Math.max(...want.filter((w) => key(w)[0] === rel).map((w) => key(w)[1]))).toBeLessThan(pos);
+    }
   });
 
   it("every constraint and index of access is the one the API's DDL built, by name and definition, and no other", async () => {
@@ -107,13 +119,13 @@ describe("contract (0307)", () => {
     expect(r.rows).toEqual([{ v: "0.2", at: "2026-11-16 00:00:00+00" }]);
   });
 
-  it("every other view publishes no row yet", async () => {
+  it("on a database with no platform rows, only the views over reference rows the migrations load publish anything", async () => {
     const counts: Record<string, number> = {};
     for (const v of CONTRACT_VIEWS.filter((x) => x !== "contract.contract_info")) {
       counts[v] = (await db.pool.query<{ n: number }>(`select count(*)::int as n from ${v}`)).rows[0]?.n ?? -1;
     }
     expect(Object.keys(counts)).toHaveLength(31);
-    expect(Object.values(counts).every((n) => n === 0)).toBe(true);
+    expect(Object.keys(counts).filter((v) => counts[v] !== 0).sort()).toEqual(["contract.admin_region", "contract.fuel_product"]);
   });
 
   it("api_reader reads every contract view and writes none", async () => {
