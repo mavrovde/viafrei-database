@@ -18,13 +18,18 @@
 --                       confidentiality other than noRestriction) or a
 --                       charging site its name marks private;
 --   audience            public | own: 'own' rows are for ViaFrei's own web
---                       and MCP keys only (Tankerkoenig fuel, Autobahn GmbH
---                       API, Polizei Hamburg and BW Landesmeldestelle
---                       messages, Toll Collect SID);
+--                       and MCP keys only (Tankerkoenig fuel, Polizei Hamburg
+--                       and BW Landesmeldestelle messages); the Autobahn GmbH
+--                       API and the Toll Collect SID are public (owner
+--                       decisions 2026-11-16);
 --   confidentiality     the publisher's marking, raw, where the table has it;
---   terms_gate          the terms a key must have accepted (sid-terms-1);
---   hold_reason         set when no key may read the row yet: Toll Collect
---                       SID until the API's terms exist (no_api_terms);
+--   terms_gate          the terms the REQUEST must accept, at that version,
+--                       before the row is served (sid-terms-1, contract.terms
+--                       holds the text): a per-request acceptance like the
+--                       site's click and MCP's elicitation, never a property
+--                       of the key (owner decision 2026-11-16);
+--   hold_reason         set when no request may read the row at all; no
+--                       source is held today;
 --   origin_restriction  a condition of the row's origin (bw_rvwd,
 --                       polizei_hamburg) whose note the caller shows;
 --   access_private, operator_is_person   on charging_site.
@@ -50,8 +55,9 @@
 -- rollback: re-run the create view statements of 0307 as create or replace
 -- view after dropping the appended columns, i.e. drop and recreate each
 -- replaced view from 0307 (then grant select on all tables in schema
--- contract to api_reader), then drop view public.contract_sources,
--- public.contract_source_domains, public.contract_source_rules;
+-- contract to api_reader), then drop view contract.terms,
+-- public.contract_sources, public.contract_source_domains,
+-- public.contract_source_rules;
 --   delete from schema_migrations where version = 312;
 
 -- create or replace view takes an ACCESS EXCLUSIVE lock on the view.
@@ -63,14 +69,13 @@ create view public.contract_source_rules as
 select t.priority, t.pattern, t.excluded, t.audience, t.display_class, t.terms_gate, t.hold_reason, t.origin_restriction
   from (values
     (10, '(tankerkoenig_hist|truckpark_occ|(^|_)ris_|park_by_lkw_dyn|enerando_stat)', true, null, null, null, null, null),
-    (20, '(truckpark_sid|toll_collect_sid)', false, 'own', 'gated', 'sid-terms-1', 'no_api_terms', null),
+    (20, '(truckpark_sid|toll_collect_sid)', false, 'public', 'gated', 'sid-terms-1', null, null),
     (30, 'tankerkoenig', false, 'own', 'no_redistribution', null, null, null),
     (40, '(^|_)traffic_bw$', false, 'own', 'consumer_only', null, null, 'bw_rvwd'),
     (50, '(traffic_hamburg|polizei_hamburg)', false, 'own', 'consumer_only', null, null, 'polizei_hamburg'),
-    (60, '^autobahn$', false, 'own', 'consumer_only', null, null, null),
     (70, '(eliso|(^|_)elu_|chargepool|park_sh_truck|trucklounge|christophorus|bosch)', false, 'public', 'consumer_only', null, null, null)
   ) as t(priority, pattern, excluded, audience, display_class, terms_gate, hold_reason, origin_restriction);
-comment on view public.contract_source_rules is 'The licence envelope of the contract views (0312), per source key: the first rule by priority whose pattern matches the key applies; no match = public, open. excluded = no row of the source is mapped. From the data steward''s rulings of 2026-11-16; a change is a migration.';
+comment on view public.contract_source_rules is 'The licence envelope of the contract views (0312), per source key: the first rule by priority whose pattern matches the key applies; no match = public, open. excluded = no row of the source is mapped. From the data steward''s rulings and the owner''s decisions of 2026-11-16 (the Autobahn GmbH API is public and open; the SID is public behind a per-request terms gate); a change is a migration.';
 
 -- ---------------------------------------------------------------- register
 
@@ -122,47 +127,16 @@ select g.source_id, g.source_id, g.attribution_text, g.licence_label, g.attribut
    and not exists (select from public.registered_sources r where r.source_id = g.source_id);
 comment on view public.contract_sources is 'The sources contract.source, publisher and licence publish (0312): feed_catalog, then the ingestor''s registered sources, then the register''s other sources, one row per key. publisher_name of a register-only source is its attribution line (the register names no publisher apart from it).';
 
+-- website: the page the register names for the source (its publisher's
+-- dataset or offer page), else the catalogue's offer page.
 create or replace view contract.publisher as
 select s.source_ref                    as publisher_id,
        s.publisher_name                as display_name,
-       null::text                      as website
+       coalesce(g.source_url, s.terms_url) as website
   from public.contract_sources s
+  left join public.source_register g on g.source_id = s.register_id
   left join lateral (select k.excluded from public.contract_source_rules k where s.source_ref ~ k.pattern order by k.priority limit 1) k on true
  where not coalesce(k.excluded, false) and s.publisher_name is not null;
-
-create or replace view contract.licence as
-with labels as (
-  select distinct s.licence_code as code from public.contract_sources s where s.licence_code is not null
-)
-select l.code                                                        as licence_code,
-       l.code                                                        as licence_name,
-       coalesce(
-         (select min(r.licence_url) from public.registered_sources r where r.licence_label = l.code),
-         case
-           when l.code ~* '^CC BY-SA 4\.0'   then 'https://creativecommons.org/licenses/by-sa/4.0/'
-           when l.code ~* '^CC BY 4\.0'      then 'https://creativecommons.org/licenses/by/4.0/'
-           when l.code ~* '^CC BY 3\.0 DE'   then 'https://creativecommons.org/licenses/by/3.0/de/'
-           when l.code ~* '^CC0'             then 'https://creativecommons.org/publicdomain/zero/1.0/'
-           when l.code ~* 'ODbL'             then 'https://opendatacommons.org/licenses/odbl/1-0/'
-           when l.code ~* '(Zero|zero-2-0)'  then 'https://www.govdata.de/dl-de/zero-2-0'
-           when l.code ~* '(Namensnennung|by-2-0)' then 'https://www.govdata.de/dl-de/by-2-0'
-           when l.code ~* 'GeoNutzV'         then 'https://www.gesetze-im-internet.de/geonutzv/'
-         end,
-         -- A licence no document names (an offer's licence class, statutory
-         -- AFIR data, an operator's terms): the one source page that states
-         -- it, when one source alone carries the label.
-         (select min(s.terms_url) from public.contract_sources s where s.licence_code = l.code
-           having count(distinct s.terms_url) = 1))                  as licence_url,
-       case
-         when l.code ~* '(CC0|Zero|zero-2-0)'           then 'public_domain'
-         when l.code ~* '(BY-SA|ODbL)'                  then 'share_alike'
-         when l.code ~* '(CC BY|Namensnennung|by-2-0|GeoNutzV)' then 'attribution'
-         when l.code ~* 'pending'                       then 'pending'
-         else 'terms'
-       end                                                           as licence_category,
-       l.code ~* '(BY-SA|ODbL)'                                      as share_alike,
-       not (l.code ~* '(CC0|Zero|zero-2-0)')                         as attribution_required
-  from labels l;
 
 create or replace view contract.source as
 with s as (
@@ -173,14 +147,23 @@ with s as (
          s.attribution_text                                 as attribution_text,
          g.changes_statement                                as changes_statement,
          s.terms_url                                        as terms_url,
-         null::text                                         as share_alike_offer_url,
+         -- Share-alike (CC BY-SA on the work, ODbL on the database): our
+         -- adaptation is offered free of charge on request to the contact the
+         -- Impressum names (the platform's offer text says so per database).
+         case when g.share_alike or s.licence_code ~* '(BY-SA|ODbL|Open Database License)'
+              then 'https://viafrei.de/impressum' end       as share_alike_offer_url,
          s.acceptance_required                              as acceptance_required,
          -- A source the rulings restrict (consumer_only, no_redistribution,
          -- gated) keeps only the consumer class of its licence's classes.
          case when coalesce(k.display_class, 'open') = 'open' then coalesce(g.use_classes, '{}')
               else array(select u from unnest(coalesce(g.use_classes, '{}')) u where u = 'consumer') end as use_classes,
-         coalesce(s.cadence_s, f.cadence_s, 31536000)       as freshness_target_s,
-         3 * coalesce(s.cadence_s, f.cadence_s, 31536000)   as stale_after_s,
+         -- Staleness (owner decision 2026-11-16): only a source with a known
+         -- cadence is ever judged stale, at 3 x its cadence; a source with no
+         -- fixed update interval (static reference data, our own content) is
+         -- NEVER stale and carries its as-of time (source_freshness) alone:
+         -- both columns are NULL.
+         coalesce(s.cadence_s, f.cadence_s)                 as freshness_target_s,
+         3 * coalesce(s.cadence_s, f.cadence_s)             as stale_after_s,
          g.verified_on                                      as review_signed_on,
          coalesce(g.register_version, (select max(v.register_version) from public.source_register v)) as register_version,
          k.excluded, k.display_class, k.audience, k.terms_gate, k.hold_reason, k.origin_restriction
@@ -199,7 +182,47 @@ select s.source_ref, s.domain, s.publisher_id, s.licence_code, s.attribution_tex
        s.hold_reason                        as hold_reason,
        s.origin_restriction                 as origin_restriction
   from s
- where not coalesce(s.excluded, false);
+ where not coalesce(s.excluded, false)
+   -- A source whose licence was never read is not published.
+   and coalesce(s.licence_code, '') !~* '^pending';
+
+-- One row per label a published source carries (contract.source, so an
+-- excluded or unlicensed source names none). licence_url: the label's row in
+-- public.licence_texts (0309), else the canonical text of a CC, ODbL,
+-- Datenlizenz Deutschland or GeoNutzV label, else the source page of the one
+-- source that carries the label, else the register's.
+create or replace view contract.licence as
+with labels as (
+  select s.licence_code as code from contract.source s where s.licence_code is not null
+  union
+  select t.licence_label from public.licence_texts t
+)
+select l.code                                                        as licence_code,
+       l.code                                                        as licence_name,
+       coalesce(
+         (select t.url from public.licence_texts t where t.licence_label = l.code),
+         case
+           when l.code ~* '^CC BY-SA 4\.0'  then 'https://creativecommons.org/licenses/by-sa/4.0/'
+           when l.code ~* '^CC BY 4\.0'     then 'https://creativecommons.org/licenses/by/4.0/'
+           when l.code ~* '^CC BY 3\.0 DE'  then 'https://creativecommons.org/licenses/by/3.0/de/'
+           when l.code ~* '(^CC0|Creative Commons Zero)' then 'https://creativecommons.org/publicdomain/zero/1.0/'
+           when l.code ~* '(ODbL|Open Database License)' then 'https://opendatacommons.org/licenses/odbl/1-0/'
+           when l.code ~* '(dl-de/zero|Datenlizenz Deutschland – Zero)' then 'https://www.govdata.de/dl-de/zero-2-0'
+           when l.code ~* '(dl-de/by|Datenlizenz Deutschland – Namensnennung)' then 'https://www.govdata.de/dl-de/by-2-0'
+           when l.code ~* 'GeoNutzV'         then 'https://www.gesetze-im-internet.de/geonutzv/'
+         end,
+         (select min(s.terms_url) from contract.source s where s.licence_code = l.code
+           having count(distinct s.terms_url) = 1),
+         (select min(g.source_url) from public.source_register g where g.licence_label = l.code)) as licence_url,
+       case
+         when l.code ~* '(CC0|Creative Commons Zero|zero-2-0|Datenlizenz Deutschland – Zero)' then 'public_domain'
+         when l.code ~* '(BY-SA|ODbL|Open Database License)' then 'share_alike'
+         when l.code ~* '(CC BY|Namensnennung|by-2-0|GeoNutzV)' then 'attribution'
+         else 'terms'
+       end                                                           as licence_category,
+       l.code ~* '(BY-SA|ODbL|Open Database License)'                as share_alike,
+       not (l.code ~* '(CC0|Creative Commons Zero|zero-2-0|Datenlizenz Deutschland – Zero)') as attribution_required
+  from labels l;
 
 create or replace view contract.source_note as
 select s.source_ref                         as source_ref,
@@ -287,6 +310,11 @@ select r.road                                  as road_ref,
   left join lateral (select k.* from public.contract_source_rules k where 'autobahn' ~ k.pattern order by k.priority limit 1) k on true;
 
 -- tmc_locations names no source key of its own (BASt LCL, lcl_version only).
+-- state_code: the location list names no Land, so it is derived: the Land
+-- (the first two digits of the AGS) of the nearest municipality point of the
+-- BKG administrative units (gazetteer_places, source bkg_gvisys), one probe of
+-- that set's own index (0313). A junction within a few hundred metres of a
+-- Land border may take its neighbour's Land.
 create or replace view contract.junction as
 select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
        t.road_number                                          as road_ref,
@@ -295,8 +323,10 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
        case t.stcd when 1 then 'interchange' when 2 then 'triangle' else 'junction' end as junction_kind,
        null::numeric(6,1)                                     as chainage_km,
        t.geom::geometry(Point, 4326)                          as location,
-       null::text                                             as state_code,
-       null::text                                             as source_ref,
+       (select left(g.admin_code, 2) from public.gazetteer_places g
+         where g.source_id = 'bkg_gvisys' and g.kind = 'city' and g.geom is not null
+         order by g.geom::geometry <-> t.geom::geometry limit 1) as state_code,
+       'bast_lcl'::text                                       as source_ref,
        'open'::text                                           as display_class,
        'public'::text                                         as audience
   from public.tmc_locations t
@@ -314,10 +344,14 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
 -- the provider's own end as withdrawn_at and its marking as confidentiality.
 create or replace view contract.traffic_event as
 with newest as (
-  select e.road, e.kind, max(e.observed_at) as at
-    from public.autobahn_events e
-   where e.observed_at > now() - interval '1 day'
-   group by e.road, e.kind
+  -- One index probe (autobahn_events_road) per road and event kind: the
+  -- instant of the newest sweep of the last day, never an aggregate over it.
+  select r.road, k.kind,
+         (select e.observed_at from public.autobahn_events e
+           where e.road = r.road and e.kind = k.kind and e.observed_at > now() - interval '1 day'
+           order by e.observed_at desc limit 1) as at
+    from public.autobahn_roads r
+   cross join (values ('warning'), ('roadworks'), ('closure')) as k(kind)
 ), autobahn as (
   select e.*,
          coalesce(e.raw, (select r.raw from public.autobahn_events r
@@ -508,7 +542,7 @@ select s.source_feed || ':' || s.site_id                 as site_id,
  where s.deleted_at is null and s.geom is not null and not coalesce(k.excluded, false);
 
 create or replace view contract.charge_point as
-select p.source_feed || ':' || p.point_key                as point_id,
+select coalesce(p.evse_id, p.source_feed || ':' || p.point_key) as point_id,
        p.source_feed || ':' || p.site_id                  as site_id,
        p.evse_id                                          as evse_code,
        case when p.current_type ~* '^ac' then 'ac' when p.current_type ~* '^dc' then 'dc'
@@ -525,7 +559,7 @@ select p.source_feed || ':' || p.point_key                as point_id,
  where p.deleted_at is null and p.site_id is not null and not coalesce(k.excluded, false);
 
 create or replace view contract.charge_point_state_observation as
-select s.source_feed || ':' || s.evse_id                  as point_id,
+select s.evse_id                                          as point_id,
        s.observed_at                                      as observed_at,
        case
          when s.status ~* '^available$' then 'available'
@@ -548,7 +582,7 @@ select s.source_feed || ':' || s.evse_id                  as point_id,
 
 -- One view over the four parking families; the id's prefix keeps them apart
 -- (share-alike rows are never merged into another licence's row). Every SID
--- facility says acceptance_required, its terms gate and its hold.
+-- facility says acceptance_required and its terms gate (a per-request acceptance).
 create or replace view contract.parking_facility as
 with f as (
   select 'p:' || id as facility_id, name, kind, operator, road, geom, false as sid, source_feed, external_id,
@@ -594,14 +628,21 @@ select f.facility_id                                     as facility_id,
 
 create or replace view contract.occupancy_observation as
 with o as (
-  select 'p:' || facility_id as facility_id, observed_at, spaces_free, spaces_total, status, source_feed, confidentiality
-    from public.parking_occupancy
+  -- p: and odbl: ticks through their facility: the contract id is the
+  -- facility's ('p:' || id, indexed by 0313), and the tick a probe of the
+  -- tick table's primary key (facility_id, observed_at). Every tick of both
+  -- has its facility (odbl by foreign key; p: none unmatched on prod).
+  select 'p:' || f.id as facility_id, t.observed_at, t.spaces_free, t.spaces_total, t.status, t.source_feed, t.confidentiality
+    from public.parking_facilities f join public.parking_occupancy t on t.facility_id = f.id
   union all
-  select 'odbl:' || facility_id, observed_at, spaces_free, spaces_total, status, source_feed, confidentiality
-    from public.parking_occupancy_odbl
+  select 'odbl:' || f.id, t.observed_at, t.spaces_free, t.spaces_total, t.status, t.source_feed, t.confidentiality
+    from public.parking_facilities_odbl f join public.parking_occupancy_odbl t on t.facility_id = f.id
   union all
-  select 'sid:' || facility_id, observed_at, spaces_free, spaces_total, status, source_feed, confidentiality
-    from public.parking_occupancy_sid
+  -- SID ticks are read directly: the SID's static sites may not be loaded
+  -- (prod 2026-11-16: no facility row, every tick's facility id unmatched),
+  -- and a tick is data the view must carry whether or not its site is known.
+  select 'sid:' || t.facility_id, t.observed_at, t.spaces_free, t.spaces_total, t.status, t.source_feed, t.confidentiality
+    from public.parking_occupancy_sid t
 )
 select o.facility_id                                     as facility_id,
        o.observed_at                                     as observed_at,
@@ -808,6 +849,30 @@ select 'dwd:' || w.id                                                 as warning
   from public.weather_warnings w
  where w.deleted_at is null and w.valid_from is not null;
 
+-- ------------------------------------------------------------------ terms
+
+-- The terms a row's terms_gate names: id, version, the day in force, the
+-- text per language (German binding) and the provider's own terms. The API
+-- returns the text with a gated answer and serves the row only to a request
+-- that accepted this version; nothing is stored with a key.
+create view contract.terms as
+select t.terms_gate                as terms_gate,
+       t.terms_id                  as terms_id,
+       t.terms_version             as terms_version,
+       t.effective_on              as effective_on,
+       x.lang                      as lang,
+       x.binding                   as binding,
+       x.heading                   as heading,
+       x.body                      as body,
+       x.terms_url                 as terms_url,
+       t.provider_terms_url        as provider_terms_url,
+       t.source_id                 as source_ref,
+       'open'::text                as display_class,
+       'public'::text              as audience
+  from public.source_terms t
+  join public.source_terms_texts x on x.terms_gate = t.terms_gate;
+grant select on contract.terms to api_reader;
+
 -- ------------------------------------------------------------------ rules
 
 create or replace view contract.rule_topic as
@@ -859,25 +924,26 @@ DO $$
 DECLARE r record;
 BEGIN
   FOR r IN SELECT * FROM (VALUES
-    ('publisher', 'One row per source of contract.source (public.contract_sources): publisher_id is the source key, display_name the feed title, or for a register-only source its attribution line. website: no source.'),
-    ('licence', 'One row per licence label of a contract source. licence_url: the registered URL, else the canonical URL of a CC, ODbL, Datenlizenz Deutschland or GeoNutzV label, else the one source page that states a licence no document names, else NULL; category, share_alike and attribution_required are read off the label.'),
-    ('source', 'One row per source of public.contract_sources (feeds, ingestor sources, the register''s static sources), with the envelope of public.contract_source_rules and the domain of public.contract_source_domains. Attribution, changes_statement, use_classes (empty = no use permitted: an unregistered source), review_signed_on and register_version from public.source_register (0309). stale_after_s is the platform''s rule, 3 x cadence (the catalogue''s, else control.data_status); a source with no cadence anywhere (static reference data) takes one year. share_alike_offer_url: no source.'),
+    ('publisher', 'One row per source of contract.source (public.contract_sources): publisher_id is the source key, display_name the feed title, or for a register-only source its attribution line. website: the page the register names for the source, else the catalogue''s offer page.'),
+    ('licence', 'One row per licence label of a published contract source. licence_url: public.licence_texts (0309), else the canonical URL of a CC, ODbL, Datenlizenz Deutschland or GeoNutzV label, else the one source page that carries the label, else the register''s source page; category, share_alike and attribution_required are read off the label.'),
+    ('source', 'One row per source of public.contract_sources (feeds, ingestor sources, the register''s static sources), with the envelope of public.contract_source_rules and the domain of public.contract_source_domains. Attribution, changes_statement, use_classes (empty = no use permitted: an unregistered source), review_signed_on and register_version from public.source_register (0309). stale_after_s is 3 x cadence (the catalogue''s, else control.data_status); a source with no cadence is never stale (owner decision 2026-11-16): freshness_target_s and stale_after_s are NULL and the caller shows its as-of time alone. share_alike_offer_url: the Impressum, where the share-alike offer is redeemed, on a share-alike source. A source whose licence was never read is not published.'),
     ('source_freshness', 'control.data_status per ledger key: data_as_of = last change seen, confirmed_at = last success, updates_paused = the gate''s pause.'),
     ('admin_region', 'public.ags_regions (Land, Kreis). boundary: no source (ags_regions holds a point).'),
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
     ('place_alias', 'The name and the English name of each place.'),
     ('road', 'public.autobahn_roads (Autobahn GmbH API). length_km, geometry, states: no source.'),
-    ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, chainage_km, state_code, source_ref: no source.'),
+    ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
     ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
     ('traffic_event_observation', 'Every Autobahn tick and every DATEX II tick of an event we did not retract. version_no: Autobahn ticks have none (NULL).'),
     ('fuel_station', 'public.fuel_stations we did not retract. open_state_at: no source.'),
     ('fuel_product', 'public.fuel_products.'),
     ('fuel_price_observation', 'Every public.fuel_prices tick of a permitted source.'),
     ('charging_site', 'public.charging_sites with a location that we did not retract. operator_is_person: no source.'),
-    ('charge_point', 'public.charging_points of a site that we did not retract.'),
-    ('charge_point_state_observation', 'Every public.charging_point_status tick; point_id is the status feed and the EVSE id.'),
-    ('parking_facility', 'The four parking families (p:, bysa:, odbl:, sid:) we did not retract; SID facilities are gated and held. direction: no source.'),
-    ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility.'),
+    ('charge_point', 'public.charging_points of a site that we did not retract. point_id is the EVSE id, which the status ticks carry (else feed:point key); the same EVSE listed by two feeds is two rows with one point_id.'),
+    ('charge_point_state_observation', 'Every public.charging_point_status tick; point_id is the EVSE id, as charge_point''s.'),
+    ('parking_facility', 'The four parking families (p:, bysa:, odbl:, sid:) we did not retract; SID facilities carry terms_gate sid-terms-1 (a per-request acceptance, contract.terms). direction: no source.'),
+    ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility; SID ticks carry terms_gate sid-terms-1 whether or not their site is loaded.'),
+    ('terms', 'The terms a gated row''s terms_gate names (public.source_terms, 0309): ViaFrei''s terms of use, section 2, per language, verbatim from the site; the German text binds.'),
     ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes. withdrawn_at: no source.'),
     ('stop_point', 'Every boarding stop of the static GTFS.'),
     ('transit_line', 'public.routes; transport_mode as transit_stop_modes types it.'),

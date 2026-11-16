@@ -19,7 +19,8 @@
 -- the MTS-K purpose note exists in German only and is stored verbatim under
 -- both languages, as the platform shows it.
 --
--- rollback: drop table public.source_register_notes, public.source_register;
+-- rollback: drop table public.source_terms_texts, public.source_terms, public.licence_texts,
+--   public.source_register_notes, public.source_register;
 --   delete from schema_migrations where version = 309;
 
 create table public.source_register (
@@ -354,3 +355,76 @@ insert into public.source_register_notes (source_id, note_kind, lang, body) valu
   ('tankerkoenig', 'purpose', 'en', 'Hinweis zu den Kraftstoffpreisdaten (MTS-K): Diese Daten dürfen ausschließlich zum Zweck der Verbraucherinformation verwendet werden; daher ist insbesondere eine Verwendung der Daten zur Information der Mineralölwirtschaft und/oder ihrer IT-Dienstleister nicht erlaubt.'),
   ('toll_collect_sid', 'condition', 'de', 'Lkw-Stellplatzbelegung: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek. Die Angaben können ungenau, unvollständig oder veraltet sein; keine Gewähr. Es gelten die Nutzungsbedingungen, Abschnitt 2: https://viafrei.de/terms#sid'),
   ('toll_collect_sid', 'condition', 'en', 'Truck-parking occupancy: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek. The figures may be inaccurate, incomplete or out of date; no warranty. ViaFrei''s terms of use, section 2, apply: https://viafrei.de/en/terms#sid');
+
+-- The licence label -> the text a caller links (#29 gap: the API reads a
+-- non-null licence_url). Exact labels, as the platform's licence table spells
+-- them; kind says what the URL is: the licence text itself, the document a
+-- source's own terms are, the statute a statutory publication rests on, or,
+-- for a Mobilithek rights class or an offer with no licence text, the page
+-- that defines the class. A label no row names falls back to 0312's rule.
+create table public.licence_texts (
+    licence_label text primary key check (btrim(licence_label) <> ''),
+    url           text not null check (url ~ '^https://'),
+    url_kind      text not null check (url_kind in ('licence_text', 'source_terms', 'statute', 'rights_class', 'provider_page')),
+    note          text
+);
+comment on table public.licence_texts is 'Per licence label the URL a caller links beside it, and what that URL is (0309). Read by contract.licence (0312); written only by migrations.';
+
+insert into public.licence_texts (licence_label, url, url_kind, note) values
+  ('CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/', 'licence_text', null),
+  ('CC BY 4.0 plus the MTS-K purpose limitation', 'https://creativecommons.org/licenses/by/4.0/', 'licence_text', 'The purpose limitation is a second obligation on top of the licence (a purpose note), not a different licence.'),
+  ('CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/', 'licence_text', null),
+  ('CC BY-SA', 'https://www.dcat-ap.de/def/licenses/cc-by-sa', 'licence_text', 'No version stated by the licensor: the DCAT-AP.de entry its metadata names, never a version nobody published.'),
+  ('CC BY', 'https://www.dcat-ap.de/def/licenses/cc-by', 'licence_text', 'No version stated by the licensor: the DCAT-AP.de entry its metadata names.'),
+  ('CC BY 3.0 DE', 'https://creativecommons.org/licenses/by/3.0/de/', 'licence_text', null),
+  ('CC0 1.0', 'https://creativecommons.org/publicdomain/zero/1.0/', 'licence_text', 'A public-domain dedication: no attribution is owed.'),
+  ('Creative Commons Zero 1.0 Universal (CC0 1.0)', 'https://creativecommons.org/publicdomain/zero/1.0/', 'licence_text', 'A public-domain dedication: no attribution is owed.'),
+  ('dl-de/by-2-0', 'https://www.govdata.de/dl-de/by-2-0', 'licence_text', null),
+  ('Datenlizenz Deutschland – Namensnennung – Version 2.0', 'https://www.govdata.de/dl-de/by-2-0', 'licence_text', null),
+  ('dl-de/zero-2-0', 'https://www.govdata.de/dl-de/zero-2-0', 'licence_text', 'Use without conditions: no Quellenvermerk is owed.'),
+  ('ODbL 1.0', 'https://opendatacommons.org/licenses/odbl/1-0/', 'licence_text', null),
+  ('Open Database License 1.0', 'https://opendatacommons.org/licenses/odbl/1-0/', 'licence_text', null),
+  ('Open Database License 1.0 (ODbL 1.0)', 'https://opendatacommons.org/licenses/odbl/1-0/', 'licence_text', null),
+  ('GeoNutzV', 'https://www.gesetze-im-internet.de/geonutzv/', 'statute', 'Obliges the Quellenvermerk the data came with and a change note; it asks for no link to its text.'),
+  ('Nutzungsbedingungen Toll Collect SID 1.0', 'https://company.toll-collect.de/static/media/dokumente/sid/agb-sid.pdf', 'source_terms', 'Toll Collect''s own terms, version 1.0 of 10 April 2026; ViaFrei''s terms of use, section 2 (contract.terms), bind the recipient.'),
+  ('AFIR Art. 20, keine Lizenz angegeben', 'https://eur-lex.europa.eu/eli/reg/2023/1804/oj', 'statute', 'The offers name no licence; the basis is AFIR Art. 20 (Regulation (EU) 2023/1804) with Delegated Regulation (EU) 2022/670.'),
+  ('open data (Autobahn GmbH)', 'https://verkehr.autobahn.de', 'provider_page', 'An open API with no key and no stated licence: no licence document exists, the provider''s page is the reference.'),
+  ('LICENSE_FREE_USE_OPEN_DATA', 'https://mobilithek.info/', 'rights_class', 'A Mobilithek rights class, not a licence: no licence text exists; the platform whose catalogue states the class.'),
+  ('LICENSE_RESTRICTED_USE_FREE_OF_CHARGE', 'https://mobilithek.info/', 'rights_class', 'A Mobilithek rights class, not a licence: terms never published; the platform whose catalogue states the class.'),
+  ('lizenzfrei (conditionForUse)', 'https://mobilithek.info/', 'rights_class', 'The offer''s own condition of use, "lizenzfrei", beside no licence text; the platform whose catalogue states it.');
+
+-- The terms a request must accept for a row whose terms_gate names them
+-- (0312): ViaFrei's terms of use, section 2 (Toll Collect SID), version 1,
+-- in force from 2026-10-27. The text is the site's, verbatim (German binding,
+-- English the data steward's translation), with the links and the source line
+-- written out. The API returns it and checks the version a request accepted;
+-- no acceptance is stored with a key. A new version is a new row.
+create table public.source_terms (
+    terms_gate         text primary key check (terms_gate ~ '^[a-z0-9-]+-[0-9]+$'),
+    terms_id           text not null check (btrim(terms_id) <> ''),
+    terms_version      text not null check (btrim(terms_version) <> ''),
+    effective_on       date not null,
+    source_id          text not null references public.source_register,
+    provider_terms_url text not null check (provider_terms_url ~ '^https://'),
+    unique (terms_id, terms_version),
+    check (terms_gate = terms_id || '-' || terms_version)
+);
+comment on table public.source_terms is 'The terms a request accepts for a gated row: id, version, the day in force, the source and the provider''s own terms (0309). Read by contract.terms (0312).';
+
+create table public.source_terms_texts (
+    terms_gate text not null references public.source_terms,
+    lang       text not null check (lang in ('de', 'en')),
+    binding    boolean not null,
+    terms_url  text not null check (terms_url ~ '^https://'),
+    heading    text not null check (btrim(heading) <> ''),
+    body       text not null check (btrim(body) <> ''),
+    primary key (terms_gate, lang)
+);
+comment on table public.source_terms_texts is 'The text of each gated terms version per language, verbatim from the site, and whether it is the binding one (0309).';
+
+insert into public.source_terms (terms_gate, terms_id, terms_version, effective_on, source_id, provider_terms_url) values
+  ('sid-terms-1', 'sid-terms', '1', '2026-10-27'::date, 'toll_collect_sid', 'https://company.toll-collect.de/static/media/dokumente/sid/agb-sid.pdf');
+
+insert into public.source_terms_texts (terms_gate, lang, binding, heading, body, terms_url) values
+  ('sid-terms-1', 'de', true, '2. Lkw-Stellplatzbelegung (Stellplatz-Informationsdienst der Toll Collect GmbH).', E'Angaben, deren Quellenzeile den Stellplatz-Informationsdienst (SID) der Toll Collect GmbH nennt, dürfen Sie unentgeltlich, auch kommerziell, nutzen, vervielfältigen, weitergeben, verändern und mit anderen Daten verknüpfen. Ergänzend gelten die Nutzungsbedingungen der Toll Collect GmbH für den Stellplatz-Informationsdienst, Version 1.0, Stand 10.04.2026. Deren Ziffern 6 und 7 beschreiben, wie die Belegung ermittelt wird und wo ihre Genauigkeit endet. Sie verpflichten sich:\na) Zweck: Sie nutzen die Angaben nur als Hilfsmittel, um belegten Parkraum zu erkennen. Sie sagen nicht verlässlich oder genau voraus, ob ein Stellplatz frei ist. Ihre gesetzlichen Pflichten bleiben unberührt, insbesondere die Fahrtüchtigkeit und die Lenk- und Ruhezeiten.\nb) Keine Identifizierung: Sie verarbeiten die Angaben nicht, um einzelne Fahrzeuge oder Personen zu identifizieren. Das gilt auch in Verbindung mit anderen Daten und beim Einsatz künstlicher Intelligenz.\nc) Quelle: Sie geben bei jeder Verwendung die Quelle an: „Lkw-Stellplätze: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek“.\nd) Weitergabe: Wenn Sie die Angaben in welcher Form auch immer an Dritte weitergeben, weisen Sie diese ausdrücklich auf die Bedingungen und die mögliche Ungenauigkeit nach Buchstabe e hin. Sie verpflichten die Dritten vertraglich, die Bedingungen dieses Abschnitts einzuhalten. Die Weitergabe darf keine Haftung der Toll Collect GmbH gegenüber den Dritten begründen.\ne) Hinweis: Die Angaben können ungenau, unvollständig oder veraltet sein und erheben keinen Anspruch auf Vollständigkeit oder jederzeitige Richtigkeit. Die Toll Collect GmbH ist nicht Ihr Vertragspartner und übernimmt Ihnen gegenüber keine Gewähr.\nf) Ende: Beschränkt oder untersagt die Toll Collect GmbH die Nutzung, endet Ihr Recht im selben Umfang. Auf unsere Aufforderung löschen Sie gespeicherte Angaben unverzüglich und bestätigen uns die Löschung in Textform.', 'https://viafrei.de/terms#sid'),
+  ('sid-terms-1', 'en', false, '2. Truck-parking occupancy (Toll Collect GmbH''s Stellplatz-Informationsdienst).', E'Figures whose source line names Toll Collect GmbH''s Stellplatz-Informationsdienst (SID) may be used free of charge, including commercially. You may copy them, pass them on, modify them and combine them with other data. In addition, the Toll Collect GmbH terms of use for the Stellplatz-Informationsdienst, version 1.0 of 10 April 2026 apply. Their sections 6 and 7 describe how occupancy is derived and where its accuracy ends. You agree to the following:\na) Purpose: you use the figures only as an aid to recognising occupied parking space. They do not reliably or exactly predict whether a space is free. Your legal duties are unaffected, in particular fitness to drive and driving and rest times.\nb) No identification: you do not process the figures to identify individual vehicles or persons. This includes processing combined with other data or using artificial intelligence.\nc) Source: you name the source on every use: “Lkw-Stellplätze: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek”.\nd) Passing on: if you pass the figures to third parties in any form, you expressly tell them about these conditions and about the possible inaccuracy described in (e). You bind them by contract to comply with this section. Passing the figures on must not create any liability of Toll Collect GmbH towards those third parties.\ne) Notice: the figures may be inaccurate, incomplete or out of date and do not claim to be complete or correct at all times. Toll Collect GmbH is not your contracting party and gives you no warranty.\nf) End: if Toll Collect GmbH restricts or forbids the use, your right ends to the same extent. At our request you delete stored figures without delay and confirm the deletion to us in text form.', 'https://viafrei.de/en/terms#sid');
