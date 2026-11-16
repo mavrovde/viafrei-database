@@ -1272,6 +1272,11 @@ public.autobahn_roads	column	last_seen_at	timestamp with time zone not null defa
 public.autobahn_roads	column	last_listed_at	timestamp with time zone
 public.autobahn_roads	constraint	autobahn_roads_pkey	p PRIMARY KEY (road)
 public.autobahn_roads	index	autobahn_roads_pkey	CREATE UNIQUE INDEX autobahn_roads_pkey ON public.autobahn_roads USING btree (road)
+public.autobahn_sweeps	column	road	text not null
+public.autobahn_sweeps	column	kind	text not null
+public.autobahn_sweeps	column	observed_at	timestamp with time zone not null
+public.autobahn_sweeps	constraint	autobahn_sweeps_pkey	p PRIMARY KEY (road, kind)
+public.autobahn_sweeps	index	autobahn_sweeps_pkey	CREATE UNIQUE INDEX autobahn_sweeps_pkey ON public.autobahn_sweeps USING btree (road, kind)
 public.bfrk_stops	column	source_feed	text not null
 public.bfrk_stops	column	source_publisher	text not null
 public.bfrk_stops	column	dhid	text not null
@@ -1394,6 +1399,7 @@ public.charging_points	column	extras	jsonb
 public.charging_points	column	price_adhoc_zero	boolean
 public.charging_points	constraint	charging_points_pkey	p PRIMARY KEY (source_feed, point_key)
 public.charging_points	constraint	charging_points_source_feed_site_id_fkey	f FOREIGN KEY (source_feed, site_id) REFERENCES public.charging_sites(source_feed, site_id)
+public.charging_points	index	charging_points_contract_site	CREATE INDEX charging_points_contract_site ON public.charging_points USING btree ((((source_feed || ':'::text) || site_id))) WHERE (deleted_at IS NULL)
 public.charging_points	index	charging_points_deleted	CREATE INDEX charging_points_deleted ON public.charging_points USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_points	index	charging_points_evse	CREATE INDEX charging_points_evse ON public.charging_points USING btree (evse_id) WHERE (evse_id IS NOT NULL)
 public.charging_points	index	charging_points_evse_norm	CREATE INDEX charging_points_evse_norm ON public.charging_points USING btree (upper(translate(evse_id, '*-'::text, ''::text))) WHERE (evse_id IS NOT NULL)
@@ -1435,6 +1441,7 @@ public.charging_sites	column	street_key	text generated public.charging_street_ke
 public.charging_sites	column	house_key	text generated public.charging_house_key(street, house_number)
 public.charging_sites	column	access_private	boolean generated (COALESCE(name, ''::text) ~* '((?<![[:alpha:]])privat(e|er|es)?(?![[:alpha:]])(?![ _-]+((fach)?hochschulen?|universit(ä|ae)t(en)?|uni|kliniken|klinik(um)?|krankenh(a|ä|ae)us(er)?|schulen?|akademie|gymnasium|bank|brauerei|university|school|clinic|hospital|college)(?![[:alpha:]]))|(?<![[:alpha:]])privat(parkpl(a|ä|ae)tz(e|es)?|grundst(ü|ue)ck(e|es|s)?|gel(ä|ae)nde(s)?|einfahrt(en)?)(?![[:alpha:]])|nicht[ _-]?(ö|oe)ffentlich|kein(e|en)?[ _-](ö|oe)ffentlich|(?<![[:alpha:]])not[ _](for[ _])?public(?![[:alpha:]])|(?<![[:alpha:]])non[ _-]public(?![[:alpha:]])|nur[ _]f(ü|ue)r[ _](mitarbeiter|bewohner|anwohner|mieter))'::text)
 public.charging_sites	constraint	charging_sites_pkey	p PRIMARY KEY (source_feed, site_id)
+public.charging_sites	index	charging_sites_contract_location	CREATE INDEX charging_sites_contract_location ON public.charging_sites USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.charging_sites	index	charging_sites_deleted	CREATE INDEX charging_sites_deleted ON public.charging_sites USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_sites	index	charging_sites_geom_gist	CREATE INDEX charging_sites_geom_gist ON public.charging_sites USING gist (geom) WHERE (closed_at IS NULL)
 public.charging_sites	index	charging_sites_page_key	CREATE INDEX charging_sites_page_key ON public.charging_sites USING btree (public.vf_page_key(((('charging:'::text || source_feed) || ':'::text) || site_id)))
@@ -2055,6 +2062,7 @@ public.gazetteer_places	constraint	gazetteer_places_pkey	p PRIMARY KEY (id)
 public.gazetteer_places	constraint	gazetteer_places_source_id_external_id_key	u UNIQUE (source_id, external_id)
 public.gazetteer_places	index	gazetteer_places_admin_code	CREATE INDEX gazetteer_places_admin_code ON public.gazetteer_places USING btree (admin_code) WHERE ((admin_code IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_bkg_city_geom_gist	CREATE INDEX gazetteer_places_bkg_city_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (closed_at IS NULL) AND (geom IS NOT NULL))
+public.gazetteer_places	index	gazetteer_places_bkg_municipality_geom	CREATE INDEX gazetteer_places_bkg_municipality_geom ON public.gazetteer_places USING gist (((geom)::public.geometry)) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (geom IS NOT NULL))
 public.gazetteer_places	index	gazetteer_places_geom_gist	CREATE INDEX gazetteer_places_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((geom IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_geonames_name_en	CREATE INDEX gazetteer_places_geonames_name_en ON public.gazetteer_places USING btree (lower(name_en)) WHERE ((closed_at IS NULL) AND (kind = 'city'::text) AND (source_id = 'geonames'::text) AND (name_en IS NOT NULL) AND (geom IS NOT NULL))
 public.gazetteer_places	index	gazetteer_places_kind_rank	CREATE INDEX gazetteer_places_kind_rank ON public.gazetteer_places USING btree (kind, rank DESC)
@@ -2351,6 +2359,12 @@ public.lez_zones	constraint	lez_zones_pkey	p PRIMARY KEY (source_feed, zone_id)
 public.lez_zones	index	lez_zones_open_geom	CREATE INDEX lez_zones_open_geom ON public.lez_zones USING gist (geom) WHERE (closed_at IS NULL)
 public.lez_zones	index	lez_zones_open_geom_m	CREATE INDEX lez_zones_open_geom_m ON public.lez_zones USING gist (geom_m) WHERE (closed_at IS NULL)
 public.lez_zones	index	lez_zones_pkey	CREATE UNIQUE INDEX lez_zones_pkey ON public.lez_zones USING btree (source_feed, zone_id)
+public.licence_texts	column	licence_label	text not null
+public.licence_texts	column	url	text not null
+public.licence_texts	column	url_kind	text not null
+public.licence_texts	column	note	text
+public.licence_texts	constraint	licence_texts_pkey	p PRIMARY KEY (licence_label)
+public.licence_texts	index	licence_texts_pkey	CREATE UNIQUE INDEX licence_texts_pkey ON public.licence_texts USING btree (licence_label)
 public.lorry_city	column	id	bigint not null identity always
 public.lorry_city	column	source_feed	text not null
 public.lorry_city	column	feature_key	text not null
@@ -3071,6 +3085,8 @@ public.parking_facilities	column	facilities_extra	text[] not null default '{}'::
 public.parking_facilities	column	facilities_source	text
 public.parking_facilities	constraint	parking_facilities_pkey	p PRIMARY KEY (id)
 public.parking_facilities	constraint	parking_facilities_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities	index	parking_facilities_contract_id	CREATE INDEX parking_facilities_contract_id ON public.parking_facilities USING btree ((('p:'::text || id)))
+public.parking_facilities	index	parking_facilities_contract_location	CREATE INDEX parking_facilities_contract_location ON public.parking_facilities USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities	index	parking_facilities_deleted	CREATE INDEX parking_facilities_deleted ON public.parking_facilities USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.parking_facilities	index	parking_facilities_geom_gist	CREATE INDEX parking_facilities_geom_gist ON public.parking_facilities USING gist (geom)
 public.parking_facilities	index	parking_facilities_pkey	CREATE UNIQUE INDEX parking_facilities_pkey ON public.parking_facilities USING btree (id)
@@ -3103,6 +3119,7 @@ public.parking_facilities_bysa	column	updated_at	timestamp with time zone not nu
 public.parking_facilities_bysa	column	confidentiality	text
 public.parking_facilities_bysa	constraint	parking_facilities_bysa_pkey	p PRIMARY KEY (id)
 public.parking_facilities_bysa	constraint	parking_facilities_bysa_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_bysa	index	parking_facilities_bysa_contract_location	CREATE INDEX parking_facilities_bysa_contract_location ON public.parking_facilities_bysa USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_bysa	index	parking_facilities_bysa_geom_gist	CREATE INDEX parking_facilities_bysa_geom_gist ON public.parking_facilities_bysa USING gist (geom)
 public.parking_facilities_bysa	index	parking_facilities_bysa_pkey	CREATE UNIQUE INDEX parking_facilities_bysa_pkey ON public.parking_facilities_bysa USING btree (id)
 public.parking_facilities_bysa	index	parking_facilities_bysa_road	CREATE INDEX parking_facilities_bysa_road ON public.parking_facilities_bysa USING btree (road, kind) WHERE (closed_at IS NULL)
@@ -3133,6 +3150,8 @@ public.parking_facilities_odbl	column	updated_at	timestamp with time zone not nu
 public.parking_facilities_odbl	column	confidentiality	text
 public.parking_facilities_odbl	constraint	parking_facilities_odbl_pkey	p PRIMARY KEY (id)
 public.parking_facilities_odbl	constraint	parking_facilities_odbl_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_odbl	index	parking_facilities_odbl_contract_id	CREATE INDEX parking_facilities_odbl_contract_id ON public.parking_facilities_odbl USING btree ((('odbl:'::text || id)))
+public.parking_facilities_odbl	index	parking_facilities_odbl_contract_location	CREATE INDEX parking_facilities_odbl_contract_location ON public.parking_facilities_odbl USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_odbl	index	parking_facilities_odbl_geom_gist	CREATE INDEX parking_facilities_odbl_geom_gist ON public.parking_facilities_odbl USING gist (geom)
 public.parking_facilities_odbl	index	parking_facilities_odbl_pkey	CREATE UNIQUE INDEX parking_facilities_odbl_pkey ON public.parking_facilities_odbl USING btree (id)
 public.parking_facilities_odbl	index	parking_facilities_odbl_road	CREATE INDEX parking_facilities_odbl_road ON public.parking_facilities_odbl USING btree (road, kind) WHERE (closed_at IS NULL)
@@ -3163,6 +3182,8 @@ public.parking_facilities_sid	column	facilities_extra	text[] not null default '{
 public.parking_facilities_sid	column	facilities_source	text
 public.parking_facilities_sid	constraint	parking_facilities_sid_pkey	p PRIMARY KEY (id)
 public.parking_facilities_sid	constraint	parking_facilities_sid_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_sid	index	parking_facilities_sid_contract_id	CREATE INDEX parking_facilities_sid_contract_id ON public.parking_facilities_sid USING btree ((('sid:'::text || id)))
+public.parking_facilities_sid	index	parking_facilities_sid_contract_location	CREATE INDEX parking_facilities_sid_contract_location ON public.parking_facilities_sid USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_sid	index	parking_facilities_sid_geom_gist	CREATE INDEX parking_facilities_sid_geom_gist ON public.parking_facilities_sid USING gist (geom)
 public.parking_facilities_sid	index	parking_facilities_sid_pkey	CREATE UNIQUE INDEX parking_facilities_sid_pkey ON public.parking_facilities_sid USING btree (id)
 public.parking_facilities_sid	index	parking_facilities_sid_source_key	CREATE UNIQUE INDEX parking_facilities_sid_source_key ON public.parking_facilities_sid USING btree (source_feed, external_id)
@@ -3443,6 +3464,8 @@ public.road_events	column	valid_windows	tstzmultirange
 public.road_events	column	suspended	boolean
 public.road_events	constraint	road_events_pkey	p PRIMARY KEY (id)
 public.road_events	constraint	road_events_source_id_publication_id_key	u UNIQUE (source_id, publication_id)
+public.road_events	index	road_events_contract_event_id	CREATE INDEX road_events_contract_event_id ON public.road_events USING btree ((((('datex:'::text || source_id) || ':'::text) || publication_id))) WHERE (deleted_at IS NULL)
+public.road_events	index	road_events_contract_location	CREATE INDEX road_events_contract_location ON public.road_events USING gist ((((public.st_pointonsurface(geom))::public.geometry(Point,4326))::public.geography)) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_deleted	CREATE INDEX road_events_deleted ON public.road_events USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)
@@ -3653,6 +3676,26 @@ public.source_schedule	column	updated_at	timestamp with time zone not null defau
 public.source_schedule	constraint	source_schedule_pkey	p PRIMARY KEY (source_key)
 public.source_schedule	index	source_schedule_host	CREATE INDEX source_schedule_host ON public.source_schedule USING btree (host)
 public.source_schedule	index	source_schedule_pkey	CREATE UNIQUE INDEX source_schedule_pkey ON public.source_schedule USING btree (source_key)
+public.source_terms	column	terms_gate	text not null
+public.source_terms	column	terms_id	text not null
+public.source_terms	column	terms_version	text not null
+public.source_terms	column	effective_on	date not null
+public.source_terms	column	source_id	text not null
+public.source_terms	column	provider_terms_url	text not null
+public.source_terms	constraint	source_terms_pkey	p PRIMARY KEY (terms_gate)
+public.source_terms	constraint	source_terms_source_id_fkey	f FOREIGN KEY (source_id) REFERENCES public.source_register(source_id)
+public.source_terms	constraint	source_terms_terms_id_terms_version_key	u UNIQUE (terms_id, terms_version)
+public.source_terms	index	source_terms_pkey	CREATE UNIQUE INDEX source_terms_pkey ON public.source_terms USING btree (terms_gate)
+public.source_terms	index	source_terms_terms_id_terms_version_key	CREATE UNIQUE INDEX source_terms_terms_id_terms_version_key ON public.source_terms USING btree (terms_id, terms_version)
+public.source_terms_texts	column	terms_gate	text not null
+public.source_terms_texts	column	lang	text not null
+public.source_terms_texts	column	binding	boolean not null
+public.source_terms_texts	column	terms_url	text not null
+public.source_terms_texts	column	heading	text not null
+public.source_terms_texts	column	body	text not null
+public.source_terms_texts	constraint	source_terms_texts_pkey	p PRIMARY KEY (terms_gate, lang)
+public.source_terms_texts	constraint	source_terms_texts_terms_gate_fkey	f FOREIGN KEY (terms_gate) REFERENCES public.source_terms(terms_gate)
+public.source_terms_texts	index	source_terms_texts_pkey	CREATE UNIQUE INDEX source_terms_texts_pkey ON public.source_terms_texts USING btree (terms_gate, lang)
 public.speed_enforcement	column	id	bigint not null default nextval('public.speed_enforcement_id_seq'::regclass)
 public.speed_enforcement	column	source_feed	text not null
 public.speed_enforcement	column	source_publisher	text not null
@@ -3930,6 +3973,7 @@ public.tmc_locations	column	pos_off_lcd	integer
 public.tmc_locations	column	geom	public.geography(Point,4326) not null
 public.tmc_locations	column	loaded_at	timestamp with time zone not null default now()
 public.tmc_locations	constraint	tmc_locations_pkey	p PRIMARY KEY (cid, tabcd, lcd)
+public.tmc_locations	index	tmc_locations_contract_junction_location	CREATE INDEX tmc_locations_contract_junction_location ON public.tmc_locations USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE ((cid = 58) AND (tabcd = 1) AND (tcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_motorway_gist	CREATE INDEX tmc_locations_motorway_gist ON public.tmc_locations USING gist (geom) WHERE ((tcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_motorway_points_gist	CREATE INDEX tmc_locations_motorway_points_gist ON public.tmc_locations USING gist (geom) WHERE ((cid = 58) AND (tabcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_pkey	CREATE UNIQUE INDEX tmc_locations_pkey ON public.tmc_locations USING btree (cid, tabcd, lcd)

@@ -85,6 +85,9 @@ contract.stop_place	15	audience	text
 contract.stop_point	4	source_ref	text
 contract.stop_point	5	display_class	text
 contract.stop_point	6	audience	text
+contract.terms	11	source_ref	text
+contract.terms	12	display_class	text
+contract.terms	13	audience	text
 contract.traffic_event	30	source_refs	text[]
 contract.traffic_event	31	display_class	text
 contract.traffic_event	32	audience	text

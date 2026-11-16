@@ -22,13 +22,16 @@ const TODAY = "(now() at time zone 'Europe/Berlin')::date";
 const SEED = [
   `insert into public.feed_catalog (feed_key, provider, display_name, licence_id, licence_label, attribution, offer_url, cadence_s) values
      ('mobilithek_park_x', 'mobilithek', 'Parken X', 'mobilithek_park_x', 'Datenlizenz Deutschland – Namensnennung – Version 2.0', 'Parken: X', 'https://example.org/offer/1', 300),
-     ('truckpark_sid_static', 'mobilithek', 'SID', 'toll_collect_sid', 'Toll Collect SID 1.0', 'Lkw-Stellplätze: Toll Collect', null, 3600),
+     ('truckpark_sid_static', 'mobilithek', 'SID', 'toll_collect_sid', 'Nutzungsbedingungen Toll Collect SID 1.0', 'Lkw-Stellplätze: Toll Collect', null, 3600),
      ('delfi_rt_tu', 'mobilithek', 'DELFI RT', 'delfi_rt_tu', 'CC BY-SA 4.0', 'Echtzeitdaten: DELFI', null, 60),
      ('tankerkoenig_hist', 'tankerkoenig', 'History', 'tankerkoenig_hist', 'CC BY-NC-SA 4.0', 'x', null, 86400)`,
   `insert into public.ags_regions (ags, level, name, name_norm, parent_ags, geom, source_id) values ('08111', 'kreis', 'Stuttgart', 'stuttgart', '08', ${PT(9.18, 48.78)}, 'destatis_gv')`,
   `insert into public.gazetteer_places (id, kind, name, name_norm, name_en, admin_code, rank, geom, source_id, external_id) overriding system value values
      (1, 'city', 'Stuttgart', 'stuttgart', 'Stuttgart City', '08111000', 600000, ${PT(9.18, 48.78)}, 'geonames', '2825297')`,
   `insert into public.gazetteer_places (id, kind, name, name_norm, road, source_id, external_id) overriding system value values (2, 'motorway', 'A8', 'a8', 'A8', 'autobahn', 'A8')`,
+  `insert into public.gazetteer_places (id, kind, name, name_norm, admin_code, geom, source_id, external_id) overriding system value values
+     (3, 'city', 'Leinfelden-Echterdingen', 'leinfelden-echterdingen', '08116078', ${PT(9.16, 48.7)}, 'bkg_gvisys', '08116078'),
+     (4, 'city', 'Neu-Ulm', 'neu-ulm', '09775139', ${PT(10.0, 48.39)}, 'bkg_gvisys', '09775139')`,
   `insert into public.autobahn_roads (road) values ('A8')`,
   `insert into public.tmc_locations (cid, tabcd, lcd, lcl_version, class, tcd, stcd, junction_no, name, road_number, geom) values
      (58, 1, 1000, '22.0', 'P', 1, 3, '52', 'Stuttgart-Degerloch', 'A8', ${PT(9.17, 48.73)}),
@@ -79,7 +82,7 @@ const SEED = [
   `insert into public.db_facilities (equipment_no, station_no, kind, state, state_since, first_seen_at, last_seen_at, source_feed, source_publisher, description) values
      ('10500', '1071', 'escalator', 'active', '2026-11-15T10:00:00Z', now(), now(), 'db_fasta', 'DB', 'Ausgang')`,
   `insert into public.weather_warnings (id, source_feed, source_id, identifier, warncell_id, version, level, severity, event, headline, official_sha256, area_sha256, valid_from, raw) overriding system value values
-     (1, 'dwd_cap', 'dwd', 'w1', '108111000', 1, 2, 'Moderate', 'STURMBÖEN', 'Amtliche WARNUNG vor STURMBÖEN', '${HEX}', '${HEX}', now(), '{}')`,
+     (1, 'dwd_warnings', 'dwd', 'w1', '108111000', 1, 2, 'Moderate', 'STURMBÖEN', 'Amtliche WARNUNG vor STURMBÖEN', '${HEX}', '${HEX}', now(), '{}')`,
 ];
 
 beforeAll(async () => {
@@ -104,26 +107,26 @@ async function read<R extends pg.QueryResultRow>(sql: string): Promise<R[]> {
 }
 
 describe("register views", () => {
-  it("source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID gated and held; an excluded source has no row", async () => {
+  it("source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID public behind its per-request terms gate; an excluded source has no row", async () => {
     const r = await read(
       "select source_ref, domain, licence_code, attribution_text, changes_statement, terms_url, acceptance_required, use_classes, freshness_target_s, stale_after_s, review_signed_on::text as rev, register_version::text as ver, display_class, audience, terms_gate, hold_reason from contract.source where source_ref in ('delfi_rt_tu', 'mobilithek_park_x', 'truckpark_sid_static', 'tankerkoenig_hist', 'toll_collect_sid') order by 1",
     );
     expect(r).toEqual([
       { source_ref: "delfi_rt_tu", domain: "transit", licence_code: "CC BY-SA 4.0", attribution_text: "Echtzeitdaten: DELFI e.V. via Mobilithek, CC BY-SA, bearbeitet", changes_statement: "bearbeitet", terms_url: null, acceptance_required: false, use_classes: ["consumer", "non_commercial"], freshness_target_s: 60, stale_after_s: 180, rev: "2026-10-12", ver: "2026-11-14", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
       { source_ref: "mobilithek_park_x", domain: "parking", licence_code: "Datenlizenz Deutschland – Namensnennung – Version 2.0", attribution_text: "Parken: X", changes_statement: null, terms_url: "https://example.org/offer/1", acceptance_required: false, use_classes: [], freshness_target_s: 300, stale_after_s: 900, rev: null, ver: "2026-11-14", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
-      { source_ref: "truckpark_sid_static", domain: "parking", licence_code: "Toll Collect SID 1.0", attribution_text: "Lkw-Stellplätze: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek, Nutzungsbedingungen Version 1.0 (Stand 10.04.2026)", changes_statement: null, terms_url: null, acceptance_required: true, use_classes: ["consumer"], freshness_target_s: 3600, stale_after_s: 10800, rev: "2026-10-26", ver: "2026-11-14", display_class: "gated", audience: "own", terms_gate: "sid-terms-1", hold_reason: "no_api_terms" },
+      { source_ref: "truckpark_sid_static", domain: "parking", licence_code: "Nutzungsbedingungen Toll Collect SID 1.0", attribution_text: "Lkw-Stellplätze: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek, Nutzungsbedingungen Version 1.0 (Stand 10.04.2026)", changes_statement: null, terms_url: null, acceptance_required: true, use_classes: ["consumer"], freshness_target_s: 3600, stale_after_s: 10800, rev: "2026-10-26", ver: "2026-11-14", display_class: "gated", audience: "public", terms_gate: "sid-terms-1", hold_reason: null },
     ]);
     const pub = await read<{ n: number }>("select count(*)::int as n from contract.publisher p join contract.source s on s.publisher_id = p.publisher_id");
     const src = await read<{ n: number }>("select count(*)::int as n from contract.source");
     expect(pub[0]?.n).toBe(src[0]?.n);
   });
 
-  it("source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = one year", async () => {
+  it("source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)", async () => {
     const r = await read(
       "select source_ref, domain, licence_code, array_to_string(use_classes, ',') as uses, acceptance_required as acc, stale_after_s, review_signed_on::text as rev, display_class, audience from contract.source where source_ref in ('geonames', 'destatis_gv_laender', 'db_fasta', 'dwd', 'viafrei_rules', 'tankerkoenig', 'mobilithek_afir_eliso_stat', 'mobilithek_park_bosch_static') order by 1",
     );
     const all = "consumer,non_commercial,commercial";
-    const year3 = 3 * 31536000;
+    const year3 = null;
     expect(r).toEqual([
       { source_ref: "db_fasta", domain: "transit", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-20", display_class: "open", audience: "public" },
       { source_ref: "destatis_gv_laender", domain: "places", licence_code: "dl-de/by-2-0", uses: all, acc: false, stale_after_s: year3, rev: "2026-11-03", display_class: "open", audience: "public" },
@@ -173,18 +176,18 @@ describe("reference views", () => {
   });
 
   it("place and place_alias: a located gazetteer row, its Kreis, rank and names; a row with no location is not a place", async () => {
-    expect(await read("select place_id, place_kind, region_code, official_key, prominence, source_ref, origin_key, source_refs, st_astext(location) as at from contract.place")).toEqual([
+    expect(await read("select place_id, place_kind, region_code, official_key, prominence, source_ref, origin_key, source_refs, st_astext(location) as at from contract.place where source_ref <> 'bkg_gvisys'")).toEqual([
       { place_id: "1", place_kind: "municipality", region_code: "08111", official_key: "08111000", prominence: 600000, source_ref: "geonames", origin_key: "2825297", source_refs: ["geonames"], at: "POINT(9.18 48.78)" },
     ]);
-    expect(await read("select label, lang, name_kind, search_fold from contract.place_alias order by 1")).toEqual([
+    expect(await read("select label, lang, name_kind, search_fold from contract.place_alias where place_id = '1' order by 1")).toEqual([
       { label: "Stuttgart", lang: null, name_kind: "name", search_fold: "stuttgart" },
       { label: "Stuttgart City", lang: "en", name_kind: "exonym", search_fold: "stuttgart city" },
     ]);
   });
 
-  it("road and junction: the A-road list (Autobahn API: own audience) and its TMC junctions only", async () => {
+  it("road and junction: the A-road list (Autobahn API: public, owner 2026-11-16) and its TMC junctions only", async () => {
     expect(await read("select road_ref, road_class, states, source_ref, display_class, audience from contract.road")).toEqual([
-      { road_ref: "A8", road_class: "motorway", states: null, source_ref: "autobahn", display_class: "consumer_only", audience: "own" },
+      { road_ref: "A8", road_class: "motorway", states: null, source_ref: "autobahn", display_class: "open", audience: "public" },
     ]);
     expect(await read("select junction_id, road_ref, number, name, junction_kind, chainage_km from contract.junction")).toEqual([
       { junction_id: "58:1:1000", road_ref: "A8", number: "52", name: "Stuttgart-Degerloch", junction_kind: "junction", chainage_km: null },
@@ -199,7 +202,7 @@ describe("roads", () => {
               source_ref, display_class, audience, confidentiality, origin_restriction from contract.traffic_event order by 1`,
     );
     expect(r).toEqual([
-      { event_id: "autobahn:X1", event_kind: "roadworks", road_class: "motorway", headline: "A8 | Stuttgart", description: "Zeile 1\nZeile 2", is_blocked: true, from_payload: true, record_class: "operator_event", source_ref: "autobahn", display_class: "consumer_only", audience: "own", confidentiality: null, origin_restriction: null },
+      { event_id: "autobahn:X1", event_kind: "roadworks", road_class: "motorway", headline: "A8 | Stuttgart", description: "Zeile 1\nZeile 2", is_blocked: true, from_payload: true, record_class: "operator_event", source_ref: "autobahn", display_class: "open", audience: "public", confidentiality: null, origin_restriction: null },
       { event_id: "datex:DE-BW:S2", event_kind: "accident", road_class: "federal", headline: "Accident", description: null, is_blocked: null, from_payload: false, record_class: "traffic_message", source_ref: "mobilithek_traffic_bw", display_class: "withhold", audience: "own", confidentiality: "restrictedToAuthorities", origin_restriction: "bw_rvwd" },
       { event_id: "datex:DE-MIA:S1", event_kind: "roadworks", road_class: "motorway", headline: "MaintenanceWorks", description: null, is_blocked: null, from_payload: false, record_class: "traffic_message", source_ref: "mobilithek_bab_messages", display_class: "open", audience: "public", confidentiality: null, origin_restriction: null },
     ]);
@@ -207,9 +210,9 @@ describe("roads", () => {
 
   it("traffic_event_observation: every Autobahn tick and the ticks of events we did not retract", async () => {
     expect(await read("select event_id, version_no, display_class from contract.traffic_event_observation order by 1, observed_at")).toEqual([
-      { event_id: "autobahn:X0", version_no: null, display_class: "consumer_only" },
-      { event_id: "autobahn:X1", version_no: null, display_class: "consumer_only" },
-      { event_id: "autobahn:X1", version_no: null, display_class: "consumer_only" },
+      { event_id: "autobahn:X0", version_no: null, display_class: "open" },
+      { event_id: "autobahn:X1", version_no: null, display_class: "open" },
+      { event_id: "autobahn:X1", version_no: null, display_class: "open" },
       { event_id: "datex:DE-BW:S2", version_no: 1, display_class: "withhold" },
       { event_id: "datex:DE-MIA:S1", version_no: 2, display_class: "open" },
     ]);
@@ -239,23 +242,23 @@ describe("charging", () => {
 
   it("charge_point and its state: ids, current, power, availability", async () => {
     expect(await read("select point_id, site_id, evse_code, current_kind, power_max_kw::text as kw, source_ref from contract.charge_point")).toEqual([
-      { point_id: "afir_enbw_stat:p1", site_id: "afir_enbw_stat:s1", evse_code: "DE*ABC*E1", current_kind: "ac", kw: "22.00", source_ref: "afir_enbw_stat" },
+      { point_id: "DE*ABC*E1", site_id: "afir_enbw_stat:s1", evse_code: "DE*ABC*E1", current_kind: "ac", kw: "22.00", source_ref: "afir_enbw_stat" },
     ]);
     expect(await read("select point_id, availability, source_ref, display_class from contract.charge_point_state_observation")).toEqual([
-      { point_id: "afir_enbw_dyn:DE*ABC*E1", availability: "occupied", source_ref: "afir_enbw_dyn", display_class: "open" },
+      { point_id: "DE*ABC*E1", availability: "occupied", source_ref: "afir_enbw_dyn", display_class: "open" },
     ]);
   });
 });
 
 describe("parking", () => {
-  it("parking_facility and occupancy: a plain facility open; a SID facility and its figure gated, held and own", async () => {
+  it("parking_facility and occupancy: a plain facility open; a SID facility and its figure public behind the per-request terms gate", async () => {
     expect(await read("select facility_id, parking_kind, operator_name, acceptance_required, source_ref, display_class, audience, terms_gate, hold_reason from contract.parking_facility order by 1")).toEqual([
       { facility_id: "p:11", parking_kind: "park_and_ride", operator_name: "Stadt", acceptance_required: false, source_ref: "mobilithek_park_x", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
-      { facility_id: "sid:12", parking_kind: "truck_parking", operator_name: null, acceptance_required: true, source_ref: "truckpark_sid_static", display_class: "gated", audience: "own", terms_gate: "sid-terms-1", hold_reason: "no_api_terms" },
+      { facility_id: "sid:12", parking_kind: "truck_parking", operator_name: null, acceptance_required: true, source_ref: "truckpark_sid_static", display_class: "gated", audience: "public", terms_gate: "sid-terms-1", hold_reason: null },
     ]);
     expect(await read("select facility_id, free_spaces, total_spaces, occupancy_status, display_class, audience, terms_gate, hold_reason from contract.occupancy_observation order by 1")).toEqual([
       { facility_id: "p:11", free_spaces: 10, total_spaces: 100, occupancy_status: "free", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
-      { facility_id: "sid:12", free_spaces: 5, total_spaces: 40, occupancy_status: "filling", display_class: "gated", audience: "own", terms_gate: "sid-terms-1", hold_reason: "no_api_terms" },
+      { facility_id: "sid:12", free_spaces: 5, total_spaces: 40, occupancy_status: "filling", display_class: "gated", audience: "public", terms_gate: "sid-terms-1", hold_reason: null },
     ]);
   });
 });
@@ -311,7 +314,7 @@ describe("stations and weather", () => {
 
   it("weather_warning: hazard, level, the Kreis of the warn cell, the DWD as issuer", async () => {
     expect(await read("select warning_id, hazard, warning_level, level_label, message_status, issuer_name, region_code, source_ref from contract.weather_warning")).toEqual([
-      { warning_id: "dwd:1", hazard: "wind", warning_level: 2, level_label: "Moderate", message_status: "actual", issuer_name: "Deutscher Wetterdienst", region_code: "08111", source_ref: "dwd_cap" },
+      { warning_id: "dwd:1", hazard: "wind", warning_level: 2, level_label: "Moderate", message_status: "actual", issuer_name: "Deutscher Wetterdienst", region_code: "08111", source_ref: "dwd_warnings" },
     ]);
   });
 });
@@ -345,5 +348,74 @@ describe("rules and coverage", () => {
       { state_code: "08", source_ref: "traffic_bw", coverage_role: "own", current_only: true, measured_on: null },
       { state_code: "11", source_ref: "traffic_lms_berlin", coverage_role: "own", current_only: false, measured_on: null },
     ]);
+  });
+});
+
+describe("0312 additions (owner decisions 2026-11-16)", () => {
+  it("terms: sid-terms-1 in German (binding) and English, the verbatim section A.2, and every SID row's terms_gate names it", async () => {
+    const t = await read<{ terms_gate: string; terms_id: string; terms_version: string; lang: string; binding: boolean; terms_url: string; head: boolean; body: boolean; audience: string }>(
+      "select terms_gate, terms_id, terms_version, lang, binding, terms_url, heading <> '' as head, body like '%Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek%' as body, audience from contract.terms order by lang",
+    );
+    expect(t).toEqual([
+      { terms_gate: "sid-terms-1", terms_id: "sid-terms", terms_version: "1", lang: "de", binding: true, terms_url: "https://viafrei.de/terms#sid", head: true, body: true, audience: "public" },
+      { terms_gate: "sid-terms-1", terms_id: "sid-terms", terms_version: "1", lang: "en", binding: false, terms_url: "https://viafrei.de/en/terms#sid", head: true, body: true, audience: "public" },
+    ]);
+    const gates = await read<{ g: string | null }>(
+      "select distinct terms_gate as g from contract.parking_facility where source_ref ~ 'sid' union select distinct terms_gate from contract.occupancy_observation where source_ref ~ 'sid' union select distinct terms_gate from contract.source where source_ref ~ 'sid'",
+    );
+    expect(gates).toEqual([{ g: "sid-terms-1" }]);
+  });
+
+  it("licence: every label a source names has a URL; the licence texts are listed with theirs", async () => {
+    const missing = await read<{ c: string }>("select l.licence_code as c from contract.licence l where l.licence_url is null");
+    expect(missing).toEqual([]);
+    const sid = await read<{ licence_url: string; licence_category: string }>("select licence_url, licence_category from contract.licence where licence_code = 'Nutzungsbedingungen Toll Collect SID 1.0'");
+    expect(sid).toHaveLength(1);
+    const odbl = await read<{ licence_url: string; share_alike: boolean }>("select licence_url, share_alike from contract.licence where licence_code = 'Open Database License 1.0'");
+    expect(odbl).toEqual([{ licence_url: "https://opendatacommons.org/licenses/odbl/1-0/", share_alike: true }]);
+  });
+
+  it("publisher website and share_alike_offer_url: the catalogue's offer page; a share-alike source offers the changed data", async () => {
+    const r = await read<{ source_ref: string; share_alike_offer_url: string | null }>(
+      "select source_ref, share_alike_offer_url from contract.source where source_ref in ('delfi_rt_tu', 'mobilithek_park_x') order by 1",
+    );
+    expect(r).toEqual([
+      { source_ref: "delfi_rt_tu", share_alike_offer_url: "https://viafrei.de/impressum" },
+      { source_ref: "mobilithek_park_x", share_alike_offer_url: null },
+    ]);
+    const w = await read<{ website: string | null }>("select website from contract.publisher where publisher_id = (select publisher_id from contract.source where source_ref = 'mobilithek_park_x')");
+    expect(w).toEqual([{ website: "https://example.org/offer/1" }]);
+  });
+
+  it("junction state_code: the Land of the nearest BKG municipality", async () => {
+    const r = await read<{ junction_id: string; state_code: string | null }>("select junction_id, state_code from contract.junction order by 1");
+    expect(r).toEqual([{ junction_id: "58:1:1000", state_code: "08" }]);
+  });
+
+  it("traffic_event: the newest sweep per road and kind is kept by the insert; a newer sweep replaces the last, a late older tick does not, and kinds that are no traffic event stay out", async () => {
+    const c = await db.pool.connect();
+    const ids = async (): Promise<string[]> => (await c.query<{ e: string }>("select event_id as e from contract.traffic_event where event_id like 'autobahn:%' order by 1")).rows.map((x) => x.e);
+    try {
+      await c.query("begin");
+      expect(await ids()).toEqual(["autobahn:X1"]);
+      const sweep = async (at: string, kind: string, id: string): Promise<void> => {
+        await c.query(`insert into public.autobahn_events (observed_at, road, kind, ext_id, title, geom, source) values (${at}, 'A8', '${kind}', '${id}', 't', ${PT(9.17, 48.73)}, 'autobahn')`);
+      };
+      await sweep(`(${T0} + interval '2 seconds')`, "roadworks", "X2");
+      expect(await ids()).toEqual(["autobahn:X2"]);
+      await sweep(T0, "roadworks", "X9");
+      expect(await ids()).toEqual(["autobahn:X2"]);
+      const s = await c.query<{ n: string }>("select count(*)::text as n from public.autobahn_sweeps where road = 'A8' and kind = 'roadworks' and observed_at = " + `${T0} + interval '2 seconds'`);
+      expect(s.rows[0]?.n).toBe("1");
+      await sweep(T1, "closure_entry_exit", "C1");
+      await sweep(T1, "parking_lorry", "L1");
+      await sweep(T1, "electric_charging_station", "E1");
+      expect(await ids()).toEqual(["autobahn:C1", "autobahn:X2"]);
+      const kind = await c.query<{ k: string }>("select event_kind as k from contract.traffic_event where event_id = 'autobahn:C1'");
+      expect(kind.rows).toEqual([{ k: "closure" }]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
   });
 });

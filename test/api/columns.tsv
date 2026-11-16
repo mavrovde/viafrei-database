@@ -1,6 +1,7 @@
 # The columns of viafrei-api's schemas as the API's own DDL built them (contract 0.2: db/contract 0001, 0003, 0004;
 # access store version 3: db/access 0001-0004), read off that database's catalogue: relation, position, column, type.
 # 0307 and 0308 must build exactly these (test/api-schemas.db.test.ts). A change here is a change of the API's contract.
+# contract.terms is new in 0312 (the SID terms text, owner 2026-11-16): the API's DDL adds it with contract 0.3.
 access.api_key	1	key_id	text
 access.api_key	2	environment	text
 access.api_key	3	plan_name	text
@@ -244,6 +245,16 @@ contract.stop_place	12	withdrawn_at	timestamp with time zone
 contract.stop_point	1	stop_point_id	text
 contract.stop_point	2	stop_place_id	text
 contract.stop_point	3	platform_label	text
+contract.terms	1	terms_gate	text
+contract.terms	2	terms_id	text
+contract.terms	3	terms_version	text
+contract.terms	4	effective_on	date
+contract.terms	5	lang	text
+contract.terms	6	binding	boolean
+contract.terms	7	heading	text
+contract.terms	8	body	text
+contract.terms	9	terms_url	text
+contract.terms	10	provider_terms_url	text
 contract.traffic_event	1	event_id	text
 contract.traffic_event	2	event_kind	text
 contract.traffic_event	3	severity	text

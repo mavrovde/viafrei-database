@@ -470,6 +470,9 @@ public.landing_status_hourly	landing_status_hourly_status_check	CHECK (((status 
 public.lez_zone_overlaps	lez_zone_overlaps_two_feeds	CHECK ((source_feed <> other_feed))	{"source_feed":"a","other_feed":"a"}
 public.lez_zones	lez_zones_area_is_area	CHECK (((role = 'exempt_road'::text) OR (public.geometrytype(geom) = ANY (ARRAY['POLYGON'::text, 'MULTIPOLYGON'::text]))))	{"role":"zone","geom":"SRID=4326;POINT(0 0)"}
 public.lez_zones	lez_zones_role_known	CHECK ((role = ANY (ARRAY['zone'::text, 'exempt_road'::text, 'transfer'::text])))	{"role":""}
+public.licence_texts	licence_texts_licence_label_check	CHECK ((btrim(licence_label) <> ''::text))	{"licence_label":""}
+public.licence_texts	licence_texts_url_check	CHECK ((url ~ '^https://'::text))	{"url":""}
+public.licence_texts	licence_texts_url_kind_check	CHECK ((url_kind = ANY (ARRAY['licence_text'::text, 'source_terms'::text, 'statute'::text, 'rights_class'::text, 'provider_page'::text])))	{"url_kind":""}
 public.lorry_city	lorry_city_category	CHECK ((category = ANY (ARRAY['connection_motorway'::text, 'connection_primary'::text, 'connection_secondary'::text, 'connection_delivery'::text, 'lorry_priority_route'::text, 'heavy_transport'::text])))	{"category":""}
 public.lorry_city	lorry_city_class_on_network	CHECK (((layer = 'priority_route'::text) = (category IS NOT NULL)))	{"layer":"priority_route"}
 public.lorry_city	lorry_city_kind	CHECK (((layer = 'priority_route'::text) OR (kind IS NOT NULL)))	{"layer":""}
@@ -751,6 +754,15 @@ public.source_schedule	source_schedule_paused_reason_check	CHECK (((paused_reaso
 public.source_schedule	source_schedule_running	CHECK (((state = 'running'::text) = (running_since IS NOT NULL)))	{"running_since":"2026-01-01 00:30:17.5+00"}
 public.source_schedule	source_schedule_source_key_check	CHECK ((source_key ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"source_key":""}
 public.source_schedule	source_schedule_state_check	CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text, 'misconfigured'::text, 'running'::text, 'unknown'::text])))	{"state":""}
+public.source_terms	source_terms_check	CHECK ((terms_gate = ((terms_id || '-'::text) || terms_version)))	{"terms_gate":"a-1","terms_id":"b","terms_version":"1"}
+public.source_terms	source_terms_provider_terms_url_check	CHECK ((provider_terms_url ~ '^https://'::text))	{"provider_terms_url":""}
+public.source_terms	source_terms_terms_gate_check	CHECK ((terms_gate ~ '^[a-z0-9-]+-[0-9]+$'::text))	{"terms_gate":""}
+public.source_terms	source_terms_terms_id_check	CHECK ((btrim(terms_id) <> ''::text))	{"terms_id":""}
+public.source_terms	source_terms_terms_version_check	CHECK ((btrim(terms_version) <> ''::text))	{"terms_version":""}
+public.source_terms_texts	source_terms_texts_body_check	CHECK ((btrim(body) <> ''::text))	{"body":""}
+public.source_terms_texts	source_terms_texts_heading_check	CHECK ((btrim(heading) <> ''::text))	{"heading":""}
+public.source_terms_texts	source_terms_texts_lang_check	CHECK ((lang = ANY (ARRAY['de'::text, 'en'::text])))	{"lang":""}
+public.source_terms_texts	source_terms_texts_terms_url_check	CHECK ((terms_url ~ '^https://'::text))	{"terms_url":""}
 public.speed_enforcement	speed_enforcement_ags	CHECK (((ags IS NULL) OR (ags ~ '^[0-9]{8}$'::text)))	{"ags":""}
 public.speed_enforcement	speed_enforcement_announced	CHECK (((kind <> 'mobile_announced'::text) OR (valid_from IS NOT NULL)))	{"kind":"mobile_announced"}
 public.speed_enforcement	speed_enforcement_attribution	CHECK ((attribution_id <> ''::text))	{"attribution_id":""}

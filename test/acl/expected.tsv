@@ -40,6 +40,7 @@ api_reader	relation	contract.source_note	SELECT
 api_reader	relation	contract.station_facility	SELECT
 api_reader	relation	contract.stop_place	SELECT
 api_reader	relation	contract.stop_point	SELECT
+api_reader	relation	contract.terms	SELECT
 api_reader	relation	contract.traffic_event	SELECT
 api_reader	relation	contract.traffic_event_observation	SELECT
 api_reader	relation	contract.transit_line	SELECT

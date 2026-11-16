@@ -57,7 +57,9 @@
 -- replaced view from 0307 (then grant select on all tables in schema
 -- contract to api_reader), then drop view contract.terms,
 -- public.contract_sources, public.contract_source_domains,
--- public.contract_source_rules;
+-- public.contract_source_rules; drop trigger autobahn_sweeps_note on
+-- public.autobahn_events, drop function public.autobahn_sweeps_note(),
+-- drop table public.autobahn_sweeps;
 --   delete from schema_migrations where version = 312;
 
 -- create or replace view takes an ACCESS EXCLUSIVE lock on the view.
@@ -336,6 +338,50 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
 
 -- ----------------------------------------------------------------- roads
 
+-- The newest sweep of each Autobahn road and event kind, kept by the insert
+-- itself: one row per (road, kind), moved forward by a statement trigger on
+-- autobahn_events (a sweep is one insert statement per road and kind). The
+-- contract reads "the events of the newest sweep" off it with one index probe
+-- per row, where a probe of the tick table per road and kind walked a whole
+-- day of a road's ticks for a kind its newest sweeps did not carry (1.7 to
+-- 2.7 s at production volume, over the 2 s read budget). Never moved back:
+-- a late insert of an older tick leaves the newer sweep standing.
+create table public.autobahn_sweeps (
+  road        text        not null,
+  kind        text        not null,
+  observed_at timestamptz not null,
+  primary key (road, kind)
+);
+comment on table public.autobahn_sweeps is
+  'The instant of the newest Autobahn GmbH sweep per road and event kind, kept by trigger autobahn_sweeps_note on autobahn_events; contract.traffic_event reads its events (#29).';
+
+create function public.autobahn_sweeps_note() returns trigger
+  language plpgsql security definer set search_path = pg_catalog, public as $$
+begin
+  insert into public.autobahn_sweeps as s (road, kind, observed_at)
+  select n.road, n.kind, max(n.observed_at) from new_rows n group by n.road, n.kind
+  on conflict (road, kind) do update set observed_at = excluded.observed_at
+   where s.observed_at < excluded.observed_at;
+  return null;
+end $$;
+revoke all on function public.autobahn_sweeps_note() from public;
+
+create trigger autobahn_sweeps_note after insert on public.autobahn_events
+  referencing new table as new_rows for each statement execute function public.autobahn_sweeps_note();
+
+-- The sweeps already stored: the newest instant of the last day per road and
+-- kind, one probe of autobahn_events_road each.
+insert into public.autobahn_sweeps (road, kind, observed_at)
+select x.road, x.kind, x.at
+  from (select r.road, k.kind,
+               (select e.observed_at from public.autobahn_events e
+                 where e.road = r.road and e.kind = k.kind and e.observed_at > now() - interval '1 day'
+                 order by e.observed_at desc limit 1) as at
+          from public.autobahn_roads r
+         cross join (select distinct e.kind from public.autobahn_events e
+                      where e.observed_at > now() - interval '1 day') k) x
+ where x.at is not null;
+
 -- Autobahn GmbH: the events of the newest sweep of each road and kind (an
 -- event that left the sweep is no longer current); its payload, where the
 -- tick stores none, is the newest same-day tick of the same item with the
@@ -344,14 +390,11 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
 -- the provider's own end as withdrawn_at and its marking as confidentiality.
 create or replace view contract.traffic_event as
 with newest as (
-  -- One index probe (autobahn_events_road) per road and event kind: the
-  -- instant of the newest sweep of the last day, never an aggregate over it.
-  select r.road, k.kind,
-         (select e.observed_at from public.autobahn_events e
-           where e.road = r.road and e.kind = k.kind and e.observed_at > now() - interval '1 day'
-           order by e.observed_at desc limit 1) as at
-    from public.autobahn_roads r
-   cross join (values ('warning'), ('roadworks'), ('closure')) as k(kind)
+  -- The newest sweep of the last day per road and event kind (autobahn_sweeps).
+  select s.road, s.kind, s.observed_at as at
+    from public.autobahn_sweeps s
+   where s.observed_at > now() - interval '1 day'
+     and s.kind in ('warning', 'roadworks', 'closure', 'closure_entry_exit')
 ), autobahn as (
   select e.*,
          coalesce(e.raw, (select r.raw from public.autobahn_events r

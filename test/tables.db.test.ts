@@ -142,11 +142,11 @@ describe("every table, catalogue and table both ways", () => {
   it("every row of the shape table is held, and the table names every table of ours", () => {
     const have = new Set(held.map(shapeLine));
     expect(expectedShape().map(shapeLine).filter((k) => !have.has(k))).toEqual([]);
-    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(229);
+    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(233);
   });
 });
 
-// 229 tables: 1128 NOT NULL columns without a default, 214 primary keys, 62 unique constraints, 40 foreign keys.
+// 233 tables: 1146 NOT NULL columns without a default, 218 primary keys, 63 unique constraints, 42 foreign keys.
 describe("every table refuses a null, a duplicate key and a dangling reference by name", () => {
   it("every table of schema access refuses each null, duplicate key and dangling reference by name", async () => {
     const r = await unrefused("access");
@@ -175,6 +175,6 @@ describe("every table refuses a null, a duplicate key and a dangling reference b
   it("every table of schema public refuses each null, duplicate key and dangling reference by name", { timeout: 900_000 }, async () => {
     const r = await unrefused("public");
     expect(r.wrong).toEqual([]);
-    expect(r.counts).toEqual({ tables: 175, notnull: 900, p: 160, u: 32, f: 28 });
+    expect(r.counts).toEqual({ tables: 179, notnull: 918, p: 164, u: 33, f: 30 });
   });
 });
