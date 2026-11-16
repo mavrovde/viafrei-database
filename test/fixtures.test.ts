@@ -5,12 +5,12 @@
  * psql on PATH. fixtures.db.test.ts runs the same install against a real
  * test database, as a child process, which coverage does not count.
  */
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { main } from "../src/cli.js";
-import { databaseOf, FIXTURES_FILE, fixturesRefusal, installFixtures } from "../src/fixtures.js";
+import { databaseOf, FIXTURES_FILE, fixturesRefusal, installFixtures, SEED_FILE, seedFixtures } from "../src/fixtures.js";
 import type { PsqlResult, PsqlRunner } from "../src/psql.js";
 import { cleanup, stubPsqlBin } from "./helpers.js";
 
@@ -47,6 +47,13 @@ describe("fixturesRefusal", () => {
 
   it("lets a test_ database with the variable through", () => {
     expect(fixturesRefusal(ENV)).toBeNull();
+    expect(fixturesRefusal(ENV, "seed")).toBeNull();
+  });
+
+  it("names the seed verb when it refuses a seed", () => {
+    expect(fixturesRefusal({}, "seed")).toBe("test-fixtures seed needs VF_TEST_FIXTURES=1: the fixtures lift guards, and are installed only on purpose");
+    expect(fixturesRefusal({ VF_TEST_FIXTURES: "1" }, "seed")).toBe("test-fixtures seed needs DATABASE_URL");
+    expect(fixturesRefusal({ VF_TEST_FIXTURES: "1", DATABASE_URL: "postgresql://u@h/viafrei" }, "seed")).toContain("test-fixtures seed refuses the database 'viafrei'");
   });
 });
 
@@ -89,6 +96,43 @@ describe("installFixtures", () => {
   });
 });
 
+describe("seedFixtures", () => {
+  let root: string;
+  let rows: string;
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "vf-seed-"));
+    rows = join(root, "it's.sql");
+    writeFileSync(rows, "insert into contract.road (road_ref) values ('A1');\n  INSERT INTO contract.road (road_ref) values ('A2');\nselect 1;\n");
+  });
+  afterEach(() => cleanup(root));
+
+  it("runs the seed triggers, the once-only guard with the file's quoted name, then the file, in one transaction from stdin", async () => {
+    const s = stubRun({ code: 0, stdout: "", stderr: "" });
+    const r = await seedFixtures(ENV, rows, s.run);
+    expect(r).toEqual({ exitCode: 0, lines: ["✓ test fixtures: 2 contract insert(s) seeded from it's.sql (test database test_x)"] });
+    expect(s.calls).toHaveLength(1);
+    expect(s.calls[0]?.args).toEqual(["-1", "-f", "-"]);
+    const script = s.calls[0]?.script ?? "";
+    const triggers = readFileSync(SEED_FILE, "utf8");
+    expect(script.startsWith(triggers)).toBe(true);
+    expect(script.slice(triggers.length)).toBe(`\nselect vf_test.contract_seed_begin('it''s.sql');\n${readFileSync(rows, "utf8")}\n`);
+  });
+
+  it("reports psql's exit code and the first line of its stderr", async () => {
+    const r = await seedFixtures(ENV, rows, stubRun({ code: 3, stdout: "", stderr: "\nERROR:  vf_test contract seed: this database was seeded already\n" }).run);
+    expect(r).toEqual({ exitCode: 1, lines: ["✗ test fixtures could not be seeded (psql exit 3): ERROR:  vf_test contract seed: this database was seeded already"] });
+  });
+
+  it("exits 2 on a refusal, and exits 1 for a file it cannot read, running no psql either way", async () => {
+    const s = stubRun({ code: 0, stdout: "", stderr: "" });
+    expect(await seedFixtures({ DATABASE_URL: URL_OK }, rows, s.run)).toEqual({ exitCode: 2, lines: ["✗ test-fixtures seed needs VF_TEST_FIXTURES=1: the fixtures lift guards, and are installed only on purpose"] });
+    const missing = join(root, "none.sql");
+    expect(await seedFixtures(ENV, missing, s.run)).toEqual({ exitCode: 1, lines: [`✗ test-fixtures seed: ${missing} could not be read`] });
+    expect(await seedFixtures(ENV, rows, s.run, missing)).toEqual({ exitCode: 1, lines: [`✗ test fixtures: ${missing} could not be read`] });
+    expect(s.calls).toEqual([]);
+  });
+});
+
 describe("the test-fixtures verb, in process", () => {
   let out: string[];
   let err: string[];
@@ -124,6 +168,19 @@ describe("the test-fixtures verb, in process", () => {
     expect(readFileSync(join(log, "1.pw"), "utf8")).toBe("s3cret");
   });
 
+  it("seeds through the psql on PATH and prints the count", async () => {
+    root = mkdtempSync(join(tmpdir(), "vf-fixtures-"));
+    const { binDir, log } = stubPsqlBin(root);
+    const rows = join(root, "rows.sql");
+    writeFileSync(rows, "insert into contract.road (road_ref) values ('A1');\n");
+    process.env["PATH"] = `${binDir}${delimiter}${saved["PATH"] ?? ""}`;
+    process.env["VF_TEST_FIXTURES"] = "1";
+    process.env["DATABASE_URL"] = "postgresql://u@127.0.0.1/test_x";
+    expect(await main(["test-fixtures", "seed", rows])).toBe(0);
+    expect(out.join("")).toBe("✓ test fixtures: 1 contract insert(s) seeded from rows.sql (test database test_x)\n");
+    expect(readFileSync(join(log, "1.stdin"), "utf8")).toContain("select vf_test.contract_seed_begin('rows.sql');");
+  });
+
   it("refuses without the variable, on stderr, with exit 2", async () => {
     process.env["DATABASE_URL"] = URL_OK;
     expect(await main(["test-fixtures", "install"])).toBe(2);
@@ -131,8 +188,8 @@ describe("the test-fixtures verb, in process", () => {
     expect(err.join("")).toContain("✗ test-fixtures install needs VF_TEST_FIXTURES=1");
   });
 
-  it.each([[["test-fixtures"]], [["test-fixtures", "drop"]], [["test-fixtures", "install", "now"]]])("is a usage error for %j", async (argv) => {
+  it.each([[["test-fixtures"]], [["test-fixtures", "drop"]], [["test-fixtures", "install", "now"]], [["test-fixtures", "seed"]], [["test-fixtures", "seed", "a.sql", "b.sql"]]])("is a usage error for %j", async (argv) => {
     expect(await main(argv)).toBe(2);
-    expect(err.join("")).toContain("test-fixtures takes one sub-verb: install");
+    expect(err.join("")).toContain("test-fixtures takes one sub-verb: install, or seed FILE");
   });
 });
