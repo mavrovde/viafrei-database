@@ -124,7 +124,10 @@ async function consumer(role: string): Promise<{ claims: number; forbiddenPresen
 
 /** The attributes the baseline creates a role with, and the role as pg_roles holds it, in the same words. */
 async function attributes(role: string): Promise<{ baseline: string; held: string }> {
-  const sql = readFileSync(join(REPO, "db", "baseline", "0293_baseline.sql"), "utf8");
+  // The baseline's roles, and viafrei-api's two, which 0307 and 0308 create the same way.
+  const sql = ["0293_baseline.sql", "../migrations/0307_contract_read_model.sql", "../migrations/0308_access_store.sql"]
+    .map((f) => readFileSync(join(REPO, "db", "baseline", f), "utf8"))
+    .join("\n");
   const baseline = new RegExp(`CREATE ROLE ${role} WITH ([A-Z ]+?)(?: CONNECTION LIMIT (\\d+))?;`).exec(sql);
   const r = (
     await db.pool.query<{ s: string }>(
@@ -165,7 +168,7 @@ describe("the expected-ACL table", () => {
   it("is read off the catalogue by the same query the comparison uses: no privilege of ours is left out of it", async () => {
     const all = (await db.pool.query<{ n: number }>(
       `select count(*)::int as n from pg_class c cross join lateral aclexplode(c.relacl) a join pg_roles g on g.oid = a.grantee
-        where g.rolname like 'viafrei\\_%' and c.relnamespace in (select oid from pg_namespace where nspname in ('public', 'control', 'domains', 'ingestor')) and not c.relispartition and c.relkind in ('r', 'p', 'v', 'm')`,
+        where (g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access')) and c.relnamespace in (select oid from pg_namespace where nspname in ('public', 'control', 'domains', 'ingestor', 'contract', 'access')) and not c.relispartition and c.relkind in ('r', 'p', 'v', 'm')`,
     )).rows[0]?.n ?? 0;
     const read = held.filter((r) => r.kind === "relation" && r.grantee !== "PUBLIC").reduce((s, r) => s + r.privileges.split(",").length, 0);
     expect(read).toBe(all);
@@ -185,6 +188,8 @@ describe("each grantee: the catalogue and expected.tsv, both directions", () => 
   it("viafrei_translate: every privilege it holds is a row, every row is held", () => check("viafrei_translate"));
   it("viafrei_ingestor: every privilege it holds is a row, every row is held", () => check("viafrei_ingestor"));
   it("PUBLIC: every privilege it holds is a row, every row is held", () => check("PUBLIC"));
+  it("api_reader: every privilege it holds is a row, every row is held", () => check("api_reader"));
+  it("api_access: every privilege it holds is a row, every row is held", () => check("api_access"));
 });
 
 describe("each role: what has_*_privilege says it can do is exactly the table", () => {
@@ -199,6 +204,8 @@ describe("each role: what has_*_privilege says it can do is exactly the table", 
   it("viafrei_ops: every relation, column, schema and function of ours", () => check("viafrei_ops"));
   it("viafrei_translate: every relation, column, schema and function of ours", () => check("viafrei_translate"));
   it("viafrei_ingestor: every relation, column, schema and function of ours", () => check("viafrei_ingestor"));
+  it("api_reader: every relation, column, schema and function of ours", () => check("api_reader"));
+  it("api_access: every relation, column, schema and function of ours", () => check("api_access"));
 });
 
 describe("each consumer's own declared list", () => {
@@ -228,4 +235,6 @@ describe("each role: its attributes, no membership, its settings", () => {
   it("viafrei_ops: as the baseline creates it", () => roleShape("viafrei_ops"));
   it("viafrei_translate: as the baseline creates it", () => roleShape("viafrei_translate"));
   it("viafrei_ingestor: as the baseline creates it", () => roleShape("viafrei_ingestor"));
+  it("api_reader: as 0307 creates it", () => roleShape("api_reader"));
+  it("api_access: as 0308 creates it", () => roleShape("api_access"));
 });

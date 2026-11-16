@@ -1,5 +1,35 @@
 # Every CHECK constraint of ours (test/checks.ts): relation, constraint, definition, a plant row that breaks it alone (JSON) or -.
 # A migration that adds, changes or drops a check changes its row here in the same commit.
+access.api_key	api_key_check	CHECK (((previous_mac IS NULL) = (previous_until IS NULL)))	{"previous_mac":""}
+access.api_key	api_key_check1	CHECK (((revoked_at IS NULL) = (revoke_reason IS NULL)))	{"revoked_at":"2026-01-01 00:30:17.5+00"}
+access.api_key	api_key_environment_check	CHECK ((environment = ANY (ARRAY['live'::text, 'test'::text])))	{"environment":""}
+access.api_key	api_key_key_id_check	CHECK ((key_id ~ '^[0-9A-Za-z]{10}$'::text))	{"key_id":""}
+access.api_key	api_key_mac_check	CHECK ((length(mac) = 32))	{"mac":""}
+access.api_key	api_key_previous_mac_check	CHECK ((length(previous_mac) = 32))	{"previous_mac":""}
+access.audit	audit_action_check	CHECK ((action = ANY (ARRAY['plan_put'::text, 'plan_move'::text, 'issue'::text, 'rotate'::text, 'revoke'::text, 'accept_terms'::text, 'audit_pruned'::text, 'usage_pruned'::text, 'console_enrolment'::text, 'console_passkey_added'::text, 'console_passkey_removed'::text, 'console_sign_in'::text])))	{"action":""}
+access.console_enrolment	console_enrolment_code_mac_check	CHECK ((length(code_mac) = 32))	{"code_mac":""}
+access.console_enrolment	console_enrolment_owner_name_check	CHECK ((owner_name ~ '^[a-z][a-z0-9._-]{0,31}$'::text))	{"owner_name":""}
+access.console_passkey	console_passkey_credential_id_check	CHECK (((length(credential_id) >= 16) AND (length(credential_id) <= 1023)))	{"credential_id":"15"}
+access.console_passkey	console_passkey_flags_check	CHECK (((flags >= 0) AND (flags <= 255)))	{"flags":"-1"}
+access.console_passkey	console_passkey_owner_name_check	CHECK ((owner_name ~ '^[a-z][a-z0-9._-]{0,31}$'::text))	{"owner_name":""}
+access.console_passkey	console_passkey_public_key_check	CHECK (((length(public_key) >= 1) AND (length(public_key) <= 2048)))	{"public_key":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+access.console_passkey	console_passkey_sign_count_check	CHECK (((sign_count >= 0) AND (sign_count <= '4294967295'::bigint)))	{"sign_count":"-1"}
+access.console_passkey	console_passkey_user_handle_check	CHECK ((length(user_handle) = 32))	{"user_handle":""}
+access.plan	plan_burst_check	CHECK (((burst >= 1) AND (burst <= 100000)))	{"burst":"0"}
+access.plan	plan_plan_name_check	CHECK ((plan_name ~ '^[a-z][a-z0-9_-]{0,31}$'::text))	{"plan_name":""}
+access.plan	plan_quota_day_check	CHECK ((quota_day >= 0))	{"quota_day":"-1"}
+access.plan	plan_quota_month_check	CHECK ((quota_month >= 0))	{"quota_month":"-1"}
+access.plan	plan_rate_per_second_check	CHECK (((rate_per_second >= 1) AND (rate_per_second <= 100000)))	{"rate_per_second":"0"}
+access.plan	plan_tier_check	CHECK ((tier = ANY (ARRAY['critical'::text, 'standard'::text, 'bulk'::text])))	{"tier":""}
+access.plan	plan_use_class_check	CHECK ((use_class = ANY (ARRAY['consumer'::text, 'non_commercial'::text, 'commercial'::text])))	{"use_class":""}
+access.usage	usage_deadline_exhausted_check	CHECK ((deadline_exhausted >= 0))	{"deadline_exhausted":"-1"}
+access.usage	usage_not_modified_check	CHECK ((not_modified >= 0))	{"not_modified":"-1"}
+access.usage	usage_operation_check	CHECK ((operation ~ '^[A-Za-z][A-Za-z0-9]{0,63}$'::text))	{"operation":""}
+access.usage	usage_overloaded_check	CHECK ((overloaded >= 0))	{"overloaded":"-1"}
+access.usage	usage_quota_exceeded_check	CHECK ((quota_exceeded >= 0))	{"quota_exceeded":"-1"}
+access.usage	usage_rate_limited_check	CHECK ((rate_limited >= 0))	{"rate_limited":"-1"}
+access.usage	usage_requests_check	CHECK ((requests >= 0))	{"requests":"-1"}
+access.usage	usage_storage_ms_check	CHECK ((storage_ms >= 0))	{"storage_ms":"-1"}
 control.budget_state	budget_state_held_reason_check	CHECK ((held_reason = ANY (ARRAY['429'::text, '5xx'::text, 'owner'::text])))	{"held_reason":""}
 control.budget_state	budget_state_owed_by_check	CHECK (((owed_by IS NULL) OR (owed_by ~ '^[a-z][a-z0-9_]{0,31}$'::text)))	{"owed_by":""}
 control.budget_state	budget_state_owed_pair	CHECK (((owed_by IS NULL) = (owed_at IS NULL)))	{"owed_by":""}

@@ -40,6 +40,8 @@ current by the loaders and stamped with when it was first and last seen.
 | Weather warnings | current records with their version history |
 | Places, the gazetteer and addresses | reference data |
 | The attribution and licence register | reference data: every source with its licence, attribution and limits |
+| The API's read contract (`contract`) | views in the shape viafrei-api reads, version 0.2, read by `api_reader` alone; `contract_info` states the version, and each other view publishes rows once its mapping onto the tables above is migrated |
+| The API's access store (`access`) | plans, keys (stored as MACs, never secrets), terms acceptances, hourly usage, an append-only audit and the owner console's passkeys, written by `api_access` alone |
 | The service roles | one login role per service, each granted only what it reads or writes |
 
 Prices are `numeric`, never floating point; places are mostly

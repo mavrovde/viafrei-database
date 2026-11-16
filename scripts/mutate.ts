@@ -31,6 +31,7 @@ const DB = "vitest.db.config.ts";
 const at = (...p: string[]): string => join(ROOT, ...p);
 const GATE = join(ROOT, "scripts", "coverage-schema.ts");
 const GATE_TESTS = ["test/coverage-schema.test.ts"];
+const API_TESTS = ["test/api-schemas.db.test.ts"];
 const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -154,6 +155,19 @@ const MUTANTS: readonly Mutant[] = [
   { name: "db: 0285 owed_by without owed_at", config: DB, file: at("db", "baseline", "0293_baseline.sql"), tests: ["test/replays.db.test.ts"], from: "CONSTRAINT budget_state_owed_pair CHECK (((owed_by IS NULL) = (owed_at IS NULL)))", to: "CONSTRAINT budget_state_owed_pair CHECK (((owed_by IS NULL) OR (owed_at IS NOT NULL)))" },
   // #32: the schema behaviour mutants (functions, triggers, views); each names database tests only.
   ...SCHEMA_BEHAVIOUR_MUTANTS.map((m) => ({ ...m, config: DB })),
+  // #29: viafrei-api's contract (0307) and access store (0308), and their roles' password step.
+  { name: "db: 0307 states contract 0.1", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "select '0.2'::text", to: "select '0.1'::text" },
+  { name: "db: 0307 publishes a row of contract.publisher", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "as website\n where false;", to: "as website\n where true;" },
+  { name: "db: 0307 drifts a contract column's type", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "null::numeric(6,1)                     as length_km,", to: "null::numeric                          as length_km," },
+  { name: "db: 0307 grants api_reader no contract view", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "grant select on all tables in schema contract to api_reader;\n", to: "" },
+  { name: "db: 0307 lets api_reader write the contract", config: DB, file: at("db", "migrations", "0307_contract_read_model.sql"), tests: API_TESTS, from: "grant select on all tables in schema contract to api_reader;", to: "grant select, insert on all tables in schema contract to api_reader;" },
+  { name: "db: 0308 lets api_access delete audit rows", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "grant select, insert on access.terms_acceptance, access.audit to api_access;", to: "grant select, insert, delete on access.terms_acceptance, access.audit to api_access;" },
+  { name: "db: 0308 prunes audit rows younger than 30 days", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "if before > now() - interval '30 days' then", to: "if before > now() - interval '1 days' then" },
+  { name: "db: 0308 prunes usage younger than 30 days", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "if keep_days < 30 then", to: "if keep_days < 1 then" },
+  { name: "db: 0308 leaves prune_audit open to PUBLIC", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "revoke all on function access.prune_audit(timestamptz) from public;\n", to: "" },
+  { name: "db: 0308 refuses the console sign-in audit action", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: ", 'console_sign_in'))", to: "))" },
+  { name: "db: 0308 forgets the store's version 3", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "values (1), (2), (3);", to: "values (1), (2);" },
+  { name: "roles: api_reader's password is fatal", file: at("src", "roles.ts"), tests: ["test/roles.test.ts"], from: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false }', to: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: true }' },
 ];
 
 // vitest is run by this node from the repository's own install, never found on

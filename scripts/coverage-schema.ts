@@ -181,9 +181,9 @@ union all
 select distinct 'grant', coalesce(g.rolname, 'PUBLIC') || '@' || r.name
   from rel r join pg_class c on c.oid = r.oid cross join lateral aclexplode(c.relacl) x
   left join pg_roles g on g.oid = x.grantee
- where x.grantee <> c.relowner and (x.grantee = 0 or g.rolname like 'viafrei\\_%')
+ where x.grantee <> c.relowner and (x.grantee = 0 or g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access'))
 union all
-select 'role', rolname from pg_roles where rolname like 'viafrei\\_%'
+select 'role', rolname from pg_roles where rolname like 'viafrei\\_%' or rolname in ('api_reader', 'api_access')
 order by 1, 2`;
 
 /**

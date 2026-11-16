@@ -28,7 +28,7 @@ versioning and how to verify the signature are in the README's
 | `VF_DB_PARTITION_DAYS` | 30 (`serve`), 7 (CLI) | Days ahead that partitions are created |
 | `VF_DB_PARTITIONS_EVERY_H` | 24 | How often `serve` re-runs partitions ensure |
 | `VF_DB_RECHECK_S` | 30 | How often `serve` re-reads the ledger for `/ready` |
-| `VF_DB_ROLE_DIR` | unset (step skipped) | Directory of mounted secret files, one per role, each named exactly like the role (`viafrei_mcp`, …) and holding its password |
+| `VF_DB_ROLE_DIR` | unset (step skipped) | Directory of mounted secret files, one per role, each named exactly like the role (`viafrei_mcp`, …, and viafrei-api's `api_reader` and `api_access`) and holding its password |
 | `VF_DB_BASELINE_DIR` | `/app/db/baseline` | The baseline (`ledger.tsv` and one `NNNN_baseline.sql`); absent means no baseline |
 | `VF_DB_MIGRATIONS_DIR` | `/app/db/migrations` | The migrations after the baseline; the image's own by default |
 | `VF_DB_ROLES_SQL_DIR` | `/app/db/roles` | The role-password SQL files |
@@ -55,7 +55,9 @@ Keep the token in a password manager. Only the hash goes into the deployment.
 
 - every migration in the image is applied with an equal checksum;
 - the boot's partitions ensure succeeded;
-- every role password was applied, or the role step is not configured.
+- every required role password was applied, or the role step is not configured
+  (a password missing for `viafrei_status`, `viafrei_digest`, `api_reader` or
+  `api_access` is reported as a warning and does not hold readiness back).
 
 In every other case it answers `503 NOT READY: <why>`. A database that a
 NEWER image has already migrated stays ready: the extra versions are reported

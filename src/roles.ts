@@ -11,8 +11,10 @@
  *
  * Severity: a missing ROLE is fatal for the roles a service
  * cannot run without (mcp, translate, ops, ingestor) and a warning for the two
- * whose service degrades to "unavailable" (status, digest). A missing FILE is
- * a secret the deployment did not mount: reported, and fatal for the fatal ones.
+ * whose service degrades to "unavailable" (status, digest), and a warning for
+ * viafrei-api's two (api_reader, api_access, 0307 and 0308), so a deployment
+ * that runs no API stays ready without mounting their secrets. A missing FILE
+ * is a secret the deployment did not mount: reported, and fatal for the fatal ones.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +29,8 @@ export const ROLES: readonly RoleSpec[] = [
   { role: "viafrei_translate", sqlFile: "translate-role-password.sql", fatal: true },
   { role: "viafrei_ops", sqlFile: "ops-role-password.sql", fatal: true },
   { role: "viafrei_ingestor", sqlFile: "ingestor-role-password.sql", fatal: true },
+  { role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false },
+  { role: "api_access", sqlFile: "api-access-role-password.sql", fatal: false },
 ];
 
 /**

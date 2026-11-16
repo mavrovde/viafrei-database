@@ -1,5 +1,88 @@
 # Every table of ours (test/tables.ts): relation, column | constraint | index, name, definition; columns in attnum order.
 # A migration that changes a table changes its rows here in the same commit.
+access.api_key	column	key_id	text not null
+access.api_key	column	environment	text not null
+access.api_key	column	plan_name	text not null
+access.api_key	column	label	text not null
+access.api_key	column	contact	text not null
+access.api_key	column	mac	bytea not null
+access.api_key	column	previous_mac	bytea
+access.api_key	column	previous_until	timestamp with time zone
+access.api_key	column	issued_at	timestamp with time zone not null
+access.api_key	column	expires_at	timestamp with time zone not null
+access.api_key	column	revoked_at	timestamp with time zone
+access.api_key	column	revoke_reason	text
+access.api_key	column	changed_at	timestamp with time zone not null
+access.api_key	constraint	api_key_pkey	p PRIMARY KEY (key_id)
+access.api_key	constraint	api_key_plan_name_fkey	f FOREIGN KEY (plan_name) REFERENCES access.plan(plan_name)
+access.api_key	index	api_key_changed_at	CREATE INDEX api_key_changed_at ON access.api_key USING btree (changed_at)
+access.api_key	index	api_key_pkey	CREATE UNIQUE INDEX api_key_pkey ON access.api_key USING btree (key_id)
+access.audit	column	audit_id	bigint not null identity always
+access.audit	column	at	timestamp with time zone not null
+access.audit	column	action	text not null
+access.audit	column	key_id	text
+access.audit	column	plan_before	text
+access.audit	column	plan_after	text
+access.audit	column	actor	text not null
+access.audit	column	reason	text
+access.audit	constraint	audit_pkey	p PRIMARY KEY (audit_id)
+access.audit	index	audit_at	CREATE INDEX audit_at ON access.audit USING btree (at)
+access.audit	index	audit_pkey	CREATE UNIQUE INDEX audit_pkey ON access.audit USING btree (audit_id)
+access.console_enrolment	column	code_mac	bytea not null
+access.console_enrolment	column	owner_name	text not null
+access.console_enrolment	column	expires_at	timestamp with time zone not null
+access.console_enrolment	column	used_at	timestamp with time zone
+access.console_enrolment	constraint	console_enrolment_pkey	p PRIMARY KEY (code_mac)
+access.console_enrolment	index	console_enrolment_pkey	CREATE UNIQUE INDEX console_enrolment_pkey ON access.console_enrolment USING btree (code_mac)
+access.console_passkey	column	credential_id	bytea not null
+access.console_passkey	column	owner_name	text not null
+access.console_passkey	column	user_handle	bytea not null
+access.console_passkey	column	public_key	bytea not null
+access.console_passkey	column	sign_count	bigint not null
+access.console_passkey	column	flags	smallint not null
+access.console_passkey	column	created_at	timestamp with time zone not null
+access.console_passkey	column	last_used_at	timestamp with time zone
+access.console_passkey	constraint	console_passkey_pkey	p PRIMARY KEY (credential_id)
+access.console_passkey	index	console_passkey_owner	CREATE INDEX console_passkey_owner ON access.console_passkey USING btree (owner_name)
+access.console_passkey	index	console_passkey_pkey	CREATE UNIQUE INDEX console_passkey_pkey ON access.console_passkey USING btree (credential_id)
+access.plan	column	plan_name	text not null
+access.plan	column	use_class	text not null
+access.plan	column	tier	text not null
+access.plan	column	scopes	text[] not null
+access.plan	column	sources	text[] not null
+access.plan	column	changed_at	timestamp with time zone not null
+access.plan	column	rate_per_second	integer not null
+access.plan	column	burst	integer not null
+access.plan	column	quota_day	bigint not null
+access.plan	column	quota_month	bigint not null
+access.plan	constraint	plan_pkey	p PRIMARY KEY (plan_name)
+access.plan	index	plan_changed_at	CREATE INDEX plan_changed_at ON access.plan USING btree (changed_at)
+access.plan	index	plan_pkey	CREATE UNIQUE INDEX plan_pkey ON access.plan USING btree (plan_name)
+access.schema_version	column	version	integer not null
+access.schema_version	column	applied_at	timestamp with time zone not null default now()
+access.schema_version	constraint	schema_version_pkey	p PRIMARY KEY (version)
+access.schema_version	index	schema_version_pkey	CREATE UNIQUE INDEX schema_version_pkey ON access.schema_version USING btree (version)
+access.terms_acceptance	column	key_id	text not null
+access.terms_acceptance	column	source_family	text not null
+access.terms_acceptance	column	terms_version	text not null
+access.terms_acceptance	column	accepted_at	timestamp with time zone not null
+access.terms_acceptance	constraint	terms_acceptance_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+access.terms_acceptance	constraint	terms_acceptance_pkey	p PRIMARY KEY (key_id, source_family, terms_version)
+access.terms_acceptance	index	terms_acceptance_pkey	CREATE UNIQUE INDEX terms_acceptance_pkey ON access.terms_acceptance USING btree (key_id, source_family, terms_version)
+access.usage	column	key_id	text not null
+access.usage	column	hour	timestamp with time zone not null
+access.usage	column	operation	text not null
+access.usage	column	requests	bigint not null
+access.usage	column	not_modified	bigint not null
+access.usage	column	rate_limited	bigint not null
+access.usage	column	quota_exceeded	bigint not null
+access.usage	column	overloaded	bigint not null
+access.usage	column	deadline_exhausted	bigint not null
+access.usage	column	storage_ms	bigint not null
+access.usage	constraint	usage_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+access.usage	constraint	usage_pkey	p PRIMARY KEY (key_id, hour, operation)
+access.usage	index	usage_hour	CREATE INDEX usage_hour ON access.usage USING btree (hour)
+access.usage	index	usage_pkey	CREATE UNIQUE INDEX usage_pkey ON access.usage USING btree (key_id, hour, operation)
 control.budget_state	column	budget_key	text not null
 control.budget_state	column	last_admitted_at	timestamp with time zone
 control.budget_state	column	last_admitted_by	text
