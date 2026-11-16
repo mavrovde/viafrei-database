@@ -28,15 +28,17 @@
 --   delete from schema_migrations where version = 308;
 
 -- The lint reads ALTER ROLE as a strong lock; it takes none on a table, but
--- the bound costs nothing.
+-- the bound costs nothing. CREATE ROLE itself takes a cluster-wide lock on
+-- pg_authid: when two databases of one cluster migrate at once, the second
+-- fails loudly on a duplicate key of pg_authid, and a re-run passes.
 set local lock_timeout = '5s';
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'api_access') THEN
     CREATE ROLE api_access WITH NOSUPERUSER NOINHERIT NOCREATEROLE NOCREATEDB LOGIN NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 8;
-  ELSIF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'api_access' AND rolsuper = false AND rolinherit = false AND rolcreaterole = false AND rolcreatedb = false AND rolcanlogin = true AND rolreplication = false AND rolbypassrls = false AND rolconnlimit = 8) THEN
-    RAISE EXCEPTION 'role api_access exists with other attributes than this migration gives it; align it first (role attributes are cluster-wide and never altered here)';
+  ELSIF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'api_access' AND rolsuper = false AND rolinherit = false AND rolcreaterole = false AND rolcreatedb = false AND rolcanlogin = true AND rolreplication = false AND rolbypassrls = false AND rolconnlimit = 8 AND NOT EXISTS (SELECT FROM pg_catalog.pg_auth_members WHERE member = 'api_access'::regrole)) THEN
+    RAISE EXCEPTION 'role api_access exists with other attributes or a membership this migration does not give it; align it first (roles are cluster-wide and never altered here)';
   END IF;
 END $$;
 

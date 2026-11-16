@@ -17,8 +17,9 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type pg from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import pg from "pg";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { main } from "../src/cli.js";
 import { DomainDb, refusal } from "./domain-db.js";
 import { REPO } from "./helpers.js";
 
@@ -247,5 +248,52 @@ describe("access (0308)", () => {
       "select bool_or(has_function_privilege('public', p.oid, 'EXECUTE')) as ok from pg_proc p where p.pronamespace = 'access'::regnamespace",
     );
     expect(pub.rows[0]?.ok).toBe(false);
+  });
+});
+
+describe("a pre-existing API role is taken only as these migrations would make it", () => {
+  /** Runs the CLI with these variables set, its output kept off the test's own. */
+  async function cli(argv: string[], env: Record<string, string>): Promise<{ code: number; out: string }> {
+    const saved = { ...process.env };
+    const out: string[] = [];
+    const o = vi.spyOn(process.stdout, "write").mockImplementation((c: string | Uint8Array) => (out.push(String(c)), true));
+    const e = vi.spyOn(process.stderr, "write").mockImplementation((c: string | Uint8Array) => (out.push(String(c)), true));
+    Object.assign(process.env, env);
+    try {
+      return { code: await main(argv), out: out.join("") };
+    } finally {
+      o.mockRestore();
+      e.mockRestore();
+      process.env = saved;
+    }
+  }
+
+  it("api_reader as a member of another role stops migrate at 0307, and nothing of 0307 stays", async () => {
+    const name = `${db.name}_member`;
+    const url = new URL(db.url);
+    url.pathname = `/${name}`;
+    await db.pool.query(`drop database if exists ${name} with (force)`);
+    await db.pool.query(`create database ${name}`);
+    await db.pool.query("create role vf_test_api_group nologin");
+    try {
+      await db.pool.query("grant vf_test_api_group to api_reader");
+      const r = await cli(["migrate"], { DATABASE_URL: url.toString() });
+      expect(r.code).not.toBe(0);
+      expect(r.out).toMatch(/role api_reader exists with other attributes or a membership this migration does not give it/);
+      const c = new pg.Client({ connectionString: url.toString() });
+      await c.connect();
+      try {
+        const left = await c.query<{ head: number; contract: boolean }>(
+          "select (select max(version) from public.schema_migrations)::int as head, exists (select from pg_namespace where nspname = 'contract') as contract",
+        );
+        expect(left.rows[0]).toEqual({ head: 306, contract: false });
+      } finally {
+        await c.end();
+      }
+    } finally {
+      await db.pool.query("revoke vf_test_api_group from api_reader");
+      await db.pool.query("drop role vf_test_api_group");
+      await db.pool.query(`drop database if exists ${name} with (force)`);
+    }
   });
 });
