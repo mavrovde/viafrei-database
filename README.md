@@ -40,7 +40,7 @@ current by the loaders and stamped with when it was first and last seen.
 | Weather warnings | current records with their version history |
 | Places, the gazetteer and addresses | reference data |
 | The attribution and licence register | reference data: every source with its licence, attribution and limits |
-| The API's read contract (`contract`) | views in the shape viafrei-api reads, version 0.2, read by `api_reader` alone; `contract_info` states the version; 27 views read the tables above (0309) and append a licence envelope to each row (`source_ref`, `display_class`, `audience`, confidentiality, terms gate, hold) from `public.contract_source_rules`, which the API enforces per key; `source_note`, `rule_topic`, `rule_statement` and `message_coverage` have no table yet and publish no row |
+| The API's read contract (`contract`) | views in the shape viafrei-api reads, version 0.2, read by `api_reader` alone; `contract_info` states the version; 27 views read the tables above (0312) and append a licence envelope to each row (`source_ref`, `display_class`, `audience`, confidentiality, terms gate, hold) from `public.contract_source_rules`, which the API enforces per key; `source_note`, `rule_topic`, `rule_statement` and `message_coverage` have no table yet and publish no row |
 | The API's access store (`access`) | plans, keys (stored as MACs, never secrets), terms acceptances, hourly usage, an append-only audit and the owner console's passkeys, written by `api_access` alone |
 | The service roles | one login role per service, each granted only what it reads or writes |
 

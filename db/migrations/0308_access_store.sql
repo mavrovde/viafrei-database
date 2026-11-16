@@ -81,6 +81,9 @@ create table access.api_key (
     revoked_at     timestamptz,
     revoke_reason  text,
     changed_at     timestamptz not null,
+    -- Who may read the contract's rows marked audience 'own' (0312): only a
+    -- key of ViaFrei's own web and MCP. Every other key is 'public'.
+    audience       text not null default 'public' check (audience in ('public', 'own')),
     constraint api_key_check check ((previous_mac is null) = (previous_until is null)),
     constraint api_key_check1 check ((revoked_at is null) = (revoke_reason is null))
 );

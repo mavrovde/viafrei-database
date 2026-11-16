@@ -3,7 +3,7 @@
  *
  *   contract (0307)  32 views in the API's contract 0.2 shape, column for
  *                    column (test/api/columns.tsv, read off the API's own
- *                    DDL); contract_info states 0.2; 0309 maps the
+ *                    DDL); contract_info states 0.2; 0312 maps the
  *                    others onto the platform's tables (contract-mapping.db.test.ts)
  *                    and appends the licence envelope (test/api/envelope.tsv); api_reader reads them and nothing
  *                    else;
@@ -57,7 +57,7 @@ async function as<R>(role: string, fn: (c: pg.PoolClient) => Promise<R>): Promis
 }
 
 describe("the shape: the API's own DDL, column for column", () => {
-  it("every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0309 appends, and no other", async () => {
+  it("every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other", async () => {
     const r = await db.pool.query<{ l: string }>(
       `select n.nspname || '.' || c.relname || E'\\t' || a.attnum || E'\\t' || a.attname || E'\\t' || format_type(a.atttypid, a.atttypmod) as l
          from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -66,11 +66,11 @@ describe("the shape: the API's own DDL, column for column", () => {
         order by n.nspname || '.' || c.relname, a.attnum`,
     );
     const want = expectedColumns();
-    expect(want).toHaveLength(292);
+    expect(want).toHaveLength(293);
     const envelope = readFileSync(join(REPO, "test", "api", "envelope.tsv"), "utf8")
       .split("\n")
       .filter((l) => l.trim() !== "" && !l.startsWith("#"));
-    expect(envelope).toHaveLength(78);
+    expect(envelope).toHaveLength(98);
     const key = (l: string): [string, number] => [l.split("\t")[0] ?? "", Number(l.split("\t")[1])];
     const merged = [...want, ...envelope].sort((a, b) => key(a)[0].localeCompare(key(b)[0]) || key(a)[1] - key(b)[1]);
     expect(r.rows.map((x) => x.l)).toEqual(merged);
@@ -93,7 +93,7 @@ describe("the shape: the API's own DDL, column for column", () => {
       `select 'index' || E'\\t' || pg_get_indexdef(i.indexrelid) as l from pg_index i join pg_class c on c.oid = i.indrelid
         where c.relnamespace = 'access'::regnamespace order by 1`,
     );
-    expect(want).toHaveLength(54);
+    expect(want).toHaveLength(55);
     expect([...con.rows, ...idx.rows].map((x) => x.l).sort()).toEqual([...want].sort());
     // A view has none: the contract carries no constraint of the stub's tables.
     expect((await db.pool.query("select 1 from pg_constraint where connamespace = 'contract'::regnamespace")).rows).toEqual([]);
@@ -112,20 +112,32 @@ describe("the shape: the API's own DDL, column for column", () => {
 });
 
 describe("contract (0307)", () => {
-  it("contract_info states version 0.2, once, as the API's readiness reads it", async () => {
+  it("contract_info states version 0.3, once, as the API's readiness reads it", async () => {
     const r = await as("api_reader", (c) =>
       c.query<{ v: string; at: string }>("select contract_version as v, published_at::text as at from contract.contract_info order by published_at desc"),
     );
-    expect(r.rows).toEqual([{ v: "0.2", at: "2026-11-16 00:00:00+00" }]);
+    expect(r.rows).toEqual([{ v: "0.3", at: "2026-11-16 00:00:00+00" }]);
   });
 
-  it("on a database with no platform rows, only the views over reference rows the migrations load publish anything", async () => {
+  it("on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything", async () => {
     const counts: Record<string, number> = {};
     for (const v of CONTRACT_VIEWS.filter((x) => x !== "contract.contract_info")) {
       counts[v] = (await db.pool.query<{ n: number }>(`select count(*)::int as n from ${v}`)).rows[0]?.n ?? -1;
     }
     expect(Object.keys(counts)).toHaveLength(31);
-    expect(Object.keys(counts).filter((v) => counts[v] !== 0).sort()).toEqual(["contract.admin_region", "contract.fuel_product"]);
+    expect(Object.keys(counts).filter((v) => counts[v] !== 0).sort()).toEqual([
+      "contract.admin_region",
+      "contract.fuel_product",
+      "contract.licence",
+      "contract.message_coverage",
+      "contract.publisher",
+      "contract.rule_statement",
+      "contract.rule_topic",
+      "contract.source",
+      "contract.source_note",
+    ]);
+    // The register's sources alone: one per register row, each with its publisher and a licence row.
+    expect([counts["contract.source"], counts["contract.publisher"], counts["contract.rule_statement"], counts["contract.message_coverage"]]).toEqual([277, 277, 74, 19]);
   });
 
   it("api_reader reads every contract view and writes none", async () => {
@@ -210,7 +222,7 @@ describe("access (0308)", () => {
     expect(r.rows.map((x) => x.v)).toEqual([1, 2, 3]);
   });
 
-  it("as api_access: a plan, a key, an acceptance, usage and an audit row are written; the audit is append-only", async () => {
+  it("as api_access: a plan, a key (public by default, made own), an acceptance, usage and an audit row are written; the audit is append-only", async () => {
     await as("api_access", async (c) => {
       await c.query(
         "insert into access.plan values ('free', 'consumer', 'standard', '{read}', '{all}', now(), 10, 20, 1000, 20000)",
@@ -218,6 +230,8 @@ describe("access (0308)", () => {
       await c.query(
         "insert into access.api_key (key_id, environment, plan_name, label, contact, mac, issued_at, expires_at, changed_at) values ('Abc123XYZ0', 'live', 'free', 'l', 'c', decode(repeat('00', 32), 'hex'), now(), now() + interval '1 year', now())",
       );
+      expect((await c.query<{ a: string }>("select audience as a from access.api_key where key_id = 'Abc123XYZ0'")).rows).toEqual([{ a: "public" }]);
+      await c.query("update access.api_key set audience = 'own' where key_id = 'Abc123XYZ0'");
       await c.query("insert into access.terms_acceptance values ('Abc123XYZ0', 'sid', 'v1', now())");
       await c.query("insert into access.usage values ('Abc123XYZ0', date_trunc('hour', now()), 'getRoad', 1, 0, 0, 0, 0, 0, 3)");
       await c.query("insert into access.audit (at, action, key_id, actor) values (now(), 'issue', 'Abc123XYZ0', 'owner')");
@@ -228,7 +242,7 @@ describe("access (0308)", () => {
     });
   });
 
-  it("refuses a malformed key id, an unknown audit action, a rate out of bounds, a negative count and a half-set rotation", async () => {
+  it("refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation", async () => {
     const plan = "insert into access.plan values ('p', 'consumer', 'standard', '{}', '{}', now(), 1, 1, 0, 0)";
     const key = (id: string, extra = ""): string =>
       `insert into access.api_key (key_id, environment, plan_name, label, contact, mac, issued_at, expires_at, changed_at${extra === "" ? "" : ", previous_mac"}) values ('${id}', 'live', 'p', 'l', 'c', decode(repeat('00', 32), 'hex'), now(), now(), now()${extra})`;
@@ -237,6 +251,7 @@ describe("access (0308)", () => {
     expect(await tryAll(key("short"))).toMatch(/api_key_key_id_check/);
     expect(await tryAll(key("Abc123XYZ0", ", decode(repeat('00', 32), 'hex')"))).toMatch(/api_key_check\b/);
     expect(await tryAll("insert into access.audit (at, action, actor) values (now(), 'delete_everything', 'x')")).toMatch(/audit_action_check/);
+    expect(await tryAll(`${key("Abc123XYZ0")}; update access.api_key set audience = 'partner'`)).toMatch(/api_key_audience_check/);
     expect(await tryAll("update access.plan set rate_per_second = 0")).toMatch(/plan_rate_per_second_check/);
     expect(await tryAll(`${key("Abc123XYZ0")}; insert into access.usage values ('Abc123XYZ0', now(), 'op', -1, 0, 0, 0, 0, 0, 0)`)).toMatch(/usage_requests_check/);
     // The same statements, well-formed, are accepted (the planted 'accepted' is the error that comes back).

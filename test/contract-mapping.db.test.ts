@@ -1,5 +1,5 @@
 /**
- * The contract views read the platform's tables (0309, #29). A database
+ * The contract views read the platform's tables (0312, #29). A database
  * migrated to head is seeded with a few rows of each source table, and every
  * mapped view is read back as api_reader: its rows, the mapping of their
  * values, and the licence envelope each row carries (source_ref, display_class,
@@ -104,16 +104,55 @@ async function read<R extends pg.QueryResultRow>(sql: string): Promise<R[]> {
 }
 
 describe("register views", () => {
-  it("source: one row per feed, its licence, attribution, offer page and the platform's stale rule; SID gated and held; an excluded source has no row", async () => {
+  it("source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID gated and held; an excluded source has no row", async () => {
     const r = await read(
-      "select source_ref, licence_code, attribution_text, terms_url, acceptance_required, freshness_target_s, stale_after_s, display_class, audience, terms_gate, hold_reason from contract.source order by 1",
+      "select source_ref, domain, licence_code, attribution_text, changes_statement, terms_url, acceptance_required, use_classes, freshness_target_s, stale_after_s, review_signed_on::text as rev, register_version::text as ver, display_class, audience, terms_gate, hold_reason from contract.source where source_ref in ('delfi_rt_tu', 'mobilithek_park_x', 'truckpark_sid_static', 'tankerkoenig_hist', 'toll_collect_sid') order by 1",
     );
     expect(r).toEqual([
-      { source_ref: "delfi_rt_tu", licence_code: "CC BY-SA 4.0", attribution_text: "Echtzeitdaten: DELFI", terms_url: null, acceptance_required: false, freshness_target_s: 60, stale_after_s: 180, display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
-      { source_ref: "mobilithek_park_x", licence_code: "Datenlizenz Deutschland – Namensnennung – Version 2.0", attribution_text: "Parken: X", terms_url: "https://example.org/offer/1", acceptance_required: false, freshness_target_s: 300, stale_after_s: 900, display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
-      { source_ref: "truckpark_sid_static", licence_code: "Toll Collect SID 1.0", attribution_text: "Lkw-Stellplätze: Toll Collect", terms_url: null, acceptance_required: true, freshness_target_s: 3600, stale_after_s: 10800, display_class: "gated", audience: "own", terms_gate: "sid-terms-1", hold_reason: "no_api_terms" },
+      { source_ref: "delfi_rt_tu", domain: "transit", licence_code: "CC BY-SA 4.0", attribution_text: "Echtzeitdaten: DELFI e.V. via Mobilithek, CC BY-SA, bearbeitet", changes_statement: "bearbeitet", terms_url: null, acceptance_required: false, use_classes: ["consumer", "non_commercial"], freshness_target_s: 60, stale_after_s: 180, rev: "2026-10-12", ver: "2026-11-14", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
+      { source_ref: "mobilithek_park_x", domain: "parking", licence_code: "Datenlizenz Deutschland – Namensnennung – Version 2.0", attribution_text: "Parken: X", changes_statement: null, terms_url: "https://example.org/offer/1", acceptance_required: false, use_classes: [], freshness_target_s: 300, stale_after_s: 900, rev: null, ver: "2026-11-14", display_class: "open", audience: "public", terms_gate: null, hold_reason: null },
+      { source_ref: "truckpark_sid_static", domain: "parking", licence_code: "Toll Collect SID 1.0", attribution_text: "Lkw-Stellplätze: Toll Collect GmbH, Stellplatz-Informationsdienst (SID) via Mobilithek, Nutzungsbedingungen Version 1.0 (Stand 10.04.2026)", changes_statement: null, terms_url: null, acceptance_required: true, use_classes: ["consumer"], freshness_target_s: 3600, stale_after_s: 10800, rev: "2026-10-26", ver: "2026-11-14", display_class: "gated", audience: "own", terms_gate: "sid-terms-1", hold_reason: "no_api_terms" },
     ]);
-    expect((await read<{ n: number }>("select count(*)::int as n from contract.publisher"))[0]?.n).toBe(3);
+    const pub = await read<{ n: number }>("select count(*)::int as n from contract.publisher p join contract.source s on s.publisher_id = p.publisher_id");
+    const src = await read<{ n: number }>("select count(*)::int as n from contract.source");
+    expect(pub[0]?.n).toBe(src[0]?.n);
+  });
+
+  it("source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = one year", async () => {
+    const r = await read(
+      "select source_ref, domain, licence_code, array_to_string(use_classes, ',') as uses, acceptance_required as acc, stale_after_s, review_signed_on::text as rev, display_class, audience from contract.source where source_ref in ('geonames', 'destatis_gv_laender', 'db_fasta', 'dwd', 'viafrei_rules', 'tankerkoenig', 'mobilithek_afir_eliso_stat', 'mobilithek_park_bosch_static') order by 1",
+    );
+    const all = "consumer,non_commercial,commercial";
+    const year3 = 3 * 31536000;
+    expect(r).toEqual([
+      { source_ref: "db_fasta", domain: "transit", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-20", display_class: "open", audience: "public" },
+      { source_ref: "destatis_gv_laender", domain: "places", licence_code: "dl-de/by-2-0", uses: all, acc: false, stale_after_s: year3, rev: "2026-11-03", display_class: "open", audience: "public" },
+      { source_ref: "dwd", domain: "weather", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-23", display_class: "open", audience: "public" },
+      { source_ref: "geonames", domain: "places", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-08", display_class: "open", audience: "public" },
+      { source_ref: "mobilithek_afir_eliso_stat", domain: "energy", licence_code: "AFIR Art. 20, keine Lizenz angegeben", uses: "consumer", acc: false, stale_after_s: year3, rev: "2026-10-25", display_class: "consumer_only", audience: "public" },
+      { source_ref: "mobilithek_park_bosch_static", domain: "parking", licence_code: "CC BY 4.0", uses: "consumer", acc: false, stale_after_s: year3, rev: "2026-10-04", display_class: "consumer_only", audience: "public" },
+      { source_ref: "tankerkoenig", domain: "energy", licence_code: "CC BY 4.0", uses: "consumer", acc: false, stale_after_s: year3, rev: "2026-11-13", display_class: "no_redistribution", audience: "own" },
+      { source_ref: "viafrei_rules", domain: "rules", licence_code: "ViaFrei editorial content (informational, not legal advice)", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-19", display_class: "open", audience: "public" },
+    ]);
+    // A register row a feed's licence id names is that feed's, never a second source.
+    expect(await read("select source_ref from contract.source where source_ref in ('delfi_rt_tu', 'toll_collect_sid', 'tankerkoenig_hist') order by 1")).toEqual([{ source_ref: "delfi_rt_tu" }]);
+  });
+
+  it("source_note: the conditions and the MTS-K purpose note, verbatim, under the feed that names the register row", async () => {
+    const r = await read<{ source_ref: string; note_kind: string; lang: string; body: string }>(
+      "select source_ref, note_kind, lang, body from contract.source_note where source_ref in ('tankerkoenig', 'truckpark_sid_static', 'mobilithek_traffic_bw') order by 1, 2, 3",
+    );
+    expect(r.map((n) => `${n.source_ref}/${n.note_kind}/${n.lang}`)).toEqual([
+      "mobilithek_traffic_bw/condition/de",
+      "mobilithek_traffic_bw/condition/en",
+      "tankerkoenig/purpose/de",
+      "tankerkoenig/purpose/en",
+      "truckpark_sid_static/condition/de",
+      "truckpark_sid_static/condition/en",
+    ]);
+    expect(r[2]?.body).toMatch(/^Hinweis zu den Kraftstoffpreisdaten \(MTS-K\): Diese Daten dürfen ausschließlich zum Zweck der Verbraucherinformation verwendet werden;/);
+    expect(r[3]?.body).toBe(r[2]?.body);
+    expect(r[5]?.body).toMatch(/terms of use, section 2, apply/);
   });
 
   it("licence: a label's URL, category, share-alike and attribution flags", async () => {
@@ -273,6 +312,38 @@ describe("stations and weather", () => {
   it("weather_warning: hazard, level, the Kreis of the warn cell, the DWD as issuer", async () => {
     expect(await read("select warning_id, hazard, warning_level, level_label, message_status, issuer_name, region_code, source_ref from contract.weather_warning")).toEqual([
       { warning_id: "dwd:1", hazard: "wind", warning_level: 2, level_label: "Moderate", message_status: "actual", issuer_name: "Deutscher Wetterdienst", region_code: "08111", source_ref: "dwd_cap" },
+    ]);
+  });
+});
+
+describe("rules and coverage", () => {
+  it("rule_topic and rule_statement: the curated topics and facts, German first, English appended, each with its legal basis, review date and to-verify note", async () => {
+    const t = await read("select topic_code, title, title_en, reviewed_on::text as rev, source_ref, display_class, audience from contract.rule_topic order by 1");
+    expect(t.map((x) => x["topic_code"] as string)).toEqual(["alcohol", "emergency", "equipment", "ev", "lez", "speed", "toll", "truck_ban", "winter"]);
+    expect(t.find((x) => x["topic_code"] === "speed")).toEqual({ topic_code: "speed", title: "Geschwindigkeiten", title_en: "Speed limits", rev: "2026-09-19", source_ref: "viafrei_rules", display_class: "open", audience: "public" });
+    expect(
+      await read("select statement_id, topic_code, position, body, legal_basis, body_en, legal_basis_url, to_verify, headline from contract.rule_statement where statement_id = 'speed.rural'"),
+    ).toEqual([
+      { statement_id: "speed.rural", topic_code: "speed", position: 3, body: "Außerorts 100 km/h für Pkw und Krafträder.", legal_basis: "§ 3 StVO", body_en: "100 km/h for cars and motorcycles on roads outside built-up areas.", legal_basis_url: "https://www.gesetze-im-internet.de/stvo_2013/__3.html", to_verify: null, headline: false },
+    ]);
+    const n = await read<{ n: number; topics: number; verify: number }>(
+      "select count(*)::int as n, count(distinct topic_code)::int as topics, count(to_verify)::int as verify from contract.rule_statement",
+    );
+    expect(n).toEqual([{ n: 74, topics: 9, verify: 24 }]);
+  });
+
+  it("message_coverage: every Land carried by the NMS relay as measured, Berlin, BW and SH by their own feeds, BW current-only", async () => {
+    const r = await read<{ state_code: string; source_ref: string; coverage_role: string; current_only: boolean; measured_on: string | null }>(
+      "select state_code, source_ref, coverage_role, current_only, measured_on::text as measured_on from contract.message_coverage order by 1, 2",
+    );
+    expect(r.filter((x) => x.coverage_role === "carried").map((x) => x.state_code)).toEqual(
+      Array.from({ length: 16 }, (_, i) => String(i + 1).padStart(2, "0")),
+    );
+    expect(new Set(r.filter((x) => x.coverage_role === "carried").map((x) => `${x.source_ref}@${x.measured_on ?? ""}`))).toEqual(new Set(["nms_events@2026-10-21"]));
+    expect(r.filter((x) => x.coverage_role === "own")).toEqual([
+      { state_code: "01", source_ref: "traffic_sh", coverage_role: "own", current_only: false, measured_on: null },
+      { state_code: "08", source_ref: "traffic_bw", coverage_role: "own", current_only: true, measured_on: null },
+      { state_code: "11", source_ref: "traffic_lms_berlin", coverage_role: "own", current_only: false, measured_on: null },
     ]);
   });
 });

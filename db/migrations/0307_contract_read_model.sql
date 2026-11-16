@@ -1,4 +1,4 @@
--- The read contract of viafrei-api (#29): schema contract, version 0.2, and the
+-- The read contract of viafrei-api (#29): schema contract, version 0.3, and the
 -- API's read-only role api_reader. Until this release the API built both
 -- itself, from its own DDL, beside the platform's schema; this file is that
 -- DDL's successor, and the API runs no DDL of its own.
@@ -10,7 +10,8 @@
 -- against that stub reads these views unchanged. test/api-schemas.db.test.ts
 -- holds the shape to the stub's, column for column.
 --
--- contract_info answers the contract version, 0.2, which the API's readiness
+-- contract_info answers the contract version, 0.3 (0.2's columns, here, plus
+-- the licence envelope 0312 appends to each view), which the API's readiness
 -- check reads. Every other view publishes NO ROW yet (`where false`): which
 -- platform rows may be published through the API, and under which source,
 -- licence and confidentiality filter, is decided per relation, and each one is
@@ -59,10 +60,10 @@ DO $$ BEGIN EXECUTE format('ALTER ROLE api_reader IN DATABASE %I SET statement_t
 DO $$ BEGIN EXECUTE format('ALTER ROLE api_reader IN DATABASE %I SET idle_in_transaction_session_timeout TO ''5s''', current_database()); END $$;
 
 create schema contract;
-comment on schema contract is 'The read contract of viafrei-api, version 0.2: views only, read by the role api_reader alone. contract_info states the version; every other view publishes no row until its mapping onto the platform''s tables is reviewed and migrated.';
+comment on schema contract is 'The read contract of viafrei-api, version 0.3: views only, read by the role api_reader alone. contract_info states the version; every other view publishes no row until its mapping onto the platform''s tables is reviewed and migrated.';
 
 create view contract.contract_info as
-select '0.2'::text                              as contract_version,
+select '0.3'::text                              as contract_version,
        '2026-11-16 00:00:00+00'::timestamptz    as published_at;
 comment on view contract.contract_info is 'The read-contract version this database publishes, and since when. One row; the API''s readiness reads the newest by published_at.';
 
@@ -395,7 +396,7 @@ DECLARE r record;
 BEGIN
   FOR r IN SELECT c.relname FROM pg_class c WHERE c.relnamespace = 'contract'::regnamespace AND c.relkind = 'v' AND c.relname <> 'contract_info' LOOP
     EXECUTE format('COMMENT ON VIEW contract.%I IS %L', r.relname,
-      'Contract 0.2 shape. Publishes no row yet: its mapping onto the platform''s tables is a later migration.');
+      'Contract 0.3 shape. Publishes no row yet: its mapping onto the platform''s tables is a later migration.');
   END LOOP;
 END $$;
 

@@ -1,4 +1,4 @@
-# The licence envelope 0309 appends to the contract views (owner 2026-11-16), after the columns of
+# The licence envelope 0312 appends to the contract views (owner 2026-11-16), after the columns of
 # test/api/columns.tsv: relation, position, column, type. test/api-schemas.db.test.ts holds both.
 contract.admin_region	6	source_ref	text
 contract.admin_region	7	display_class	text
@@ -29,6 +29,9 @@ contract.journey	8	audience	text
 contract.junction	9	source_ref	text
 contract.junction	10	display_class	text
 contract.junction	11	audience	text
+contract.message_coverage	5	measured_on	date
+contract.message_coverage	6	display_class	text
+contract.message_coverage	7	audience	text
 contract.occupancy_observation	7	display_class	text
 contract.occupancy_observation	8	audience	text
 contract.occupancy_observation	9	confidentiality	text
@@ -49,6 +52,23 @@ contract.place_alias	8	audience	text
 contract.road	7	source_ref	text
 contract.road	8	display_class	text
 contract.road	9	audience	text
+contract.rule_statement	6	body_en	text
+contract.rule_statement	7	legal_basis_url	text
+contract.rule_statement	8	legal_basis_note	text
+contract.rule_statement	9	legal_basis_note_en	text
+contract.rule_statement	10	to_verify	text
+contract.rule_statement	11	to_verify_en	text
+contract.rule_statement	12	reviewed_on	date
+contract.rule_statement	13	headline	boolean
+contract.rule_statement	14	source_ref	text
+contract.rule_statement	15	source_refs	text[]
+contract.rule_statement	16	display_class	text
+contract.rule_statement	17	audience	text
+contract.rule_topic	4	title_en	text
+contract.rule_topic	5	source_ref	text
+contract.rule_topic	6	source_refs	text[]
+contract.rule_topic	7	display_class	text
+contract.rule_topic	8	audience	text
 contract.scheduled_call	7	source_ref	text
 contract.scheduled_call	8	display_class	text
 contract.scheduled_call	9	audience	text

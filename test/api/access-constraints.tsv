@@ -2,6 +2,7 @@
 # that database's catalogue: kind, relation, name, definition. 0308 must build exactly these (test/api-schemas.db.test.ts).
 constraint	access.api_key	api_key_check	CHECK (((previous_mac IS NULL) = (previous_until IS NULL)))
 constraint	access.api_key	api_key_check1	CHECK (((revoked_at IS NULL) = (revoke_reason IS NULL)))
+constraint	access.api_key	api_key_audience_check	CHECK ((audience = ANY (ARRAY['public'::text, 'own'::text])))
 constraint	access.api_key	api_key_environment_check	CHECK ((environment = ANY (ARRAY['live'::text, 'test'::text])))
 constraint	access.api_key	api_key_key_id_check	CHECK ((key_id ~ '^[0-9A-Za-z]{10}$'::text))
 constraint	access.api_key	api_key_mac_check	CHECK ((length(mac) = 32))

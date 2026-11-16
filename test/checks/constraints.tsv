@@ -1,5 +1,6 @@
 # Every CHECK constraint of ours (test/checks.ts): relation, constraint, definition, a plant row that breaks it alone (JSON) or -.
 # A migration that adds, changes or drops a check changes its row here in the same commit.
+access.api_key	api_key_audience_check	CHECK ((audience = ANY (ARRAY['public'::text, 'own'::text])))	{"audience":""}
 access.api_key	api_key_check	CHECK (((previous_mac IS NULL) = (previous_until IS NULL)))	{"previous_mac":""}
 access.api_key	api_key_check1	CHECK (((revoked_at IS NULL) = (revoke_reason IS NULL)))	{"revoked_at":"2026-01-01 00:30:17.5+00"}
 access.api_key	api_key_environment_check	CHECK ((environment = ANY (ARRAY['live'::text, 'test'::text])))	{"environment":""}
@@ -335,6 +336,12 @@ public.deployments	deployments_note_is_short	CHECK (((note IS NULL) OR (length(n
 public.deployments	deployments_previous_git_sha_is_hex	CHECK (((previous_git_sha IS NULL) OR (previous_git_sha ~ '^[0-9a-f]{7,40}$'::text)))	{"previous_git_sha":""}
 public.deployments	deployments_translator_digest_is_a_digest	CHECK (((translator_digest IS NULL) OR (translator_digest ~ '^sha256:[0-9a-f]{64}$'::text)))	{"translator_digest":""}
 public.deployments	deployments_version_is_a_version	CHECK ((version ~ '^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.\\-]+)?$'::text))	{"version":""}
+public.driving_rule_facts	driving_rule_facts_check	CHECK (((source_note_de IS NULL) = (source_note_en IS NULL)))	{"source_note_de":"x","source_note_en":null}
+public.driving_rule_facts	driving_rule_facts_check1	CHECK (((to_verify_de IS NULL) = (to_verify_en IS NULL)))	{"to_verify_de":"x","to_verify_en":null}
+public.driving_rule_facts	driving_rule_facts_fact_key_check	CHECK ((fact_key ~ '^[a-z_]+\\.[a-z0-9_]+$'::text))	{"fact_key":""}
+public.driving_rule_facts	driving_rule_facts_position_check	CHECK (("position" > 0))	{"position":"-1"}
+public.driving_rule_facts	driving_rule_facts_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
+public.driving_rule_topics	driving_rule_topics_topic_code_check	CHECK ((topic_code ~ '^[a-z_]+$'::text))	{"topic_code":""}
 public.energy_page_key_heads	energy_page_key_heads_build_ms_check	CHECK ((build_ms >= 0))	{"build_ms":"-1"}
 public.energy_page_key_heads	energy_page_key_heads_feed_counts_check	CHECK ((jsonb_typeof(feed_counts) = 'object'::text))	{"feed_counts":"\"x\""}
 public.energy_page_key_heads	energy_page_key_heads_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
@@ -515,6 +522,11 @@ public.mcp_usage_exports	mcp_usage_exports_finished	CHECK (((state = 'claimed'::
 public.mcp_usage_exports	mcp_usage_exports_http_status_check	CHECK (((http_status >= 100) AND (http_status <= 599)))	{"http_status":"99"}
 public.mcp_usage_exports	mcp_usage_exports_state_check	CHECK ((state = ANY (ARRAY['claimed'::text, 'sent'::text, 'failed'::text])))	{"state":""}
 public.mcp_usage_exports	mcp_usage_exports_totals_check	CHECK ((jsonb_typeof(totals) = 'object'::text))	{"totals":"\"x\""}
+public.message_coverage_sources	message_coverage_sources_check	CHECK (((NOT current_only) OR (coverage_role = 'own'::text)))	{"current_only":"true","coverage_role":"carried","measured_on":"2026-01-01"}
+public.message_coverage_sources	message_coverage_sources_check1	CHECK (((coverage_role = 'own'::text) OR (measured_on IS NOT NULL)))	{"coverage_role":"carried","measured_on":null}
+public.message_coverage_sources	message_coverage_sources_coverage_role_check	CHECK ((coverage_role = ANY (ARRAY['own'::text, 'carried'::text])))	{"coverage_role":""}
+public.message_coverage_sources	message_coverage_sources_source_ref_check	CHECK ((btrim(source_ref) <> ''::text))	{"source_ref":""}
+public.message_coverage_sources	message_coverage_sources_state_code_check	CHECK ((state_code ~ '^[0-9]{2}$'::text))	{"state_code":""}
 public.motorway_summary	motorway_summary_closures_check	CHECK ((closures >= 0))	{"closures":"-1"}
 public.motorway_summary	motorway_summary_jams_check	CHECK ((jams >= 0))	{"jams":"-1"}
 public.motorway_summary	motorway_summary_road_check	CHECK ((road ~ '^A[1-9][0-9]{0,2}$'::text))	{"road":""}
@@ -715,6 +727,15 @@ public.source_hosts	source_hosts_app_version_check	CHECK (((app_version IS NULL)
 public.source_hosts	source_hosts_host_check	CHECK ((host = ANY (ARRAY['ingest-autobahn'::text, 'ingest-tankerkoenig'::text, 'ingest-mobilithek'::text, 'ingest-dwd'::text, 'ingest-vbb-rt'::text, 'ingest-db-fasta'::text, 'ingest-gtfs-roll'::text, 'ingest-gtfs-fetch'::text, 'ingest-zhv'::text, 'ingest-bnetza'::text, 'ingest-ocpdb'::text, 'ingest-hamburg'::text, 'ingest-gbfs'::text, 'retention'::text])))	{"host":""}
 public.source_hosts	source_hosts_order	CHECK ((heartbeat_at >= started_at))	{"started_at":"2026-01-02 00:00:00+00","heartbeat_at":"2026-01-01 00:00:00+00"}
 public.source_hosts	source_hosts_sources_check	CHECK ((sources >= 0))	{"sources":"-1"}
+public.source_register	source_register_attribution_text_check	CHECK ((btrim(attribution_text) <> ''::text))	{"attribution_text":""}
+public.source_register	source_register_check	CHECK (((NOT share_alike_database) OR share_alike))	{"share_alike":"false","share_alike_database":"true"}
+public.source_register	source_register_licence_label_check	CHECK ((btrim(licence_label) <> ''::text))	{"licence_label":""}
+public.source_register	source_register_source_id_check	CHECK ((source_id ~ '^[a-z0-9_]+$'::text))	{"source_id":""}
+public.source_register	source_register_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
+public.source_register	source_register_use_classes_check	CHECK (((cardinality(use_classes) > 0) AND (use_classes <@ ARRAY['consumer'::text, 'non_commercial'::text, 'commercial'::text])))	{"use_classes":"{zz-not-allowed}"}
+public.source_register_notes	source_register_notes_body_check	CHECK ((btrim(body) <> ''::text))	{"body":""}
+public.source_register_notes	source_register_notes_lang_check	CHECK ((lang = ANY (ARRAY['de'::text, 'en'::text])))	{"lang":""}
+public.source_register_notes	source_register_notes_note_kind_check	CHECK ((note_kind = ANY (ARRAY['condition'::text, 'purpose'::text])))	{"note_kind":""}
 public.source_schedule	source_schedule_declared_cadence_s_check	CHECK ((declared_cadence_s > 0))	{"declared_cadence_s":"-1"}
 public.source_schedule	source_schedule_floor_s_check	CHECK ((floor_s >= 0))	{"floor_s":"-1"}
 public.source_schedule	source_schedule_grant_reason_check	CHECK (((grant_reason IS NULL) OR (length(grant_reason) <= 200)))	{"grant_reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}

@@ -14,6 +14,7 @@ access.api_key	10	expires_at	timestamp with time zone
 access.api_key	11	revoked_at	timestamp with time zone
 access.api_key	12	revoke_reason	text
 access.api_key	13	changed_at	timestamp with time zone
+access.api_key	14	audience	text
 access.audit	1	audit_id	bigint
 access.audit	2	at	timestamp with time zone
 access.audit	3	action	text
