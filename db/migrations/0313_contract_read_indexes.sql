@@ -8,13 +8,15 @@
 -- function for st_dwithin and <->) matches it:
 --   * a position: the view's location cast to geography, which the API writes
 --     as location::geography: charging sites, the four parking families, the
---     open DATEX II road events and the TMC junction points;
+--     open DATEX II road events, the TMC junction points and the stops;
 --   * a contract id built from two columns: a charge point's site, a parking
 --     facility's id (the occupancy ticks are reached through it, 0312), a
 --     DATEX II situation's event id;
 --   * the BKG municipality points a junction's Land is read from (0312), a
 --     planar nearest-neighbour probe (a geodesic one costs ten times more per
---     junction) that must not walk the stops sharing the table.
+--     junction) that must not walk the stops sharing the table;
+--   * a name's search form (contract_search_fold, 0312), trigram-indexed for
+--     the API's substring search of stations and place names.
 -- All on reference or current-state tables, none on a tick table: a tick
 -- read is a probe of the tick table's own primary key.
 --
@@ -34,6 +36,9 @@
 --   drop index concurrently if exists public.road_events_contract_event_id;
 --   drop index concurrently if exists public.tmc_locations_contract_junction_location;
 --   drop index concurrently if exists public.gazetteer_places_bkg_municipality_geom;
+--   drop index concurrently if exists public.stops_contract_search_fold;
+--   drop index concurrently if exists public.stops_contract_location;
+--   drop index concurrently if exists public.gazetteer_places_contract_search_fold;
 --   delete from schema_migrations where version = 313;
 
 set max_parallel_maintenance_workers = 0;
@@ -50,7 +55,8 @@ select format('drop index concurrently if exists public.%I', i.relname)
                      'parking_facilities_contract_id', 'parking_facilities_odbl_contract_id',
                      'parking_facilities_sid_contract_id', 'road_events_contract_location',
                      'road_events_contract_event_id', 'tmc_locations_contract_junction_location',
-                     'gazetteer_places_bkg_municipality_geom')
+                     'gazetteer_places_bkg_municipality_geom', 'stops_contract_search_fold', 'stops_contract_location',
+                     'gazetteer_places_contract_search_fold')
 \gexec
 
 -- contract.charging_site: location = geom::geometry(Point, 4326); the API reads open sites.
@@ -103,3 +109,18 @@ create index concurrently if not exists tmc_locations_contract_junction_location
 create index concurrently if not exists gazetteer_places_bkg_municipality_geom
   on public.gazetteer_places using gist ((geom::geometry))
   where source_id = 'bkg_gvisys' and kind = 'city' and geom is not null;
+
+-- contract.stop_place and contract.place_alias: search_fold = contract_search_fold(name);
+-- the API matches it with like '%' || folded text || '%'.
+create index concurrently if not exists stops_contract_search_fold
+  on public.stops using gin ((public.contract_search_fold(name)) gin_trgm_ops)
+  where deleted_at is null;
+create index concurrently if not exists gazetteer_places_contract_search_fold
+  on public.gazetteer_places using gin ((public.contract_search_fold(name)) gin_trgm_ops)
+  where geom is not null;
+
+-- contract.stop_place: location = geom::geometry(Point, 4326); the API's "stations near" reads it
+-- (a position-only search walked every stop without it: 1.4 s on 530 000 stops, 80 ms with it).
+create index concurrently if not exists stops_contract_location
+  on public.stops using gist (((geom::geometry(Point, 4326))::geography))
+  where deleted_at is null;

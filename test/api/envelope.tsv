@@ -1,4 +1,5 @@
-# The licence envelope 0312 appends to the contract views (owner 2026-11-16), after the columns of
+# The licence envelope 0312 appends to the contract views (owner 2026-11-16), and the stop place lookups
+# (station_category, municipality_name, eva_no, ifopt) the API asked for, after the columns of
 # test/api/columns.tsv: relation, position, column, type. test/api-schemas.db.test.ts holds both.
 contract.admin_region	6	source_ref	text
 contract.admin_region	7	display_class	text
@@ -82,6 +83,10 @@ contract.station_facility	9	audience	text
 contract.stop_place	13	source_refs	text[]
 contract.stop_place	14	display_class	text
 contract.stop_place	15	audience	text
+contract.stop_place	16	station_category	smallint
+contract.stop_place	17	municipality_name	text
+contract.stop_place	18	eva_no	text
+contract.stop_place	19	ifopt	text
 contract.stop_point	4	source_ref	text
 contract.stop_point	5	display_class	text
 contract.stop_point	6	audience	text

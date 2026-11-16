@@ -440,12 +440,33 @@ BEGIN
   END IF;
 END $$;
 
+-- The one StaDa station whose IFOPT is a stop's id (FaSta names it; the stop
+-- place reads its category, EVA number and municipality); its number is
+-- derived from the IFOPT, so a second call finds the first one's row.
+CREATE OR REPLACE FUNCTION vf_test.ensure_station(p_ifopt text, p_name text) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE no text;
+BEGIN
+  SELECT station_no INTO no FROM public.db_stations WHERE ifopt = p_ifopt AND source_id = 'db_stada' ORDER BY station_no LIMIT 1;
+  IF no IS NULL THEN
+    no := (800000000 + abs(hashtext(p_ifopt)) % 100000000)::text;
+    INSERT INTO public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, ifopt, source_id)
+    VALUES (no, p_name, 'seed', now(), now(), now(), p_ifopt, 'db_stada');
+  END IF;
+  RETURN no;
+END $$;
+
 CREATE OR REPLACE FUNCTION vf_test.seed_stop_place() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE k smallint := split_part(NEW.stop_place_id, ':', 1)::smallint;
 BEGIN
   PERFORM vf_test.ensure_feed(k, NEW.source_ref);
   INSERT INTO public.stops (gtfs_feed_key, id, name, geom, location_type)
   VALUES (k, vf_test.after_colon(NEW.stop_place_id), NEW.name, vf_test.point(NEW.location), 1);
+  -- category, EVA number and municipality name are a DB station's whose IFOPT is the stop's id
+  IF NEW.station_category IS NOT NULL OR NEW.eva_no IS NOT NULL OR NEW.municipality_name IS NOT NULL THEN
+    PERFORM vf_test.ensure_station(vf_test.after_colon(NEW.stop_place_id), NEW.name);
+    UPDATE public.db_stations SET eva_no = NEW.eva_no, category = NEW.station_category, city = NEW.municipality_name
+     WHERE ifopt = vf_test.after_colon(NEW.stop_place_id);
+  END IF;
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
@@ -528,10 +549,15 @@ END $$;
 -- "equipment:<id>" is an OpenStation/KVB lift or escalator with its state,
 -- "fasta:<number>" a DB FaSta facility.
 CREATE OR REPLACE FUNCTION vf_test.seed_station_facility() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE station text;
 BEGIN
   IF NEW.facility_id LIKE 'fasta:%' THEN
+    -- FaSta names a DB station; its stop place is that station's IFOPT
+    IF NEW.stop_place_id IS NOT NULL THEN
+      station := vf_test.ensure_station(vf_test.after_colon(NEW.stop_place_id), 'Bahnhof');
+    END IF;
     INSERT INTO public.db_facilities (equipment_no, station_no, kind, state, state_since, first_seen_at, last_seen_at, source_feed, source_publisher, description)
-    VALUES (vf_test.after_colon(NEW.facility_id), '1', NEW.facility_kind, NEW.facility_status, coalesce(NEW.status_observed_at, now()),
+    VALUES (vf_test.after_colon(NEW.facility_id), coalesce(station, '1'), NEW.facility_kind, NEW.facility_status, coalesce(NEW.status_observed_at, now()),
             now(), coalesce(NEW.status_observed_at, now()), coalesce(NEW.source_ref, 'db_fasta'), 'DB', NEW.position_text);
   ELSE
     INSERT INTO public.station_equipment (equipment_id, kind, stop_place_id, description, first_seen_at, last_seen_at, source_feed, source_publisher)

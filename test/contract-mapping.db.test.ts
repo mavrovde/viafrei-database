@@ -76,7 +76,12 @@ const SEED = [
   `insert into public.transit_delays (observed_at, feed_ts, trip_id, stop_id, stop_sequence, delay_s, schedule_relationship, source) values
      (now(), now(), 't1', 'de:08111:6115:1:1', 1, 120, 'SCHEDULED', 'delfi_rt_tu')`,
   `insert into public.station_equipment (equipment_id, kind, stop_place_id, description, first_seen_at, last_seen_at, source_feed, source_publisher) values
-     ('eq1', 'elevator', 'de:08111:6115', 'Gleis 1', now(), now(), 'openstation_netex', 'DB')`,
+     ('eq1', 'elevator', 'dhid:de:08111:6115:EdB', 'Gleis 1', now(), now(), 'openstation_netex', 'DB'),
+     ('eq2', 'escalator', 'de:08111:7777', 'Ausgang Nord', now(), now(), 'kvb_fahrtreppen', 'KVB')`,
+  `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, eva_no, ifopt, category, city) values
+     ('1071', 'Stuttgart Hbf', 'h', now(), now(), now(), '8000096', 'de:08111:6115', 1, 'Stuttgart')`,
+  `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, ifopt, source_id) values
+     ('de:08111:6115', 'Stuttgart Hbf', 'h', now(), now(), now(), 'de:08111:6115', 'delfi_static')`,
   `insert into public.station_equipment_state (equipment_id, status, state, status_since, last_seen_at, known_equipment, source_feed, source_publisher) values
      ('eq1', 'INACTIVE', 'inactive', '2026-11-15T10:00:00Z', now(), true, 'openstation_siri_fm', 'DB')`,
   `insert into public.db_facilities (equipment_no, station_no, kind, state, state_since, first_seen_at, last_seen_at, source_feed, source_publisher, description) values
@@ -181,7 +186,7 @@ describe("reference views", () => {
     ]);
     expect(await read("select label, lang, name_kind, search_fold from contract.place_alias where place_id = '1' order by 1")).toEqual([
       { label: "Stuttgart", lang: null, name_kind: "name", search_fold: "stuttgart" },
-      { label: "Stuttgart City", lang: "en", name_kind: "exonym", search_fold: "stuttgart city" },
+      { label: "Stuttgart City", lang: "en", name_kind: "exonym", search_fold: "stuttgartcity" },
     ]);
   });
 
@@ -266,7 +271,10 @@ describe("parking", () => {
 describe("transit", () => {
   it("stop_place, stop_point and transit_line from the static GTFS", async () => {
     expect(await read("select stop_place_id, national_stop_code, region_code, modes, search_fold, source_ref from contract.stop_place")).toEqual([
-      { stop_place_id: "1:de:08111:6115", national_stop_code: "de:08111:6115", region_code: "08111", modes: ["sbahn"], search_fold: "stuttgart hbf", source_ref: "delfi_static" },
+      { stop_place_id: "1:de:08111:6115", national_stop_code: "de:08111:6115", region_code: "08111", modes: ["sbahn"], search_fold: "stuttgarthbf", source_ref: "delfi_static" },
+    ]);
+    expect(await read("select station_category, municipality_name, eva_no, ifopt from contract.stop_place")).toEqual([
+      { station_category: 1, municipality_name: "Stuttgart", eva_no: "8000096", ifopt: "de:08111:6115" },
     ]);
     expect(await read("select stop_point_id, stop_place_id, platform_label from contract.stop_point")).toEqual([
       { stop_point_id: "1:de:08111:6115:1:1", stop_place_id: "1:de:08111:6115", platform_label: "1" },
@@ -308,7 +316,8 @@ describe("stations and weather", () => {
   it("station_facility: an OpenStation lift with its state, and a FaSta escalator", async () => {
     expect(await read("select facility_id, stop_place_id, facility_kind, position_text, facility_status, source_ref from contract.station_facility order by 1")).toEqual([
       { facility_id: "equipment:eq1", stop_place_id: "1:de:08111:6115", facility_kind: "elevator", position_text: "Gleis 1", facility_status: "inactive", source_ref: "openstation_siri_fm" },
-      { facility_id: "fasta:10500", stop_place_id: null, facility_kind: "escalator", position_text: "Ausgang", facility_status: "active", source_ref: "db_fasta" },
+      { facility_id: "equipment:eq2", stop_place_id: null, facility_kind: "escalator", position_text: "Ausgang Nord", facility_status: "unknown", source_ref: "kvb_fahrtreppen" },
+      { facility_id: "fasta:10500", stop_place_id: "1:de:08111:6115", facility_kind: "escalator", position_text: "Ausgang", facility_status: "active", source_ref: "db_fasta" },
     ]);
   });
 
@@ -413,6 +422,43 @@ describe("0312 additions (owner decisions 2026-11-16)", () => {
       expect(await ids()).toEqual(["autobahn:C1", "autobahn:X2"]);
       const kind = await c.query<{ k: string }>("select event_kind as k from contract.traffic_event where event_id = 'autobahn:C1'");
       expect(kind.rows).toEqual([{ k: "closure" }]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+});
+
+describe("search_fold and the stop place lookups (#29)", () => {
+  it("search_fold: lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only", async () => {
+    const r = await read<{ a: string; b: string; c: string; d: string; e: string; f: string }>(
+      `select public.contract_search_fold('Köln Hbf') as a, public.contract_search_fold('koeln hbf') as b, public.contract_search_fold('KÖLN-HBF') as c,
+              public.contract_search_fold('Straße Ärzte Übach') as d, public.contract_search_fold('Gießen (Lahn) Bf 2') as e, public.contract_search_fold('Besançon Saint-Étienne Łódź') as f`,
+    );
+    expect(r).toEqual([{ a: "koelnhbf", b: "koelnhbf", c: "koelnhbf", d: "strasseaerzteuebach", e: "giessenlahnbf2", f: "besanconsaintetiennelodz" }]);
+  });
+
+  it("stop_place: a stop no DB station names keeps its own DHID and takes the nearest municipality's name", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type) values (1, 'de:08116:4400', 'Echterdingen Bahnhof', ${PT(9.161, 48.701)}, 1)`);
+      const r = await c.query("select station_category, municipality_name, eva_no, ifopt, search_fold from contract.stop_place where stop_place_id = '1:de:08116:4400'");
+      expect(r.rows).toEqual([{ station_category: null, municipality_name: "Leinfelden-Echterdingen", eva_no: null, ifopt: "de:08116:4400", search_fold: "echterdingenbahnhof" }]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
+  it("station_facility: a KVB Haltestelle DELFI keeps no parent for maps to its first parentless stop", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type) values
+        (1, 'de:08111:7777:2:2', 'Nord', ${PT(9.2, 48.8)}, 0), (1, 'de:08111:7777:1:1', 'Nord', ${PT(9.2, 48.8)}, 0)`);
+      const r = await c.query("select stop_place_id from contract.station_facility where facility_id = 'equipment:eq2'");
+      expect(r.rows).toEqual([{ stop_place_id: "1:de:08111:7777:1:1" }]);
     } finally {
       await c.query("rollback");
       c.release();

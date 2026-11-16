@@ -2063,6 +2063,7 @@ public.gazetteer_places	constraint	gazetteer_places_source_id_external_id_key	u 
 public.gazetteer_places	index	gazetteer_places_admin_code	CREATE INDEX gazetteer_places_admin_code ON public.gazetteer_places USING btree (admin_code) WHERE ((admin_code IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_bkg_city_geom_gist	CREATE INDEX gazetteer_places_bkg_city_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (closed_at IS NULL) AND (geom IS NOT NULL))
 public.gazetteer_places	index	gazetteer_places_bkg_municipality_geom	CREATE INDEX gazetteer_places_bkg_municipality_geom ON public.gazetteer_places USING gist (((geom)::public.geometry)) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (geom IS NOT NULL))
+public.gazetteer_places	index	gazetteer_places_contract_search_fold	CREATE INDEX gazetteer_places_contract_search_fold ON public.gazetteer_places USING gin (public.contract_search_fold(name) public.gin_trgm_ops) WHERE (geom IS NOT NULL)
 public.gazetteer_places	index	gazetteer_places_geom_gist	CREATE INDEX gazetteer_places_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((geom IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_geonames_name_en	CREATE INDEX gazetteer_places_geonames_name_en ON public.gazetteer_places USING btree (lower(name_en)) WHERE ((closed_at IS NULL) AND (kind = 'city'::text) AND (source_id = 'geonames'::text) AND (name_en IS NOT NULL) AND (geom IS NOT NULL))
 public.gazetteer_places	index	gazetteer_places_kind_rank	CREATE INDEX gazetteer_places_kind_rank ON public.gazetteer_places USING btree (kind, rank DESC)
@@ -3899,6 +3900,8 @@ public.stops	column	deleted_reason	text
 public.stops	column	geom	public.geography(Point,4326) not null
 public.stops	column	extras	jsonb not null default '{}'::jsonb
 public.stops	constraint	stops_pkey	p PRIMARY KEY (gtfs_feed_key, id)
+public.stops	index	stops_contract_location	CREATE INDEX stops_contract_location ON public.stops USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_search_fold	CREATE INDEX stops_contract_search_fold ON public.stops USING gin (public.contract_search_fold(name) public.gin_trgm_ops) WHERE (deleted_at IS NULL)
 public.stops	index	stops_deleted	CREATE INDEX stops_deleted ON public.stops USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.stops	index	stops_geom_gist	CREATE INDEX stops_geom_gist ON public.stops USING gist (geom)
 public.stops	index	stops_id_prefix	CREATE INDEX stops_id_prefix ON public.stops USING btree (gtfs_feed_key, id text_pattern_ops)

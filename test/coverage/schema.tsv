@@ -3552,3 +3552,7 @@ fixture	vf_test.seed_rule_topic	test/contract-seed.db.test.ts > contract.%s read
 fixture	vf_test.seed_rule_statement	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
 fixture	vf_test.seed_message_coverage	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
 fixture	vf_test.seed_refused	test/contract-seed.db.test.ts > contract_info is never seeded, and api_reader inserts into no contract view
+function	public.contract_search_fold(t text)	test/contract-mapping.db.test.ts > search_fold: lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only
+function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: a KVB Haltestelle DELFI keeps no parent for maps to its first parentless stop
+function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: an OpenStation lift with its state, and a FaSta escalator
+fixture	vf_test.ensure_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged

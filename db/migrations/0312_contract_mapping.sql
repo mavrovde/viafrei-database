@@ -65,6 +65,43 @@
 -- create or replace view takes an ACCESS EXCLUSIVE lock on the view.
 set local lock_timeout = '5s';
 
+-- ------------------------------------------------------------- the fold
+
+-- The search form of a name, as viafrei-api's transit.Fold writes a query:
+-- lower case, ä/ö/ü spelled ae/oe/ue and ß ss, every other diacritic of the
+-- Latin letters a German name carries dropped, and everything but letters and
+-- digits removed. "Köln Hbf", "koeln hbf" and "KOELN-HBF" fold alike.
+-- contract.stop_place and contract.place_alias carry it as search_fold, and
+-- 0313 indexes it (trigram) for the API's substring search.
+create function public.contract_search_fold(t text) returns text
+  language sql immutable strict parallel safe
+  return regexp_replace(
+           translate(replace(replace(replace(replace(replace(lower(t), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'), 'ß', 'ss'), 'ẞ', 'ss'),
+                     'àáâãåāăąçćčĉèéêëēėęěìíîïīįñńňòóôõøōśšşùúûūůűýÿźżžłřğďť',
+                     'aaaaaaaacccceeeeeeeeiiiiiinnnoooooosssuuuuuuyyzzzlrgdt'),
+           '[^[:alnum:]]', '', 'g');
+comment on function public.contract_search_fold(text) is
+  'The search form of a name (lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only), as viafrei-api folds a query (#29).';
+
+-- The contract stop_place of a DHID-bearing id as the station feeds write it
+-- ("dhid:de:05315:11201:EdB", "de:05315:11201", a DB station's IFOPT): the
+-- DELFI timetable's stop of that DHID, else its first parentless stop filed
+-- under it (KVB names a Haltestelle DELFI keeps no parent for); NULL when the
+-- timetable holds neither, never an id that names no stop_place. Security
+-- definer: a view calls a function with its reader's rights, and api_reader
+-- reads no platform table.
+create function public.contract_stop_place_of(ref text) returns text
+  language sql stable strict parallel safe security definer set search_path = pg_catalog, public
+  return (select '1:' || s.id from public.stops s
+           where s.gtfs_feed_key = 1 and s.deleted_at is null
+             and (s.id = substring(ref from '^(?:dhid:)?([a-z]{2}:[0-9]{5}:[0-9]+)')
+                  or s.id like substring(ref from '^(?:dhid:)?([a-z]{2}:[0-9]{5}:[0-9]+)') || ':%')
+             and (s.location_type = 1 or (s.location_type = 0 and s.parent_id is null))
+           order by s.id = substring(ref from '^(?:dhid:)?([a-z]{2}:[0-9]{5}:[0-9]+)') desc, s.id
+           limit 1);
+comment on function public.contract_stop_place_of(text) is
+  'The contract stop_place_id of a station feed''s DHID-bearing id (#29): the DELFI stop of that DHID, else the first parentless stop under it, else NULL.';
+
 -- ------------------------------------------------------------ the rules
 
 create view public.contract_source_rules as
@@ -288,12 +325,12 @@ select g.id::text                                          as place_id,
  where g.geom is not null;
 
 create or replace view contract.place_alias as
-select g.id::text as place_id, g.name as label, null::text as lang, 'name'::text as name_kind, g.name_norm as search_fold,
+select g.id::text as place_id, g.name as label, null::text as lang, 'name'::text as name_kind, public.contract_search_fold(g.name) as search_fold,
        g.source_id as source_ref, 'open'::text as display_class, 'public'::text as audience
   from public.gazetteer_places g
  where g.geom is not null
 union all
-select g.id::text, g.name_en, 'en', 'exonym', lower(g.name_en), g.source_id, 'open', 'public'
+select g.id::text, g.name_en, 'en', 'exonym', public.contract_search_fold(g.name_en), g.source_id, 'open', 'public'
   from public.gazetteer_places g
  where g.geom is not null and g.name_en is not null;
 
@@ -726,7 +763,7 @@ select s.gtfs_feed_key || ':' || s.id                     as stop_place_id,
        case when s.id ~ '^[a-z]{2}:[0-9]{5}:' then split_part(s.id, ':', 1) || ':' || split_part(s.id, ':', 2) || ':' || split_part(s.id, ':', 3) end as national_stop_code,
        (select a.ags from public.ags_regions a where a.ags = split_part(s.id, ':', 2)) as region_code,
        coalesce(m.modes, '{}'::text[])                    as modes,
-       lower(s.name)                                      as search_fold,
+       public.contract_search_fold(s.name)                as search_fold,
        f.source_feed                                      as source_ref,
        s.id                                               as origin_key,
        f.created_at                                       as recorded_at,
@@ -734,10 +771,20 @@ select s.gtfs_feed_key || ':' || s.id                     as stop_place_id,
        null::timestamptz                                  as withdrawn_at,
        array[f.source_feed]                               as source_refs,
        'open'::text                                       as display_class,
-       'public'::text                                     as audience
+       'public'::text                                     as audience,
+       d.category                                         as station_category,
+       coalesce(d.city,
+                (select g.name from public.gazetteer_places g
+                  where g.source_id = 'bkg_gvisys' and g.kind = 'city' and g.geom is not null
+                  order by g.geom::geometry <-> s.geom::geometry limit 1)) as municipality_name,
+       d.eva_no                                           as eva_no,
+       coalesce(d.ifopt, case when s.id ~ '^[a-z]{2}:[0-9]{5}:[0-9]+$' then s.id end) as ifopt
   from public.stops s
   join public.feeds f on f.gtfs_feed_key = s.gtfs_feed_key
   left join public.transit_stop_modes m on m.gtfs_feed_key = s.gtfs_feed_key and m.root_id = s.id
+  left join lateral (select x.category, x.city, x.eva_no, x.ifopt from public.db_stations x
+                      where x.ifopt = s.id and x.closed_at is null
+                      order by x.source_id = 'db_stada' desc, x.station_no limit 1) d on true
  where s.deleted_at is null and s.geom is not null and s.name is not null
    and (s.location_type = 1 or (coalesce(s.location_type, 0) = 0 and s.parent_id is null));
 
@@ -831,7 +878,7 @@ select '1:' || d.trip_id || ':' || to_char((d.observed_at at time zone 'Europe/B
 
 create or replace view contract.station_facility as
 select 'equipment:' || e.equipment_id                               as facility_id,
-       '1:' || e.stop_place_id                                      as stop_place_id,
+       public.contract_stop_place_of(e.stop_place_id)               as stop_place_id,
        e.kind                                                       as facility_kind,
        e.description                                                as position_text,
        coalesce(st.state, 'unknown')                                as facility_status,
@@ -844,7 +891,7 @@ select 'equipment:' || e.equipment_id                               as facility_
  where e.closed_at is null
 union all
 select 'fasta:' || f.equipment_no,
-       null,
+       (select public.contract_stop_place_of(d.ifopt) from public.db_stations d where d.station_no = f.station_no),
        f.kind,
        f.description,
        f.state,
@@ -973,7 +1020,7 @@ BEGIN
     ('source_freshness', 'control.data_status per ledger key: data_as_of = last change seen, confirmed_at = last success, updates_paused = the gate''s pause.'),
     ('admin_region', 'public.ags_regions (Land, Kreis). boundary: no source (ags_regions holds a point).'),
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
-    ('place_alias', 'The name and the English name of each place.'),
+    ('place_alias', 'The name and the English name of each place; search_fold is contract_search_fold() of the label.'),
     ('road', 'public.autobahn_roads (Autobahn GmbH API). length_km, geometry, states: no source.'),
     ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
     ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
@@ -987,13 +1034,13 @@ BEGIN
     ('parking_facility', 'The four parking families (p:, bysa:, odbl:, sid:) we did not retract; SID facilities carry terms_gate sid-terms-1 (a per-request acceptance, contract.terms). direction: no source.'),
     ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility; SID ticks carry terms_gate sid-terms-1 whether or not their site is loaded.'),
     ('terms', 'The terms a gated row''s terms_gate names (public.source_terms, 0309): ViaFrei''s terms of use, section 2, per language, verbatim from the site; the German text binds.'),
-    ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes. withdrawn_at: no source.'),
+    ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes; search_fold is contract_search_fold(name). station_category, eva_no: the DB station (db_stations, StaDa first) whose IFOPT is the stop''s id, else NULL. municipality_name: that station''s city, else the nearest BKG municipality point. ifopt: the DB station''s, else the stop''s own DHID. withdrawn_at: no source.'),
     ('stop_point', 'Every boarding stop of the static GTFS.'),
     ('transit_line', 'public.routes; transport_mode as transit_stop_modes types it.'),
     ('journey', 'A trip on each of its service dates. extra: the static timetable has no extra trips (false).'),
     ('scheduled_call', 'public.stop_times on each service date of its trip, in absolute time.'),
     ('call_observation', 'DELFI GTFS-RT stop-time ticks (CC BY-SA), expected = planned + delay on the tick''s Berlin date.'),
-    ('station_facility', 'Lifts and escalators of DB OpenStation and KVB with their state, and DB FaSta. stop_place_id: FaSta names a DB station number, not a stop (NULL).'),
+    ('station_facility', 'Lifts and escalators of DB OpenStation and KVB with their state, and DB FaSta. stop_place_id: the DELFI stop of the equipment''s DHID (contract_stop_place_of), FaSta''s through its DB station''s IFOPT; NULL when the timetable holds no such stop.'),
     ('weather_warning', 'DWD warnings per warn cell (German text). English warnings: no level, not mapped.'),
     ('source_note', 'The condition and purpose notes of public.source_register_notes (0309), per source that names the register row. The MTS-K purpose note is German only and is published verbatim under lang de and en.'),
     ('rule_topic', 'public.driving_rule_topics (0310): title in German, title_en appended.'),

@@ -23,7 +23,7 @@ insert into contract.parking_facility (facility_id, name, parking_kind, location
 insert into contract.occupancy_observation (facility_id, observed_at, free_spaces, total_spaces, source_ref) values ('p:900001', '2026-11-16 08:00+00', 12, 40, 'seed_park');
 insert into contract.parking_facility (facility_id, name, parking_kind, location, source_ref) values ('sid:900002', 'Seed Rastplatz', 'truck_parking', 'SRID=4326;POINT(11.6 48.2)', 'truckpark_sid_static');
 insert into contract.occupancy_observation (facility_id, observed_at, free_spaces, total_spaces, source_ref) values ('sid:900002', '2026-11-16 08:00+00', 3, 20, 'truckpark_sid_dyn');
-insert into contract.stop_place (stop_place_id, name, location, source_ref) values ('1:de:09162:seed', 'Seed Hbf', 'SRID=4326;POINT(11.56 48.14)', 'delfi_static');
+insert into contract.stop_place (stop_place_id, name, location, source_ref, station_category, municipality_name, eva_no) values ('1:de:09162:seed', 'Seed Hbf', 'SRID=4326;POINT(11.56 48.14)', 'delfi_static', 2, 'München', '8099999');
 insert into contract.stop_point (stop_point_id, stop_place_id, platform_label, source_ref) values ('1:de:09162:seed:1', '1:de:09162:seed', '1', 'delfi_static');
 insert into contract.transit_line (line_id, line_name, transport_mode, source_ref) values ('1:seed-s1', 'S1', 'sbahn', 'delfi_static');
 insert into contract.journey (journey_id, line_id, destination_label, source_ref) values ('1:seed-trip:20261116', '1:seed-s1', 'Seedhausen', 'delfi_static');
