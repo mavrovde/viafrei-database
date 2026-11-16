@@ -6,9 +6,12 @@
  * audience, confidentiality, terms_gate, hold_reason, origin_restriction).
  * The views' columns and types are held by api-schemas.db.test.ts.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DomainDb } from "./domain-db.js";
+import { REPO } from "./helpers.js";
 
 const db = new DomainDb(process.env["TEST_DATABASE_URL"] ?? "", "map");
 
@@ -190,8 +193,66 @@ describe("reference views", () => {
     ]);
   });
 
-  it("road: no line geometry, as the platform shows none today (an OSM road-relation import is a later source)", async () => {
-    expect(await read("select count(*)::int as n, count(geometry)::int as g from contract.road")).toEqual([{ n: 1, g: 0 }]);
+  it("road: the BASt LCL chains linked by pos_off_lcd, one line each, broken at a gap; a self-link, a foreign code and a lone point draw nothing; a cycle starts at its smallest code", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      const pt = (lcd: number, pos: number | null, road = "A99"): string =>
+        `(58, 1, ${String(lcd)}, '22.0', 'P', 1, 1, null, null, '${road}', ${pos === null ? "null" : String(pos)}, ${PT(9 + lcd / 1000, 48)})`;
+      await c.query("insert into public.autobahn_roads (road) values ('A99'), ('A98') on conflict do nothing");
+      await c.query(
+        `insert into public.tmc_locations (cid, tabcd, lcd, lcl_version, class, tcd, stcd, junction_no, name, road_number, pos_off_lcd, geom) values
+           ${[pt(5, 3), pt(3, 9), pt(9, null), pt(7, 7), pt(11, 12), pt(12, 99), pt(99, null, "A1"), pt(20, 21, "A98"), pt(21, 22, "A98"), pt(22, 20, "A98")].join(", ")}`,
+      );
+      await c.query("set local role api_reader");
+      const { rows: r } = await c.query<{ road_ref: string; chain: string; source_refs: string[] }>(
+        `select r.road_ref, string_agg(round(((st_x(p.geom) - 9) * 1000)::numeric)::text, ',' order by p.path) as chain, r.source_refs
+           from contract.road r cross join lateral st_dumppoints(r.geometry) p
+          where r.road_ref in ('A99', 'A98') group by r.road_ref, p.path[1], r.source_refs order by 1, min(p.path[1])`,
+      );
+      expect(r).toEqual([
+        { road_ref: "A98", chain: "20,21,22", source_refs: ["autobahn", "bast_lcl"] },
+        { road_ref: "A99", chain: "5,3,9", source_refs: ["autobahn", "bast_lcl"] },
+        { road_ref: "A99", chain: "11,12", source_refs: ["autobahn", "bast_lcl"] },
+      ]);
+      expect((await c.query("select road_ref, geometry, source_refs from contract.road where road_ref = 'A8'")).rows).toEqual([{ road_ref: "A8", geometry: null, source_refs: ["autobahn"] }]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
+  it("road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point", async () => {
+    const tsv = (f: string): string[][] =>
+      readFileSync(join(REPO, "test", "road-line", f), "utf8").split("\n").filter((l) => l !== "" && !l.startsWith("#")).map((l) => l.split("\t"));
+    const points = tsv("lcl-points.tsv");
+    const at = new Map(points.map((p) => [`${p[0] ?? ""}:${p[1] ?? ""}`, `${p[9] ?? ""} ${p[8] ?? ""}`]));
+    const want = tsv("platform-chains.tsv").map(([road, lcds]) => `${road ?? ""} ${(lcds ?? "").split(",").map((l) => at.get(`${road ?? ""}:${l}`) ?? "?").join(";")}`).sort();
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      await c.query("insert into public.autobahn_roads (road) values ('A1'), ('A3'), ('A7') on conflict do nothing");
+      for (const p of points) {
+        await c.query(
+          `insert into public.tmc_locations (cid, tabcd, lcd, lcl_version, class, tcd, stcd, junction_no, name, road_number, neg_off_lcd, pos_off_lcd, geom)
+           values (58, 1, $1, '22.0', 'P', $2, $3, nullif($4, ''), nullif($5, ''), $6, nullif($7, '')::integer, nullif($8, '')::integer, st_setsrid(st_makepoint($10, $9), 4326)::geography)`,
+          [p[1], p[2], p[3], p[4], p[5], p[0], p[6], p[7], p[8], p[9]],
+        );
+      }
+      await c.query("set local role api_reader");
+      const t0 = Date.now();
+      const r = await c.query<{ chain: string }>(
+        `select r.road_ref || ' ' || string_agg(st_x(p.geom)::text || ' ' || st_y(p.geom)::text, ';' order by p.path) as chain
+           from contract.road r cross join lateral st_dumppoints(r.geometry) p
+          where r.road_ref in ('A1', 'A3', 'A7') group by r.road_ref, p.path[1]`,
+      );
+      expect(Date.now() - t0).toBeLessThan(2000);
+      expect(r.rows.map((x) => x.chain).sort()).toEqual(want);
+      expect(want).toHaveLength(4);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
   });
 
   it("road and junction: the A-road list (Autobahn API: public, owner 2026-11-16) and its TMC junctions only", async () => {

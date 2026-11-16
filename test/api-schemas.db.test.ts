@@ -70,7 +70,7 @@ describe("the shape: the API's own DDL, column for column", () => {
     const envelope = readFileSync(join(REPO, "test", "api", "envelope.tsv"), "utf8")
       .split("\n")
       .filter((l) => l.trim() !== "" && !l.startsWith("#"));
-    expect(envelope).toHaveLength(109);
+    expect(envelope).toHaveLength(110);
     const key = (l: string): [string, number] => [l.split("\t")[0] ?? "", Number(l.split("\t")[1])];
     const merged = [...want, ...envelope].sort((a, b) => key(a)[0].localeCompare(key(b)[0]) || key(a)[1] - key(b)[1]);
     expect(r.rows.map((x) => x.l)).toEqual(merged);

@@ -3568,3 +3568,7 @@ fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > contract.%s reads
 fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > a departure seeded with a realtime source reads back with its figure, its platform and its carriers
 view	contract.traffic_event	test/contract-mapping.db.test.ts > severity: a closed or blocked road, an accident, a long jam, roadworks, a short jam, a restriction, a hazard; a lane deviation is no closure
 view	public.contract_source_domains	test/contract-mapping.db.test.ts > domain: station equipment and stop accessibility sources answer for accessibility, the timetable for transit
+function	public.contract_road_line(road text)	test/contract-mapping.db.test.ts > road: the BASt LCL chains linked by pos_off_lcd, one line each, broken at a gap; a self-link, a foreign code and a lone point draw nothing; a cycle starts at its smallest code
+view	contract.road	test/contract-mapping.db.test.ts > road: the BASt LCL chains linked by pos_off_lcd, one line each, broken at a gap; a self-link, a foreign code and a lone point draw nothing; a cycle starts at its smallest code
+function	public.contract_road_line(road text)	test/contract-mapping.db.test.ts > road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point
+view	contract.road	test/contract-mapping.db.test.ts > road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point

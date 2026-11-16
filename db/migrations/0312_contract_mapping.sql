@@ -57,7 +57,7 @@
 -- view after dropping the appended columns, i.e. drop and recreate each
 -- replaced view from 0307 (then grant select on all tables in schema
 -- contract to api_reader), then drop view contract.terms, contract.departure,
--- functions public.contract_transport_mode(integer),
+-- functions public.contract_road_line(text), public.contract_transport_mode(integer),
 -- public.contract_stop_place_of(text), public.contract_search_fold(text),
 -- public.contract_sources, public.contract_source_domains,
 -- public.contract_source_rules; drop trigger autobahn_sweeps_note on
@@ -352,22 +352,88 @@ select g.id::text, g.name_en, 'en', 'exonym', public.contract_search_fold(g.name
   from public.gazetteer_places g
  where g.geom is not null and g.name_en is not null;
 
--- autobahn_roads is the Autobahn GmbH API's road list: its rule applies.
--- geometry is NULL: no table holds a motorway's line (the Autobahn API gives
--- each event a point, osm_streets carries no road number). It needs an import
--- of the OpenStreetMap road relations with an A-number (ODbL, an ingestor
--- source), which is out of contract 0.3: the platform shows no road line today.
+-- A motorway's line is the one the platform's motorway map draws (ingest
+-- analysis motorway-entries: orderedChains; steward M3 and S7: the BASt LCL
+-- alone, never OpenStreetMap): the road's LCL points (motorway_points_live)
+-- linked by pos_off_lcd, a link kept only to a point of the same road that is
+-- not the point itself. A chain starts at each point no link reaches, in
+-- ascending location code, and runs until it meets a point already used;
+-- what is left lies on a cycle and is walked from its smallest code. One
+-- LineString per chain: the line breaks where the chain breaks, and no
+-- segment is invented across a gap. A chain of one point draws no line and is
+-- left out. The chains keep the order of their first location code (the map
+-- draws each apart, so their order draws nothing). It reads the LCL with the
+-- owner's rights, as the views do.
+create function public.contract_road_line(road text) returns geometry(MultiLineString, 4326)
+language plpgsql stable security definer set search_path = pg_catalog, public as $$
+declare
+  lcds integer[];
+  links integer[];
+  pts geometry[];
+  nxt integer[] := '{}';
+  reached boolean[];
+  used boolean[];
+  lines geometry[] := '{}';
+  chain geometry[];
+  n integer;
+  i integer;
+  cur integer;
+  pass integer;
+begin
+  select array_agg(p.lcd order by p.lcd), array_agg(p.pos_off_lcd order by p.lcd), array_agg(p.geom::geometry order by p.lcd)
+    into lcds, links, pts
+    from public.motorway_points_live p
+   where p.road = contract_road_line.road;
+  n := coalesce(array_length(lcds, 1), 0);
+  if n = 0 then
+    return null;
+  end if;
+  reached := array_fill(false, array[n]);
+  used := array_fill(false, array[n]);
+  for i in 1 .. n loop
+    nxt[i] := case when links[i] is not null and links[i] <> lcds[i] then array_position(lcds, links[i]) end;
+    if nxt[i] is not null then
+      reached[nxt[i]] := true;
+    end if;
+  end loop;
+  for pass in 1 .. 2 loop
+    for i in 1 .. n loop
+      continue when used[i] or (pass = 1 and reached[i]);
+      chain := '{}';
+      cur := i;
+      while cur is not null and not used[cur] loop
+        used[cur] := true;
+        chain := chain || pts[cur];
+        cur := nxt[cur];
+      end loop;
+      if array_length(chain, 1) >= 2 then
+        lines := lines || st_makeline(chain);
+      end if;
+    end loop;
+  end loop;
+  if array_length(lines, 1) is null then
+    return null;
+  end if;
+  return st_setsrid(st_multi(st_collect(lines)), 4326)::geometry(MultiLineString, 4326);
+end $$;
+comment on function public.contract_road_line(text) is
+  'The line of one motorway as the platform''s motorway map draws it (#29): its BASt LCL chains linked by pos_off_lcd, one LineString per chain, no segment across a gap; NULL when the LCL holds no chain of two points.';
+
+-- autobahn_roads is the Autobahn GmbH API's road list: its rule applies. The
+-- geometry is the BASt LCL's (bast_lcl), credited in source_refs.
 create or replace view contract.road as
 select r.road                                  as road_ref,
        'motorway'::text                        as road_class,
        r.road                                  as name,
        null::numeric(6,1)                      as length_km,
-       null::geometry(MultiLineString, 4326)   as geometry,
+       l.line::geometry(MultiLineString, 4326) as geometry,
        null::text[]                            as states,
        'autobahn'::text                        as source_ref,
        coalesce(k.display_class, 'open')       as display_class,
-       coalesce(k.audience, 'public')          as audience
+       coalesce(k.audience, 'public')          as audience,
+       case when l.line is null then array['autobahn'] else array['autobahn', 'bast_lcl'] end as source_refs
   from public.autobahn_roads r
+  cross join lateral (select public.contract_road_line(r.road) as line) l
   left join lateral (select k.* from public.contract_source_rules k where 'autobahn' ~ k.pattern order by k.priority limit 1) k on true;
 
 -- tmc_locations names no source key of its own (BASt LCL, lcl_version only).
@@ -1236,7 +1302,7 @@ BEGIN
     ('admin_region', 'public.ags_regions (Land, Kreis). boundary: no source (ags_regions holds a point).'),
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
     ('place_alias', 'The name and the English name of each place; search_fold is contract_search_fold() of the label.'),
-    ('road', 'public.autobahn_roads (Autobahn GmbH API). length_km and states: no source. geometry: NULL until an import of the OpenStreetMap road relations with an A-number (ODbL), an ingestor source; out of contract 0.3, as the platform shows no road line today.'),
+    ('road', 'public.autobahn_roads (Autobahn GmbH API). geometry: the BASt LCL chains of public.contract_road_line(), as the platform''s motorway map draws them; source_refs credits bast_lcl when it is there. length_km and states: no source.'),
     ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
     ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
     ('traffic_event_observation', 'Every Autobahn tick and every DATEX II tick of an event we did not retract. version_no: Autobahn ticks have none (NULL).'),

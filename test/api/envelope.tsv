@@ -57,6 +57,7 @@ contract.place_alias	8	audience	text
 contract.road	7	source_ref	text
 contract.road	8	display_class	text
 contract.road	9	audience	text
+contract.road	10	source_refs	text[]
 contract.rule_statement	6	body_en	text
 contract.rule_statement	7	legal_basis_url	text
 contract.rule_statement	8	legal_basis_note	text
