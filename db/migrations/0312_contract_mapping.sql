@@ -353,6 +353,10 @@ select g.id::text, g.name_en, 'en', 'exonym', public.contract_search_fold(g.name
  where g.geom is not null and g.name_en is not null;
 
 -- autobahn_roads is the Autobahn GmbH API's road list: its rule applies.
+-- geometry is NULL: no table holds a motorway's line (the Autobahn API gives
+-- each event a point, osm_streets carries no road number). It needs an import
+-- of the OpenStreetMap road relations with an A-number (ODbL, an ingestor
+-- source), which is out of contract 0.3: the platform shows no road line today.
 create or replace view contract.road as
 select r.road                                  as road_ref,
        'motorway'::text                        as road_class,
@@ -1232,7 +1236,7 @@ BEGIN
     ('admin_region', 'public.ags_regions (Land, Kreis). boundary: no source (ags_regions holds a point).'),
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
     ('place_alias', 'The name and the English name of each place; search_fold is contract_search_fold() of the label.'),
-    ('road', 'public.autobahn_roads (Autobahn GmbH API). length_km, geometry, states: no source.'),
+    ('road', 'public.autobahn_roads (Autobahn GmbH API). length_km and states: no source. geometry: NULL until an import of the OpenStreetMap road relations with an A-number (ODbL), an ingestor source; out of contract 0.3, as the platform shows no road line today.'),
     ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
     ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
     ('traffic_event_observation', 'Every Autobahn tick and every DATEX II tick of an event we did not retract. version_no: Autobahn ticks have none (NULL).'),

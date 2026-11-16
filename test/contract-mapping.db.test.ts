@@ -190,6 +190,10 @@ describe("reference views", () => {
     ]);
   });
 
+  it("road: no line geometry, as the platform shows none today (an OSM road-relation import is a later source)", async () => {
+    expect(await read("select count(*)::int as n, count(geometry)::int as g from contract.road")).toEqual([{ n: 1, g: 0 }]);
+  });
+
   it("road and junction: the A-road list (Autobahn API: public, owner 2026-11-16) and its TMC junctions only", async () => {
     expect(await read("select road_ref, road_class, states, source_ref, display_class, audience from contract.road")).toEqual([
       { road_ref: "A8", road_class: "motorway", states: null, source_ref: "autobahn", display_class: "open", audience: "public" },
