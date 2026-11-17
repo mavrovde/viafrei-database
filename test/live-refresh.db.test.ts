@@ -121,8 +121,9 @@ describe.skipIf(url === undefined)("live.refresh_requests", () => {
       await tried(c, ins("train-board-de", '{"eva":"80002x7"}', "80002x7")),
       await tried(c, ins("fuel-prices-de", '{"at":"anchor:12333"}', "anchor:12333")),
       await tried(c, ins("train-board-de", '{"eva":"8000261"}', "8000261")),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('train-board-de', '{"eva":"8000207"}', '8000207', 'dev')`),
     ]);
-    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "ok", "ok"]);
+    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "ok", "ok", "ok"]);
   });
 
   it("viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none", async () => {

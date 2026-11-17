@@ -18,8 +18,8 @@
 -- fuel-prices-de {"at": "ags:<8 digits>" | "anchor:<BASt LCL code, 1-6
 -- digits>"}, train-board-de {"eva": "<7 digits>"}, the key equal to that id.
 -- Only these two sources are accepted: a new source is a migration with its
--- own subject check. requested_by is our own door only (site, mcp), never
--- null. Retention: 30 days after created_at, in any state
+-- own subject check. requested_by is our own door only (site, mcp, or dev
+-- for debugging), never null. Retention: 30 days after created_at, in any state
 -- (live.prune_refresh_requests).
 --
 -- Two notifications:
@@ -72,7 +72,7 @@ create table live.refresh_requests (
     settled_at   timestamptz,
     reason       text check (length(reason) between 1 and 200),
     reused       boolean not null default false,
-    requested_by text not null check (requested_by in ('site', 'mcp')),
+    requested_by text not null check (requested_by in ('site', 'mcp', 'dev')),
     constraint refresh_requests_settled check ((state = 'pending') = (settled_at is null)),
     constraint refresh_requests_order check (claimed_at >= created_at and settled_at >= created_at),
     constraint refresh_requests_fuel_subject check (source <> 'fuel-prices-de' or (
@@ -96,7 +96,7 @@ comment on column live.refresh_requests.claimed_at is 'When the live ingestor cl
 comment on column live.refresh_requests.settled_at is 'When it settled; null while open.';
 comment on column live.refresh_requests.reason is 'On refused or failed: fixed words, never a place or a provider value.';
 comment on column live.refresh_requests.reused is 'True when the request joined a refresh queued or in flight, or was answered from a remembered outcome.';
-comment on column live.refresh_requests.requested_by is 'The door that asked (site, mcp); the ingestor does not read it.';
+comment on column live.refresh_requests.requested_by is 'The door that asked (site, mcp, or dev for debugging); the ingestor does not read it.';
 
 create unique index refresh_requests_open on live.refresh_requests (source, subject_key) where settled_at is null;
 create index refresh_requests_pending on live.refresh_requests (created_at, id) where settled_at is null;
