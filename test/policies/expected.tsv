@@ -54,6 +54,8 @@ domains.street_bay_state	street_bay_state_read	SELECT	public	PERMISSIVE	true	-
 domains.street_bays	street_bays_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = street_bays.source_id) AND (s.domain = 'street_bays'::text)))))
 domains.street_bays	street_bays_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
 domains.street_bays	street_bays_read	SELECT	public	PERMISSIVE	true	-
+domains.train_board_departures	train_board_departures_live_insert	INSERT	viafrei_live_ingestor	PERMISSIVE	-	(source_id = 'db_timetables'::text)
+domains.train_board_departures	train_board_departures_read	SELECT	public	PERMISSIVE	true	-
 domains.transit_agencies_odbl	transit_agencies_odbl_own_insert	INSERT	viafrei_ingestor	PERMISSIVE	-	((source_id = current_setting('viafrei.source_id'::text, true)) AND (EXISTS ( SELECT 1 FROM ingestor.sources s WHERE ((s.id = transit_agencies_odbl.source_id) AND (s.domain = 'transit_agencies_odbl'::text)))))
 domains.transit_agencies_odbl	transit_agencies_odbl_own_update	UPDATE	viafrei_ingestor	PERMISSIVE	(source_id = current_setting('viafrei.source_id'::text, true))	(source_id = current_setting('viafrei.source_id'::text, true))
 domains.transit_agencies_odbl	transit_agencies_odbl_read	SELECT	public	PERMISSIVE	true	-

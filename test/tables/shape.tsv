@@ -1226,6 +1226,31 @@ ingestor.units	column	last_seen_at	timestamp with time zone not null default clo
 ingestor.units	column	last_pod	text
 ingestor.units	constraint	units_pkey	p PRIMARY KEY (name)
 ingestor.units	index	units_pkey	CREATE UNIQUE INDEX units_pkey ON ingestor.units USING btree (name)
+live.refresh_askers	column	request_id	bigint not null
+live.refresh_askers	column	key_id	text not null
+live.refresh_askers	column	asked_at	timestamp with time zone not null
+live.refresh_askers	constraint	refresh_askers_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+live.refresh_askers	constraint	refresh_askers_pkey	p PRIMARY KEY (request_id, key_id)
+live.refresh_askers	constraint	refresh_askers_request_id_fkey	f FOREIGN KEY (request_id) REFERENCES live.refresh_requests(id) ON DELETE CASCADE
+live.refresh_askers	index	refresh_askers_key	CREATE INDEX refresh_askers_key ON live.refresh_askers USING btree (key_id)
+live.refresh_askers	index	refresh_askers_pkey	CREATE UNIQUE INDEX refresh_askers_pkey ON live.refresh_askers USING btree (request_id, key_id)
+live.refresh_requests	column	id	bigint not null identity always
+live.refresh_requests	column	source	text not null
+live.refresh_requests	column	subject	jsonb not null
+live.refresh_requests	column	subject_key	text not null
+live.refresh_requests	column	state	text not null default 'pending'::text
+live.refresh_requests	column	created_at	timestamp with time zone not null default clock_timestamp()
+live.refresh_requests	column	claimed_at	timestamp with time zone
+live.refresh_requests	column	settled_at	timestamp with time zone
+live.refresh_requests	column	reason	text
+live.refresh_requests	column	reused	boolean not null default false
+live.refresh_requests	column	requested_by	text
+live.refresh_requests	constraint	refresh_requests_pkey	p PRIMARY KEY (id)
+live.refresh_requests	index	refresh_requests_created	CREATE INDEX refresh_requests_created ON live.refresh_requests USING btree (created_at)
+live.refresh_requests	index	refresh_requests_open	CREATE UNIQUE INDEX refresh_requests_open ON live.refresh_requests USING btree (source, subject_key) WHERE (settled_at IS NULL)
+live.refresh_requests	index	refresh_requests_pending	CREATE INDEX refresh_requests_pending ON live.refresh_requests USING btree (created_at, id) WHERE (settled_at IS NULL)
+live.refresh_requests	index	refresh_requests_pkey	CREATE UNIQUE INDEX refresh_requests_pkey ON live.refresh_requests USING btree (id)
+live.refresh_requests	index	refresh_requests_settled	CREATE INDEX refresh_requests_settled ON live.refresh_requests USING btree (source, subject_key, settled_at DESC) WHERE (settled_at IS NOT NULL)
 public.ags_regions	column	ags	text not null
 public.ags_regions	column	level	text not null
 public.ags_regions	column	name	text not null
