@@ -87,4 +87,6 @@ DO $$ BEGIN EXECUTE format('ALTER ROLE api_reader IN DATABASE %I SET statement_t
 DO $$ BEGIN EXECUTE format('ALTER ROLE api_reader IN DATABASE %I SET idle_in_transaction_session_timeout TO ''5s''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE api_access IN DATABASE %I SET statement_timeout TO ''2s''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER ROLE api_access IN DATABASE %I SET idle_in_transaction_session_timeout TO ''5s''', current_database()); END $$;
+DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_live_ingestor IN DATABASE %I SET statement_timeout TO ''30s''', current_database()); END $$;
+DO $$ BEGIN EXECUTE format('ALTER ROLE viafrei_live_ingestor IN DATABASE %I SET idle_in_transaction_session_timeout TO ''60s''', current_database()); END $$;
 DO $$ BEGIN EXECUTE format('ALTER DATABASE %I SET search_path TO "$user", public, topology, tiger', current_database()); END $$;

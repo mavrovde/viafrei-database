@@ -1,7 +1,7 @@
 /**
  * domains.train_board_departures and contract.train_board (0314): the DB
  * Timetables boards the live ingestor fetches on a person's ask, appended by
- * viafrei_ingestor (0315; api_access until then) and read by the API's reader
+ * the live ingestor's own role viafrei_live_ingestor (0315) and read by the API's reader
  * as each station's newest fetch.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
@@ -76,13 +76,15 @@ describe.skipIf(url === undefined)("domains.train_board_departures", () => {
     expect(r.rows[0]?.parts).toBeGreaterThan(0);
   });
 
-  it("viafrei_ingestor (the live ingestor, 0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access appends none", async () => {
+  it("viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none", async () => {
     const now = new Date();
     const at = new Date(now.getTime() - 5_000).toISOString();
     const planned = new Date(now.getTime() + 600_000).toISOString();
     const api = await as(t.pool, "api_access", (c) => state(() => c.query(insert, ["8011160", at, planned, null, "5", null, false])));
     expect(api).toBe("42501");
-    const out = await as(t.pool, "viafrei_ingestor", async (c) => {
+    const ing = await as(t.pool, "viafrei_ingestor", (c) => state(() => c.query(insert, ["8011160", at, planned, null, "5", null, false])));
+    expect(ing).toBe("42501");
+    const out = await as(t.pool, "viafrei_live_ingestor", async (c) => {
       await c.query(insert, ["8011160", at, planned, null, "5", null, false]);
       const other = await state(() => c.query("savepoint s").then(() => c.query(`insert into ${T} (eva, observed_at, planned_at, source_id) values ('8011160', $1, $1, 'other_source')`, [at])));
       await c.query("rollback to savepoint s");

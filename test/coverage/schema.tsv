@@ -3709,39 +3709,63 @@ check	domains.train_board_departures.train_board_departures_planned_near	test/ch
 check	domains.train_board_departures.train_board_departures_platform_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
 check	domains.train_board_departures.train_board_departures_source	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
 check	domains.train_board_departures.train_board_departures_train_number_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
-check	domains.train_board_departures.train_board_departures_source	test/train-board.db.test.ts > viafrei_ingestor (the live ingestor, 0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access appends none
-grant	viafrei_ingestor@domains.train_board_departures	test/train-board.db.test.ts > viafrei_ingestor (the live ingestor, 0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access appends none
+check	domains.train_board_departures.train_board_departures_source	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
+grant	viafrei_live_ingestor@domains.train_board_departures	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
 grant	api_reader@contract.train_board	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
 grant	api_reader@contract.train_board	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
 partitioned	domains.train_board_departures	test/train-board.db.test.ts > is a tick table on the daily schedule: partitioned by day on observed_at, with a retention row and no default partition
-policy	domains.train_board_departures.train_board_departures_ingestor_insert	test/train-board.db.test.ts > viafrei_ingestor (the live ingestor, 0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access appends none
+policy	domains.train_board_departures.train_board_departures_live_insert	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
 policy	domains.train_board_departures.train_board_departures_read	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
-table	domains.train_board_departures	test/train-board.db.test.ts > viafrei_ingestor (the live ingestor, 0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access appends none
+table	domains.train_board_departures	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
 table	domains.train_board_departures	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
 view	contract.train_board	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
 view	contract.train_board	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
 fixture	vf_test.seed_train_board	test/contract-seed.db.test.ts > the sample seeds every contract relation but contract_info, transit_punctuality, transit_trip_delay and station_disruption (computed by the migrations)
-check	live.refresh_request.refresh_request_order	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_reason_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_settled	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_source_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_state_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_subject_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_subject_key_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-check	live.refresh_request.refresh_request_order	test/live-refresh.db.test.ts > viafrei_ingestor claims and settles a request, and changes nothing else, inserts and removes none
-check	live.refresh_request.refresh_request_claimed	test/live-refresh.db.test.ts > refuses a settled state without settled_at, a claim without claimed_at, an unknown state and a subject that is no object
-function	live.prune_refresh_requests(before timestamp with time zone)	test/live-refresh.db.test.ts > prunes settled requests older than a date with their askers, never one settled less than 30 days ago, for api_access
-function	live.refresh_request_notify()	test/live-refresh.db.test.ts > notifies the ingestor on insert and the row's waiters on settle
-function	live.refresh_request_transition()	test/live-refresh.db.test.ts > viafrei_ingestor claims and settles a request, and changes nothing else, inserts and removes none
-grant	api_access@live.refresh_asker	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
-grant	api_access@live.refresh_asker	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
-grant	api_access@live.refresh_request	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
-grant	api_access@live.refresh_request	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
-grant	viafrei_ingestor@live.refresh_request	test/live-refresh.db.test.ts > viafrei_ingestor claims and settles a request, and changes nothing else, inserts and removes none
-table	live.refresh_asker	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
-table	live.refresh_request	test/live-refresh.db.test.ts > holds one open request per source and subject key: a second insert does nothing until the first settles
-table	live.refresh_request	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
-trigger	live.refresh_request.refresh_request_notify	test/live-refresh.db.test.ts > notifies the ingestor on insert and the row's waiters on settle
-trigger	live.refresh_request.refresh_request_transition	test/live-refresh.db.test.ts > viafrei_ingestor claims and settles a request, and changes nothing else, inserts and removes none
 fixture	vf_test.contract_seed_end	test/contract-seed.db.test.ts > a row the contract cannot read back as given is refused, naming the column, and writes nothing
 fixture	vf_test.seed_read_back	test/contract-seed.db.test.ts > a row the contract cannot read back as given is refused, naming the column, and writes nothing
+check	live.refresh_requests.refresh_requests_fuel_subject	test/live-refresh.db.test.ts > stores public ids only: a position, a cell, a station name, an extra field or a key other than the id is refused (privacy ruling R1, R2)
+check	live.refresh_requests.refresh_requests_train_board_subject	test/live-refresh.db.test.ts > stores public ids only: a position, a cell, a station name, an extra field or a key other than the id is refused (privacy ruling R1, R2)
+check	live.refresh_requests.refresh_requests_order	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_reason_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_requested_by_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_settled	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_source_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_state_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_subject_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_subject_key_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_order	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+function	live.prune_refresh_requests(before timestamp with time zone)	test/live-refresh.db.test.ts > prunes requests made before a date in any state with their askers, never one made less than 30 days ago, for api_access
+function	live.refresh_requests_notify()	test/live-refresh.db.test.ts > notifies the ingestor on insert with the source, and the API's waiters on settle with the id
+function	live.refresh_requests_transition()	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+grant	api_access@live.refresh_askers	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+grant	api_access@live.refresh_askers	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
+grant	api_access@live.refresh_requests	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+grant	api_access@live.refresh_requests	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
+grant	viafrei_live_ingestor@live.refresh_requests	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+grant	viafrei_live_ingestor@control.data_status	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@control.data_status	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.db_station_numbers	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.db_station_numbers	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_price_latest	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_price_latest	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_price_latest_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_price_latest_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_station_watch	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_station_watch	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_stations	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_stations	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_stations_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_stations_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.gazetteer_places	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.gazetteer_places	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.ingest_runs	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.ingest_runs	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.motorway_points_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.motorway_points_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+role	viafrei_live_ingestor	test/roles-grants.db.test.ts > viafrei_live_ingestor: as 0315 creates it
+role	viafrei_live_ingestor	test/roles-grants.db.test.ts > viafrei_live_ingestor: every relation, column, schema and function of ours
+table	live.refresh_askers	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+table	live.refresh_requests	test/live-refresh.db.test.ts > holds one open request per source and subject key: a second insert does nothing until the first settles
+table	live.refresh_requests	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+trigger	live.refresh_requests.refresh_requests_notify	test/live-refresh.db.test.ts > notifies the ingestor on insert with the source, and the API's waiters on settle with the id
+trigger	live.refresh_requests.refresh_requests_transition	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none

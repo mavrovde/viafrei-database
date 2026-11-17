@@ -212,10 +212,10 @@ describe("access (0308)", () => {
           and c.oid not in (select objid from pg_depend where deptype = 'e') and has_table_privilege('api_access', c.oid, p)`,
     );
     expect(out.rows.map((r) => r.n).sort()).toEqual([
-      "live.refresh_asker INSERT",
-      "live.refresh_asker SELECT",
-      "live.refresh_request INSERT",
-      "live.refresh_request SELECT",
+      "live.refresh_askers INSERT",
+      "live.refresh_askers SELECT",
+      "live.refresh_requests INSERT",
+      "live.refresh_requests SELECT",
     ]);
     const others = await db.pool.query<{ l: string }>(
       `select r.rolname || ' ' || n.nspname as l from pg_roles r cross join pg_namespace n

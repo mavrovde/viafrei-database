@@ -94,10 +94,11 @@ describe("the role table and its SQL", () => {
       expect(sql.indexOf("\nset log_statement = 'none';")).toBeLessThan(sql.indexOf(`\nalter role ${r.role} password`));
     }
   });
-  it("holds viafrei-api's two roles as warnings: a deployment that mounts no API secret stays ready", () => {
-    expect(ROLES.filter((r) => r.role.startsWith("api_"))).toEqual([
+  it("holds viafrei-api's two roles and the live ingestor's as warnings: a deployment that runs neither stays ready", () => {
+    expect(ROLES.filter((r) => !r.fatal && r.role !== "viafrei_status" && r.role !== "viafrei_digest")).toEqual([
       { role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false },
       { role: "api_access", sqlFile: "api-access-role-password.sql", fatal: false },
+      { role: "viafrei_live_ingestor", sqlFile: "live-ingestor-role-password.sql", fatal: false },
     ]);
     expect(ROLES.filter((r) => r.fatal).map((r) => r.role)).toEqual(["viafrei_mcp", "viafrei_translate", "viafrei_ops", "viafrei_ingestor"]);
   });
@@ -140,7 +141,7 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
     const run: PsqlRunner = (s, a = []) => (seen.push({ script: String(s), args: a.join(" ") }), Promise.resolve({ code: 0, stdout: "", stderr: "" }));
     const r = await applyRoleSettings(run, join(REPO, "db", "roles"));
     expect(r.ok).toBe(true);
-    expect(r.line).toMatch(/^ {2}role settings: 44 applied to this database/);
+    expect(r.line).toMatch(/^ {2}role settings: 46 applied to this database/);
     expect(seen).toHaveLength(1);
     expect(seen[0]?.args).toBe("-f -");
     expect(seen[0]?.script).toBe(readFileSync(join(REPO, "db", "roles", SETTINGS_FILE), "utf8"));
@@ -175,17 +176,20 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
       const [n = "", ...v] = x.split("=");
       return `${n.toLowerCase()}=${v.join("=").toLowerCase()}`;
     };
-    // viafrei-api's two roles (0307, 0308) are newer than the measurement: their five settings are held
-    // to the API's own DDL here, and production gets them with the release that brings the roles.
+    // viafrei-api's two roles (0307, 0308) and the live ingestor's (0315) are newer than the measurement:
+    // their seven settings are held to their own DDL here, and production gets them with the release that brings the roles.
     const all = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
-    expect(all.filter((x) => x.startsWith("api_"))).toEqual([
+    const newer = (x: string): boolean => x.startsWith("api_") || x.startsWith("viafrei_live_ingestor|");
+    expect(all.filter(newer)).toEqual([
       "api_access|idle_in_transaction_session_timeout=5s",
       "api_access|statement_timeout=2s",
       "api_reader|default_transaction_read_only=on",
       "api_reader|idle_in_transaction_session_timeout=5s",
       "api_reader|statement_timeout=2s",
+      "viafrei_live_ingestor|idle_in_transaction_session_timeout=60s",
+      "viafrei_live_ingestor|statement_timeout=30s",
     ]);
-    const ours = all.filter((x) => !x.startsWith("api_"));
+    const ours = all.filter((x) => !newer(x));
     const theirs = prod.filter((p) => p.database === "(all dbs)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
     expect(ours).toEqual(theirs);
     expect(databaseSettings(settingsFile())).toEqual(prod.filter((p) => p.role === "(all roles)" && p.database === "viafrei").map((p) => p.setting));
@@ -195,12 +199,12 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
 
   it("every statement parses to a role, a setting and a value, the readers' memory and jit among them", () => {
     const s = parseSettings(settingsFile());
-    expect(s).toHaveLength(43);
+    expect(s).toHaveLength(45);
     const m = byRole(s, "owner");
     expect(m.get("viafrei_mcp")).toContain("jit=off");
     expect(m.get("viafrei_digest")).toEqual(expect.arrayContaining(["jit=off", "work_mem=16MB", "hash_mem_multiplier=1.0", "max_parallel_workers_per_gather=0", "default_transaction_read_only=on"]));
     expect(m.get("owner")).toEqual(["hash_mem_multiplier=1.0", "jit=off", "maintenance_work_mem=64MB", "max_parallel_maintenance_workers=0", "max_parallel_workers_per_gather=0", "work_mem=16MB"]);
-    expect([...m.keys()].sort()).toEqual(["api_access", "api_reader", "owner", "viafrei_digest", "viafrei_ingestor", "viafrei_mcp", "viafrei_ops", "viafrei_status", "viafrei_translate"]);
+    expect([...m.keys()].sort()).toEqual(["api_access", "api_reader", "owner", "viafrei_digest", "viafrei_ingestor", "viafrei_live_ingestor", "viafrei_mcp", "viafrei_ops", "viafrei_status", "viafrei_translate"]);
     expect(() => parseSettings("DO $$ BEGIN EXECUTE 'ALTER ROLE x IN DATABASE y SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
   });
 });

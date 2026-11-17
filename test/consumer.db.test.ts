@@ -125,7 +125,7 @@ describe("1 — the role settings reach every database migrate touches", () => {
       const m = await svc.migrate("cli");
       expect(m.ok).toBe(true);
       expect(m.lines.join("\n")).toMatch(/✓ 0 migration\(s\) applied/);
-      expect(m.lines.join("\n")).toMatch(/role settings: 44 applied to this database/);
+      expect(m.lines.join("\n")).toMatch(/role settings: 46 applied to this database/);
     } finally {
       await svc.close();
     }
@@ -147,7 +147,7 @@ describe("1 — the role settings reach every database migrate touches", () => {
     expect((await heldSettings(CLONE)).size).toBe(0);
     const r = await cli(["roles", "settings"], { DATABASE_URL: urlOf(CLONE) });
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/role settings: 44 applied/);
+    expect(r.out).toMatch(/role settings: 46 applied/);
     expect(await heldSettings(CLONE)).toEqual(expected());
   });
 });
