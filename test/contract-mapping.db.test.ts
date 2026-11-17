@@ -82,8 +82,8 @@ const SEED = [
   `insert into public.station_equipment (equipment_id, kind, stop_place_id, description, first_seen_at, last_seen_at, source_feed, source_publisher) values
      ('eq1', 'elevator', 'dhid:de:08111:6115:EdB', 'Gleis 1', now(), now(), 'openstation_netex', 'DB'),
      ('eq2', 'escalator', 'de:08111:7777', 'Ausgang Nord', now(), now(), 'kvb_fahrtreppen', 'KVB')`,
-  `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, eva_no, ifopt, category, city) values
-     ('1071', 'Stuttgart Hbf', 'h', now(), now(), now(), '8000096', 'de:08111:6115', 1, 'Stuttgart')`,
+  `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, eva_no, eva_nos, ifopt, category, city) values
+     ('1071', 'Stuttgart Hbf', 'h', now(), now(), now(), '8000096', '{8098096,8070096,8098096}', 'de:08111:6115', 1, 'Stuttgart')`,
   `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, ifopt, source_id) values
      ('de:08111:6115', 'Stuttgart Hbf', 'h', now(), now(), now(), 'de:08111:6115', 'delfi_static')`,
   `insert into public.station_equipment_state (equipment_id, status, state, status_since, last_seen_at, known_equipment, source_feed, source_publisher) values
@@ -397,8 +397,8 @@ describe("transit", () => {
     expect(await read("select stop_place_id, national_stop_code, region_code, modes, search_fold, source_ref from contract.stop_place")).toEqual([
       { stop_place_id: "1:de:08111:6115", national_stop_code: "de:08111:6115", region_code: "08111", modes: ["sbahn"], search_fold: "stuttgarthbf", source_ref: "delfi_static" },
     ]);
-    expect(await read("select station_category, municipality_name, eva_no, ifopt from contract.stop_place")).toEqual([
-      { station_category: 1, municipality_name: "Stuttgart", eva_no: "8000096", ifopt: "de:08111:6115" },
+    expect(await read("select station_category, municipality_name, eva_no, eva_numbers, ifopt from contract.stop_place")).toEqual([
+      { station_category: 1, municipality_name: "Stuttgart", eva_no: "8000096", eva_numbers: ["8000096", "8098096", "8070096"], ifopt: "de:08111:6115" },
     ]);
     expect(await read("select stop_point_id, stop_place_id, platform_label from contract.stop_point")).toEqual([
       { stop_point_id: "1:de:08111:6115:1:1", stop_place_id: "1:de:08111:6115", platform_label: "1" },
@@ -658,8 +658,8 @@ describe("search_fold and the stop place lookups (#29)", () => {
     try {
       await c.query("begin");
       await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type) values (1, 'de:08116:4400', 'Echterdingen Bahnhof', ${PT(9.161, 48.701)}, 1)`);
-      const r = await c.query("select station_category, municipality_name, eva_no, ifopt, search_fold from contract.stop_place where stop_place_id = '1:de:08116:4400'");
-      expect(r.rows).toEqual([{ station_category: null, municipality_name: "Leinfelden-Echterdingen", eva_no: null, ifopt: "de:08116:4400", search_fold: "echterdingenbahnhof" }]);
+      const r = await c.query("select station_category, municipality_name, eva_no, eva_numbers, ifopt, search_fold from contract.stop_place where stop_place_id = '1:de:08116:4400'");
+      expect(r.rows).toEqual([{ station_category: null, municipality_name: "Leinfelden-Echterdingen", eva_no: null, eva_numbers: [], ifopt: "de:08116:4400", search_fold: "echterdingenbahnhof" }]);
     } finally {
       await c.query("rollback");
       c.release();

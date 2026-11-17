@@ -1075,11 +1075,16 @@ select s.gtfs_feed_key || ':' || s.id                     as stop_place_id,
                   order by g.geom::geometry <-> s.geom::geometry limit 1)) as municipality_name,
        d.eva_no                                           as eva_no,
        coalesce(d.ifopt, case when s.id ~ '^[a-z]{2}:[0-9]{5}:[0-9]+$' then s.id end) as ifopt,
-       case when exists (select 1 from public.ags_regions a where a.ags = split_part(s.id, ':', 2)) then 'bkg_gvisys' end as placement_source_ref
+       case when exists (select 1 from public.ags_regions a where a.ags = split_part(s.id, ':', 2)) then 'bkg_gvisys' end as placement_source_ref,
+       -- every EVA number of the DB station, the main one first, each once:
+       -- a station of several parts files each part's trains under the
+       -- part's own number (the platform's train board asks each).
+       coalesce(array(select e from unnest(array[d.eva_no] || d.eva_nos) with ordinality u(e, o)
+                       where e is not null group by e order by min(o)), '{}'::text[]) as eva_numbers
   from public.stops s
   join public.feeds f on f.gtfs_feed_key = s.gtfs_feed_key
   left join public.transit_stop_modes m on m.gtfs_feed_key = s.gtfs_feed_key and m.root_id = s.id
-  left join lateral (select x.category, x.city, x.eva_no, x.ifopt from public.db_stations x
+  left join lateral (select x.category, x.city, x.eva_no, x.eva_nos, x.ifopt from public.db_stations x
                       where x.ifopt = s.id and x.closed_at is null
                       order by x.source_id = 'db_stada' desc, x.station_no limit 1) d on true
  where s.deleted_at is null and s.geom is not null and s.name is not null

@@ -577,9 +577,9 @@ BEGIN
   INSERT INTO public.stops (gtfs_feed_key, id, name, geom, location_type)
   VALUES (k, vf_test.after_colon(NEW.stop_place_id), NEW.name, vf_test.point(NEW.location), 1);
   -- category, EVA number and municipality name are a DB station's whose IFOPT is the stop's id
-  IF NEW.station_category IS NOT NULL OR NEW.eva_no IS NOT NULL OR NEW.municipality_name IS NOT NULL THEN
+  IF NEW.station_category IS NOT NULL OR NEW.eva_no IS NOT NULL OR NEW.municipality_name IS NOT NULL OR cardinality(NEW.eva_numbers) > 0 THEN
     PERFORM vf_test.ensure_station(vf_test.after_colon(NEW.stop_place_id), NEW.name);
-    UPDATE public.db_stations SET eva_no = NEW.eva_no, category = NEW.station_category, city = NEW.municipality_name
+    UPDATE public.db_stations SET eva_no = NEW.eva_no, eva_nos = coalesce(NEW.eva_numbers, '{}'), category = NEW.station_category, city = NEW.municipality_name
      WHERE ifopt = vf_test.after_colon(NEW.stop_place_id);
   END IF;
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));

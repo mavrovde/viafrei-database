@@ -112,6 +112,7 @@ contract.stop_place	17	municipality_name	text
 contract.stop_place	18	eva_no	text
 contract.stop_place	19	ifopt	text
 contract.stop_place	20	placement_source_ref	text
+contract.stop_place	21	eva_numbers	text[]
 contract.stop_point	4	source_ref	text
 contract.stop_point	5	display_class	text
 contract.stop_point	6	audience	text
