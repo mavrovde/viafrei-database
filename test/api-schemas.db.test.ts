@@ -66,11 +66,11 @@ describe("the shape: the API's own DDL, column for column", () => {
         order by n.nspname || '.' || c.relname, a.attnum`,
     );
     const want = expectedColumns();
-    expect(want).toHaveLength(330);
+    expect(want).toHaveLength(489);
     const envelope = readFileSync(join(REPO, "test", "api", "envelope.tsv"), "utf8")
       .split("\n")
       .filter((l) => l.trim() !== "" && !l.startsWith("#"));
-    expect(envelope).toHaveLength(110);
+    expect(envelope).toHaveLength(128);
     const key = (l: string): [string, number] => [l.split("\t")[0] ?? "", Number(l.split("\t")[1])];
     const merged = [...want, ...envelope].sort((a, b) => key(a)[0].localeCompare(key(b)[0]) || key(a)[1] - key(b)[1]);
     expect(r.rows.map((x) => x.l)).toEqual(merged);
@@ -99,12 +99,12 @@ describe("the shape: the API's own DDL, column for column", () => {
     expect((await db.pool.query("select 1 from pg_constraint where connamespace = 'contract'::regnamespace")).rows).toEqual([]);
   });
 
-  it("contract holds views only, 34 of them; access holds its 8 tables, and neither holds anything else", async () => {
+  it("contract holds views only, 44 of them; access holds its 8 tables, and neither holds anything else", async () => {
     const r = await db.pool.query<{ k: string; n: string }>(
       `select c.relkind::text as k, n.nspname || '.' || c.relname as n from pg_class c join pg_namespace n on n.oid = c.relnamespace
         where n.nspname in ('contract', 'access') and c.relkind in ('r', 'p', 'v', 'm', 'f') order by 2`,
     );
-    expect(CONTRACT_VIEWS).toHaveLength(34);
+    expect(CONTRACT_VIEWS).toHaveLength(44);
     expect(r.rows.filter((x) => x.n.startsWith("contract.")).map((x) => `${x.k} ${x.n}`)).toEqual([...CONTRACT_VIEWS].sort().map((v) => `v ${v}`));
     expect(ACCESS_TABLES).toHaveLength(8);
     expect(r.rows.filter((x) => x.n.startsWith("access.")).map((x) => `${x.k} ${x.n}`)).toEqual([...ACCESS_TABLES].sort().map((t) => `r ${t}`));
@@ -124,7 +124,7 @@ describe("contract (0307)", () => {
     for (const v of CONTRACT_VIEWS.filter((x) => x !== "contract.contract_info")) {
       counts[v] = (await db.pool.query<{ n: number }>(`select count(*)::int as n from ${v}`)).rows[0]?.n ?? -1;
     }
-    expect(Object.keys(counts)).toHaveLength(33);
+    expect(Object.keys(counts)).toHaveLength(43);
     expect(Object.keys(counts).filter((v) => counts[v] !== 0).sort()).toEqual([
       "contract.admin_region",
       "contract.fuel_product",
@@ -147,7 +147,7 @@ describe("contract (0307)", () => {
               has_table_privilege('api_reader', c.oid, 'UPDATE') as upd, has_table_privilege('api_reader', c.oid, 'DELETE') as del
          from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'contract' order by 1`,
     );
-    expect(r.rows).toHaveLength(34);
+    expect(r.rows).toHaveLength(44);
     expect(r.rows.filter((x) => !x.sel || x.ins || x.upd || x.del)).toEqual([]);
   });
 

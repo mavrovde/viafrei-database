@@ -307,9 +307,11 @@ END $$;
 
 CREATE OR REPLACE FUNCTION vf_test.seed_fuel_station() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO public.fuel_stations (id, name, brand, land, geom, state, source_feed, first_seen_at, updated_at)
+  INSERT INTO public.fuel_stations (id, name, brand, land, geom, state, source_feed, first_seen_at, updated_at,
+                                    street, house_no, postcode, city, opening_times, whole_day)
   VALUES (NEW.station_id, NEW.name, NEW.brand, NEW.region_code, vf_test.point(NEW.location), nullif(NEW.open_state, 'unknown'),
-          coalesce(NEW.source_ref, 'tankerkoenig'), coalesce(NEW.recorded_at, now()), coalesce(NEW.changed_at, now()));
+          coalesce(NEW.source_ref, 'tankerkoenig'), coalesce(NEW.recorded_at, now()), coalesce(NEW.changed_at, now()),
+          NEW.street, NEW.house_number, NEW.postcode, NEW.city, coalesce(NEW.opening_times, '[]'), NEW.whole_day);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
@@ -350,13 +352,22 @@ DECLARE
   feed text := coalesce(NEW.source_ref, split_part(NEW.site_id, ':', 1));
   site text := substr(NEW.site_id, length(feed) + 2);
 BEGIN
-  INSERT INTO public.charging_points (source_feed, point_key, site_id, evse_id, current_type, max_power_kw, geom, confidentiality)
+  INSERT INTO public.charging_points (source_feed, point_key, site_id, evse_id, current_type, max_power_kw, geom, confidentiality,
+                                      connector_types, price_per_kwh, price_adhoc_zero, price_last_updated, extras)
   VALUES (feed, CASE WHEN NEW.evse_code IS NULL AND NEW.point_id LIKE feed || ':%' THEN substr(NEW.point_id, length(feed) + 2) ELSE NEW.point_id END,
           site, NEW.evse_code,
           CASE NEW.current_kind WHEN 'ac' THEN 'AC_3_PHASE' WHEN 'dc' THEN 'DC' WHEN 'other' THEN 'OTHER' END,
           NEW.power_max_kw,
           coalesce((SELECT s.geom FROM public.charging_sites s WHERE s.source_feed = feed AND s.site_id = site), vf_test.point(NULL)),
-          NEW.confidentiality);
+          NEW.confidentiality,
+          coalesce(array(SELECT CASE c WHEN 'ccs2' THEN 'iec62196T2COMBO' WHEN 'type2' THEN 'iec62196T2' WHEN 'chademo' THEN 'chademo' ELSE c END
+                           FROM unnest(NEW.connectors) c), '{}'),
+          NEW.price_per_kwh, NEW.price_adhoc_zero, NEW.price_updated_at,
+          jsonb_strip_nulls(jsonb_build_object('device', jsonb_strip_nulls(jsonb_build_object(
+            'openingHours', CASE NEW.opening_hours_kind WHEN 'always' THEN '247' WHEN 'restricted' THEN 'Eingeschränkt' END,
+            'payment', nullif(concat_ws(';', CASE WHEN NEW.payment_card THEN 'Kreditkarte' END, CASE WHEN NEW.free_of_charge THEN 'Kostenlos' END,
+                                        CASE WHEN NEW.payment_card = false OR NEW.free_of_charge = false THEN 'Bargeld' END), ''),
+            'parking', CASE NEW.parking_access WHEN 'public' THEN 'keine Beschränkung' WHEN 'customers' THEN 'nur für Kunden' END)))));
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
@@ -380,14 +391,17 @@ CREATE OR REPLACE FUNCTION vf_test.seed_parking_facility() RETURNS trigger LANGU
 DECLARE
   fam text := split_part(NEW.facility_id, ':', 1);
   fid bigint := vf_test.after_colon(NEW.facility_id)::bigint;
-  k text := CASE NEW.parking_kind WHEN 'rest_area' THEN 'rest_area' WHEN 'park_and_ride' THEN 'park_and_ride' WHEN 'truck_parking' THEN 'truck' ELSE 'car_park' END;
+  k text := coalesce(NEW.stored_kind, CASE NEW.parking_kind WHEN 'rest_area' THEN 'rest_area' WHEN 'park_and_ride' THEN 'park_and_ride' WHEN 'truck_parking' THEN 'truck' ELSE 'car_park' END);
   g geography := vf_test.point(NEW.location);
   ext text := coalesce(NEW.origin_key, vf_test.after_colon(NEW.facility_id));
 BEGIN
   IF fam = 'p' THEN
-    INSERT INTO public.parking_facilities (id, source_feed, external_id, kind, name, operator, road, geom, attribution_id, first_seen_at, updated_at, closed_at, confidentiality)
+    INSERT INTO public.parking_facilities (id, source_feed, external_id, kind, name, operator, road, geom, attribution_id, first_seen_at, updated_at, closed_at, confidentiality,
+                                           facilities, facilities_absent, facilities_source)
     OVERRIDING SYSTEM VALUE VALUES (fid, NEW.source_ref, ext, k, NEW.name, NEW.operator_name, NEW.road_ref, g, NEW.source_ref,
-                                    coalesce(NEW.recorded_at, now()), coalesce(NEW.changed_at, now()), NEW.withdrawn_at, NEW.confidentiality);
+                                    coalesce(NEW.recorded_at, now()), coalesce(NEW.changed_at, now()), NEW.withdrawn_at, NEW.confidentiality,
+                                    coalesce(NEW.amenities, '{}'), coalesce(NEW.amenities_absent, '{}'),
+                                    CASE WHEN cardinality(coalesce(NEW.amenities, '{}')) + cardinality(coalesce(NEW.amenities_absent, '{}')) > 0 THEN NEW.source_ref END);
   ELSIF fam = 'bysa' THEN
     INSERT INTO public.parking_facilities_bysa (id, source_feed, external_id, kind, name, operator, road, geom, attribution_id, first_seen_at, updated_at, closed_at, confidentiality)
     OVERRIDING SYSTEM VALUE VALUES (fid, NEW.source_ref, ext, k, NEW.name, NEW.operator_name, NEW.road_ref, g, 'mobilithek_park_nrw_pr',
@@ -695,6 +709,150 @@ BEGIN
   RAISE EXCEPTION 'vf_test contract seed: contract.% is not seeded (the migrations state it)', TG_TABLE_NAME USING ERRCODE = '0A000';
 END $$;
 
+-- ------------------------------------------------- the 0.3 read additions
+
+-- station_id is "<feed>:<id>".
+CREATE OR REPLACE FUNCTION vf_test.seed_hydrogen_station() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, split_part(NEW.station_id, ':', 1));
+BEGIN
+  INSERT INTO public.hydrogen_stations (id, source_feed, external_id, name, operator, brand, geom, address, refill, opening, attribution_id,
+                                        provider_updated_at, first_seen_at, last_seen_at)
+  VALUES (vf_test.after_colon(NEW.station_id)::bigint, feed, vf_test.after_colon(NEW.station_id), NEW.name, NEW.operator_name, NEW.brand,
+          vf_test.point(NEW.location), NEW.address, coalesce(NEW.refill, '[{"solution":"700bar"}]'), NEW.opening, 'mobilithek_h2_stations',
+          NEW.provider_updated_at, coalesce(NEW.recorded_at, now()), coalesce(NEW.last_seen_at, now()));
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- camera_id is "osm:node<osm id>", "se:<id>" or "hh:<camera id>".
+CREATE OR REPLACE FUNCTION vf_test.seed_speed_camera() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE fam text := split_part(NEW.camera_id, ':', 1);
+BEGIN
+  IF fam = 'osm' THEN
+    INSERT INTO public.osm_speed_cameras (osm_type, osm_id, enforces, geom, max_speed_kmh, direction, name, source_id, land, extract_date, first_seen_at, last_seen_at)
+    VALUES ('node', substr(NEW.camera_id, 9)::bigint, coalesce(NEW.enforces, 'speed'), vf_test.point(NEW.location), NEW.max_speed_kmh, NEW.direction,
+            NEW.name, 'osm_speed_cameras', NEW.land_name, coalesce(NEW.data_as_of, current_date), coalesce(NEW.recorded_at, now()), coalesce(NEW.last_seen_at, now()));
+  ELSIF fam = 'se' THEN
+    INSERT INTO public.speed_enforcement (id, source_feed, source_publisher, external_id, attribution_id, kind, enforces, geom, ags, municipality, street,
+                                          location_text, direction, max_speed_kmh, max_speed_hgv_kmh, valid_from, valid_to, data_as_of, first_seen_at, last_seen_at)
+    VALUES (vf_test.after_colon(NEW.camera_id)::bigint, NEW.source_ref, 'Test', vf_test.after_colon(NEW.camera_id), NEW.source_ref,
+            coalesce(NEW.camera_kind, 'fixed'), coalesce(NEW.enforces, 'speed'), CASE WHEN NEW.location IS NULL THEN NULL ELSE vf_test.point(NEW.location) END,
+            NEW.admin_code, NEW.name, NEW.street, NEW.location_text, NEW.direction, NEW.max_speed_kmh, NEW.max_speed_hgv_kmh, NEW.valid_from, NEW.valid_to,
+            NEW.data_as_of, coalesce(NEW.recorded_at, now()), coalesce(NEW.last_seen_at, now()));
+  ELSIF fam = 'hh' THEN
+    INSERT INTO public.hh_cameras (camera_id, location_label, note, geom, first_seen_at, last_seen_at, source_feed, source_publisher)
+    VALUES (vf_test.after_colon(NEW.camera_id), coalesce(NEW.name, 'Kamera'), NEW.location_text, vf_test.point(NEW.location)::geometry,
+            coalesce(NEW.recorded_at, now()), coalesce(NEW.last_seen_at, now()), 'hh_verkehrskameras', 'Hamburg');
+  ELSE
+    RAISE EXCEPTION 'vf_test contract seed: speed_camera id % names no family (osm:, se:, hh:)', NEW.camera_id USING ERRCODE = '22023';
+  END IF;
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- The system of a sharing row is admitted under CC0 on first use.
+CREATE OR REPLACE FUNCTION vf_test.ensure_gbfs_system(p_system text, p_feed text, p_name text DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO public.gbfs_systems (system_id, publisher, name, license_id, admitted, licence_basis, licence_read_at, first_seen_at, last_seen_at,
+                                   source_feed, source_publisher, status_seen_at, vehicles_seen_at)
+  VALUES (p_system, p_feed, p_name, 'CC0-1.0', true, 'stated', now(), now(), now(), p_feed, p_feed, now(), now())
+  ON CONFLICT (system_id) DO NOTHING;
+END $$;
+
+-- station_id is "<system>:<station>".
+CREATE OR REPLACE FUNCTION vf_test.seed_sharing_station() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, 'gbfs_nextbike');
+BEGIN
+  PERFORM vf_test.ensure_gbfs_system(coalesce(NEW.system_id, split_part(NEW.station_id, ':', 1)), feed, NEW.system_name);
+  INSERT INTO public.gbfs_stations (system_id, station_id, name, capacity, is_virtual, geom, first_seen_at, last_seen_at, source_feed, source_publisher)
+  VALUES (split_part(NEW.station_id, ':', 1), vf_test.after_colon(NEW.station_id), NEW.name, NEW.capacity, NEW.is_virtual, vf_test.point(NEW.location),
+          coalesce(NEW.recorded_at, now()), now(), feed, feed);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW) - 'status_seen_at');
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION vf_test.seed_sharing_station_status() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM vf_test.ensure_gbfs_system(split_part(NEW.station_id, ':', 1), coalesce(NEW.source_ref, 'gbfs_nextbike'));
+  PERFORM vf_test.ensure_day('public.gbfs_station_status', NEW.observed_at);
+  INSERT INTO public.gbfs_station_status (observed_at, system_id, station_id, vehicles_available, electric_available, docks_available,
+                                          is_renting, is_returning, reported_at)
+  VALUES (NEW.observed_at, split_part(NEW.station_id, ':', 1), vf_test.after_colon(NEW.station_id), NEW.vehicles_available, NEW.electric_available,
+          NEW.docks_available, NEW.is_renting, NEW.is_returning, NEW.reported_at);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- vehicle_id is "<system>:<seq>".
+CREATE OR REPLACE FUNCTION vf_test.seed_sharing_vehicle() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, 'gbfs_nextbike');
+BEGIN
+  PERFORM vf_test.ensure_gbfs_system(split_part(NEW.vehicle_id, ':', 1), feed, NEW.system_name);
+  INSERT INTO public.gbfs_vehicles (system_id, seq, form_factor, propulsion, range_m, geom, observed_at, source_feed, source_publisher)
+  VALUES (split_part(NEW.vehicle_id, ':', 1), vf_test.after_colon(NEW.vehicle_id)::int, NEW.form_factor, NEW.propulsion, NEW.range_m,
+          vf_test.point(NEW.location), coalesce(NEW.observed_at, now()), feed, feed);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW) - 'vehicles_seen_at');
+  RETURN NEW;
+END $$;
+
+-- poi_id and address_id are "osm:<type><osm id>".
+CREATE OR REPLACE FUNCTION vf_test.seed_poi() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE t text := substring(NEW.poi_id from '^osm:([a-z]+)');
+BEGIN
+  INSERT INTO public.osm_pois (osm_type, osm_id, name, name_norm, category, category_value, brand, operator, street, house_number, postcode,
+                               place, place_norm, geom, source_id, extract_date, first_seen_at, last_seen_at, land, access)
+  VALUES (t, substring(NEW.poi_id from '[0-9]+$')::bigint, NEW.name, coalesce(NEW.name_fold, lower(NEW.name)), NEW.category, NEW.category_value,
+          NEW.brand, NEW.operator_name, NEW.street, NEW.house_number, NEW.postcode, NEW.place_name, NEW.place_fold, vf_test.point(NEW.location), 'osm',
+          coalesce(NEW.data_as_of, current_date), coalesce(NEW.recorded_at, now()), now(), NEW.land_name, NEW.access);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION vf_test.seed_address() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE t text := substring(NEW.address_id from '^osm:([a-z]+)');
+BEGIN
+  INSERT INTO public.osm_addresses (osm_type, osm_id, street, house_number, postcode, place, street_norm, house_number_norm, place_norm, geom,
+                                    source_id, extract_date, first_seen_at, last_seen_at, land)
+  VALUES (t, substring(NEW.address_id from '[0-9]+$')::bigint, NEW.street, NEW.house_number, NEW.postcode, NEW.place_name,
+          coalesce(NEW.street_fold, lower(NEW.street)), coalesce(NEW.house_number_fold, lower(NEW.house_number)), coalesce(NEW.place_fold, lower(NEW.place_name)),
+          vf_test.point(NEW.location), 'osm', coalesce(NEW.data_as_of, current_date), coalesce(NEW.recorded_at, now()), now(), NEW.land_name);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- alert_id is "<feed>:<alert id>"; the source is DELFI's GTFS-RT alerts.
+CREATE OR REPLACE FUNCTION vf_test.seed_service_alert() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, split_part(NEW.alert_id, ':', 1));
+BEGIN
+  INSERT INTO public.delfi_service_alerts (source_id, source_feed, alert_id, header, description, cause, effect, url, active_from, active_to,
+                                           active_periods, route_ids, line_names, stop_ids, kreise, lands, placed_by, dedupe_key, content_hash,
+                                           confidentiality, first_seen_at, last_seen_at, provider_updated_at)
+  VALUES ('delfi_rt_sa', feed, vf_test.after_colon(NEW.alert_id), NEW.header, NEW.description, NEW.cause, NEW.effect, NEW.url, NEW.active_from,
+          NEW.active_to, coalesce(NEW.active_periods, '[]'), coalesce(NEW.route_ids, '{}'), coalesce(NEW.line_names, '{}'), coalesce(NEW.stop_ids, '{}'),
+          coalesce(NEW.district_codes, '{}'), coalesce(NEW.state_codes, '{}'),
+          coalesce(NEW.placed_by, 'network'), coalesce(NEW.dedupe_key, NEW.alert_id), md5(NEW.alert_id), NEW.confidentiality,
+          coalesce(NEW.recorded_at, now()), now(), NEW.changed_at);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- bay_id is "<city>:<external id>"; a stated state is a sensor tick.
+CREATE OR REPLACE FUNCTION vf_test.seed_street_bay() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, 'dortmund_parksensoren_bays');
+BEGIN
+  INSERT INTO public.street_bays (bay_id, external_id, kind, publisher_kind, street, house_number, postcode, city, charge_point_operator, geom,
+                                  last_message_at, first_seen_at, last_seen_at, source_feed, source_publisher, spaces, reserved_when)
+  VALUES (NEW.bay_id, vf_test.after_colon(NEW.bay_id), coalesce(NEW.bay_kind, 'disabled'), NEW.publisher_kind, NEW.street, NEW.house_number,
+          NEW.postcode, NEW.city, NEW.charge_point_operator, vf_test.point(NEW.location), NEW.last_message_at, coalesce(NEW.recorded_at, now()), now(),
+          feed, 'Test', NEW.spaces, NEW.reserved_when);
+  IF NEW.state IS NOT NULL THEN
+    INSERT INTO public.street_bay_state (bay_id, state, message_at, last_seen_at, source_feed, source_publisher)
+    VALUES (NEW.bay_id, NEW.state, coalesce(NEW.state_at, now()), now(), 'dortmund_parksensoren', 'Test');
+  END IF;
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
 -- ------------------------------------------------------------ the triggers
 
 DO $$
@@ -702,7 +860,7 @@ DECLARE v record;
 BEGIN
   FOR v IN SELECT c.relname FROM pg_class c WHERE c.relnamespace = 'contract'::regnamespace AND c.relkind = 'v' LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS vf_test_seed ON contract.%I', v.relname);
-    IF v.relname = 'contract_info' THEN
+    IF v.relname IN ('contract_info', 'transit_punctuality') THEN
       EXECUTE format('CREATE TRIGGER vf_test_seed INSTEAD OF INSERT ON contract.%I FOR EACH ROW EXECUTE FUNCTION vf_test.seed_refused()', v.relname);
     ELSIF to_regprocedure(format('vf_test.seed_%s()', v.relname)) IS NOT NULL THEN
       EXECUTE format('CREATE TRIGGER vf_test_seed INSTEAD OF INSERT ON contract.%I FOR EACH ROW EXECUTE FUNCTION vf_test.seed_%s()', v.relname, v.relname);

@@ -57,6 +57,10 @@
 -- view after dropping the appended columns, i.e. drop and recreate each
 -- replaced view from 0307 (then grant select on all tables in schema
 -- contract to api_reader), then drop view contract.terms, contract.departure,
+-- contract.hydrogen_station, contract.speed_camera, contract.sharing_station,
+-- contract.sharing_station_status, contract.sharing_vehicle, contract.poi,
+-- contract.address, contract.service_alert, contract.transit_punctuality,
+-- contract.street_bay,
 -- functions public.contract_road_line(text), public.contract_transport_mode(integer),
 -- public.contract_stop_place_of(text), public.contract_search_fold(text),
 -- public.contract_sources, public.contract_source_domains,
@@ -84,7 +88,7 @@ create function public.contract_search_fold(t text) returns text
                      'aaaaaaaacccceeeeeeeeiiiiiinnnoooooosssuuuuuuyyzzzlrgdt'),
            '[^[:alnum:]]', '', 'g');
 comment on function public.contract_search_fold(text) is
-  'The search form of a name (lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only), as viafrei-api folds a query (#29).';
+  'The search form of a name (lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only), as viafrei-api folds a query.';
 
 -- The contract stop_place of a DHID-bearing id as the station feeds write it
 -- ("dhid:de:05315:11201:EdB", "de:05315:11201", a DB station's IFOPT): the
@@ -103,7 +107,7 @@ create function public.contract_stop_place_of(ref text) returns text
            order by s.id = substring(ref from '^(?:dhid:)?([a-z]{2}:[0-9]{5}:[0-9]+)') desc, s.id
            limit 1);
 comment on function public.contract_stop_place_of(text) is
-  'The contract stop_place_id of a station feed''s DHID-bearing id (#29): the DELFI stop of that DHID, else the first parentless stop under it, else NULL.';
+  'The contract stop_place_id of a station feed''s DHID-bearing id: the DELFI stop of that DHID, else the first parentless stop under it, else NULL.';
 
 create function public.contract_transport_mode(route_type integer) returns text
   language sql immutable strict parallel safe
@@ -117,7 +121,7 @@ create function public.contract_transport_mode(route_type integer) returns text
            else 'other'
          end;
 comment on function public.contract_transport_mode(integer) is
-  'The contract transport_mode of a GTFS route_type (basic and extended), as contract.transit_line and contract.departure name it (#29).';
+  'The contract transport_mode of a GTFS route_type (basic and extended), as contract.transit_line and contract.departure name it.';
 
 -- ------------------------------------------------------------ the rules
 
@@ -417,7 +421,7 @@ begin
   return st_setsrid(st_multi(st_collect(lines)), 4326)::geometry(MultiLineString, 4326);
 end $$;
 comment on function public.contract_road_line(text) is
-  'The line of one motorway as the platform''s motorway map draws it (#29): its BASt LCL chains linked by pos_off_lcd, one LineString per chain, no segment across a gap; NULL when the LCL holds no chain of two points.';
+  'The line of one motorway as the platform''s motorway map draws it: its BASt LCL chains linked by pos_off_lcd, one LineString per chain, no segment across a gap; NULL when the LCL holds no chain of two points.';
 
 -- autobahn_roads is the Autobahn GmbH API's road list: its rule applies. The
 -- geometry is the BASt LCL's (bast_lcl), credited in source_refs.
@@ -690,7 +694,13 @@ select f.id                                             as station_id,
        coalesce(f.updated_at, f.last_seen_at)           as changed_at,
        null::timestamptz                                as withdrawn_at,
        coalesce(k.display_class, 'open')                as display_class,
-       coalesce(k.audience, 'public')                   as audience
+       coalesce(k.audience, 'public')                   as audience,
+       f.street                                         as street,
+       f.house_no                                       as house_number,
+       f.postcode                                       as postcode,
+       f.city                                           as city,
+       f.opening_times                                  as opening_times,
+       f.whole_day                                      as whole_day
   from public.fuel_stations f
   left join lateral (select k.* from public.contract_source_rules k where coalesce(f.source_feed, f.source, '') ~ k.pattern order by k.priority limit 1) k on true
  where f.deleted_at is null and f.geom is not null and not coalesce(k.excluded, false);
@@ -750,7 +760,19 @@ select coalesce(p.evse_id, p.source_feed || ':' || p.point_key) as point_id,
        case when coalesce(p.confidentiality, 'noRestriction') <> 'noRestriction' then 'withhold'
             else coalesce(k.display_class, 'open') end    as display_class,
        coalesce(k.audience, 'public')                     as audience,
-       p.confidentiality                                  as confidentiality
+       p.confidentiality                                  as confidentiality,
+       array_remove(array[
+         case when p.connector_types && array['iec62196T2COMBO','iec62196T2Combo','iec62196t2combo','combo','ccs'] then 'ccs2' end,
+         case when p.connector_types && array['iec62196T2','iec62196t2','type2'] then 'type2' end,
+         case when p.connector_types && array['chademo','chaDemo','CHAdeMO'] then 'chademo' end,
+         case when p.connector_types && array['mcs'] then 'mcs' end], null) as connectors,
+       p.price_per_kwh                                    as price_per_kwh,
+       p.price_adhoc_zero                                 as price_adhoc_zero,
+       p.price_last_updated                               as price_updated_at,
+       public.charging_register_opening_hours(p.extras)   as opening_hours_kind,
+       public.charging_register_payment_card(p.extras)    as payment_card,
+       public.charging_register_free_of_charge(p.extras)  as free_of_charge,
+       public.charging_register_parking(p.extras)         as parking_access
   from public.charging_points p
   left join lateral (select k.* from public.contract_source_rules k where p.source_feed ~ k.pattern order by k.priority limit 1) k on true
  where p.deleted_at is null and p.site_id is not null and not coalesce(k.excluded, false);
@@ -783,19 +805,19 @@ select s.evse_id                                          as point_id,
 create or replace view contract.parking_facility as
 with f as (
   select 'p:' || id as facility_id, name, kind, operator, road, geom, false as sid, source_feed, external_id,
-         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality
+         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality, facilities, facilities_absent
     from public.parking_facilities where deleted_at is null
   union all
   select 'bysa:' || id, name, kind, operator, road, geom, false, source_feed, external_id,
-         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality
+         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality, '{}'::text[], '{}'::text[]
     from public.parking_facilities_bysa
   union all
   select 'odbl:' || id, name, kind, operator, road, geom, false, source_feed, external_id,
-         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality
+         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality, '{}'::text[], '{}'::text[]
     from public.parking_facilities_odbl
   union all
   select 'sid:' || id, name, kind, null, null, geom, true, source_feed, external_id,
-         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality
+         first_seen_at, updated_at, last_seen_at, closed_at, confidentiality, facilities, facilities_absent
     from public.parking_facilities_sid
 )
 select f.facility_id                                     as facility_id,
@@ -818,7 +840,10 @@ select f.facility_id                                     as facility_id,
        coalesce(k.audience, 'public')                    as audience,
        f.confidentiality                                 as confidentiality,
        k.terms_gate                                      as terms_gate,
-       k.hold_reason                                     as hold_reason
+       k.hold_reason                                     as hold_reason,
+       f.kind                                            as stored_kind,
+       f.facilities                                      as amenities,
+       f.facilities_absent                               as amenities_absent
   from f
   left join lateral (select k.* from public.contract_source_rules k where f.source_feed ~ k.pattern order by k.priority limit 1) k on true
  where f.geom is not null and not coalesce(k.excluded, false);
@@ -1290,12 +1315,297 @@ select m.state_code                         as state_code,
        'public'::text                       as audience
   from public.message_coverage_sources m;
 
+-- ------------------------------------------------------------ hydrogen
+
+-- The hydrogen stations we did not close, as find_hydrogen_station reads
+-- them (hydrogen_stations_live): address, refill and opening as the
+-- publisher states them.
+create view contract.hydrogen_station as
+select h.source_feed || ':' || h.id                      as station_id,
+       h.name                                            as name,
+       h.operator                                        as operator_name,
+       h.brand                                           as brand,
+       h.geom::geometry(Point, 4326)                     as location,
+       h.address                                         as address,
+       h.refill                                          as refill,
+       h.opening                                         as opening,
+       h.provider_updated_at                             as provider_updated_at,
+       h.last_seen_at                                    as last_seen_at,
+       h.source_feed                                     as source_ref,
+       h.first_seen_at                                   as recorded_at,
+       h.closed_at                                       as withdrawn_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.hydrogen_stations h
+  left join lateral (select k.* from public.contract_source_rules k where h.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where h.closed_at is null and h.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.hydrogen_station to api_reader;
+
+-- ---------------------------------------------------------- speed cameras
+
+-- Every speed camera find_speed_cameras reads: the OpenStreetMap cameras,
+-- the official enforcement points and the Hamburg police cameras, one row
+-- each; the id's prefix keeps the families apart. kind: fixed for an OSM or
+-- Hamburg camera, the publisher's word for an official one. admin_code: the
+-- official row's AGS, else NULL (the platform derives an OSM camera's cell
+-- from the nearest municipality at read time).
+create view contract.speed_camera as
+with c as (
+  select 'osm:' || o.osm_type || o.osm_id as camera_id, 'fixed'::text as kind, o.enforces, o.geom, o.max_speed_kmh,
+         null::smallint as max_speed_hgv_kmh, o.direction, o.name, null::text as street, null::text as location_text,
+         null::text as admin_code, o.land, o.extract_date as data_as_of, null::date as valid_from, null::date as valid_to,
+         o.source_id as source_ref, o.first_seen_at, o.last_seen_at
+    from public.osm_speed_cameras o where o.closed_at is null
+  union all
+  select 'se:' || s.id, s.kind, s.enforces, s.geom, s.max_speed_kmh, s.max_speed_hgv_kmh, s.direction, s.municipality,
+         s.street, s.location_text, s.ags, null, s.data_as_of, s.valid_from, s.valid_to,
+         s.source_feed, s.first_seen_at, s.last_seen_at
+    from public.speed_enforcement s where s.closed_at is null
+  union all
+  select 'hh:' || h.camera_id, 'fixed', null, h.geom::geography, null, null, null, h.location_label, null, h.note,
+         '02000000', 'hamburg', null, null, null, h.source_feed, h.first_seen_at, h.last_seen_at
+    from public.hh_cameras h where h.closed_at is null
+)
+select c.camera_id                                       as camera_id,
+       c.kind                                            as camera_kind,
+       c.enforces                                        as enforces,
+       c.geom::geometry(Point, 4326)                     as location,
+       c.max_speed_kmh::integer                          as max_speed_kmh,
+       c.max_speed_hgv_kmh::integer                      as max_speed_hgv_kmh,
+       c.direction                                       as direction,
+       c.name                                            as name,
+       c.street                                          as street,
+       c.location_text                                   as location_text,
+       c.admin_code                                      as admin_code,
+       c.land                                            as land_name,
+       c.data_as_of                                      as data_as_of,
+       c.valid_from                                      as valid_from,
+       c.valid_to                                        as valid_to,
+       c.source_ref                                      as source_ref,
+       c.first_seen_at                                   as recorded_at,
+       c.last_seen_at                                    as last_seen_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience,
+       k.origin_restriction                              as origin_restriction
+  from c
+  left join lateral (select k.* from public.contract_source_rules k where c.source_ref ~ k.pattern order by k.priority limit 1) k on true
+ where not coalesce(k.excluded, false);
+grant select on contract.speed_camera to api_reader;
+
+-- --------------------------------------------------------------- sharing
+
+-- The bike-sharing stations, their status ticks and the free-floating
+-- vehicles of the systems we admitted (gbfs_*_live), as find_sharing reads
+-- them.
+create view contract.sharing_station as
+select s.system_id || ':' || s.station_id                as station_id,
+       s.system_id                                       as system_id,
+       y.name                                            as system_name,
+       s.name                                            as name,
+       s.capacity                                        as capacity,
+       s.is_virtual                                      as is_virtual,
+       s.geom::geometry(Point, 4326)                     as location,
+       y.status_seen_at                                  as status_seen_at,
+       s.source_feed                                     as source_ref,
+       s.first_seen_at                                   as recorded_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.gbfs_stations s
+  join public.gbfs_systems y using (system_id)
+  left join lateral (select k.* from public.contract_source_rules k where s.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where s.closed_at is null and y.admitted and s.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.sharing_station to api_reader;
+
+create view contract.sharing_station_status as
+select t.system_id || ':' || t.station_id                as station_id,
+       t.observed_at                                     as observed_at,
+       t.vehicles_available                              as vehicles_available,
+       t.electric_available                              as electric_available,
+       t.docks_available                                 as docks_available,
+       t.is_renting                                      as is_renting,
+       t.is_returning                                    as is_returning,
+       t.reported_at                                     as reported_at,
+       y.source_feed                                     as source_ref,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.gbfs_station_status t
+  join public.gbfs_systems y using (system_id)
+  left join lateral (select k.* from public.contract_source_rules k where y.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where y.admitted and not coalesce(k.excluded, false);
+grant select on contract.sharing_station_status to api_reader;
+
+create view contract.sharing_vehicle as
+select v.system_id || ':' || v.seq                       as vehicle_id,
+       v.system_id                                       as system_id,
+       y.name                                            as system_name,
+       v.form_factor                                     as form_factor,
+       v.propulsion                                      as propulsion,
+       v.range_m                                         as range_m,
+       v.geom::geometry(Point, 4326)                     as location,
+       v.observed_at                                     as observed_at,
+       y.vehicles_seen_at                                as vehicles_seen_at,
+       v.source_feed                                     as source_ref,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.gbfs_vehicles v
+  join public.gbfs_systems y using (system_id)
+  left join lateral (select k.* from public.contract_source_rules k where v.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where y.admitted and v.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.sharing_vehicle to api_reader;
+
+-- ------------------------------------------------------- POIs, addresses
+
+-- The OpenStreetMap points of interest and addresses we did not close, as
+-- find_poi, find_nearby, find_address and describe_location read them. The
+-- folds are the platform's own normalised names (name_norm, street_norm,
+-- house_number_norm, place_norm).
+create view contract.poi as
+select 'osm:' || p.osm_type || p.osm_id                  as poi_id,
+       p.name                                            as name,
+       p.name_norm                                       as name_fold,
+       p.category                                        as category,
+       p.category_value                                  as category_value,
+       p.brand                                           as brand,
+       p.operator                                        as operator_name,
+       p.street                                          as street,
+       p.house_number                                    as house_number,
+       p.postcode                                        as postcode,
+       p.place                                           as place_name,
+       p.place_norm                                      as place_fold,
+       p.land                                            as land_name,
+       p.access                                          as access,
+       p.geom::geometry(Point, 4326)                     as location,
+       p.extract_date                                    as data_as_of,
+       p.source_id                                       as source_ref,
+       p.first_seen_at                                   as recorded_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.osm_pois p
+  left join lateral (select k.* from public.contract_source_rules k where p.source_id ~ k.pattern order by k.priority limit 1) k on true
+ where p.closed_at is null and p.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.poi to api_reader;
+
+create view contract.address as
+select 'osm:' || a.osm_type || a.osm_id                  as address_id,
+       a.street                                          as street,
+       a.street_norm                                     as street_fold,
+       a.house_number                                    as house_number,
+       a.house_number_norm                               as house_number_fold,
+       a.postcode                                        as postcode,
+       a.place                                           as place_name,
+       a.place_norm                                      as place_fold,
+       a.land                                            as land_name,
+       a.geom::geometry(Point, 4326)                     as location,
+       a.extract_date                                    as data_as_of,
+       a.source_id                                       as source_ref,
+       a.first_seen_at                                   as recorded_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.osm_addresses a
+  left join lateral (select k.* from public.contract_source_rules k where a.source_id ~ k.pattern order by k.priority limit 1) k on true
+ where a.closed_at is null and a.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.address to api_reader;
+
+-- ------------------------------------------------------ transit service
+
+-- The DELFI service alerts we did not close, as check_transit_disruption
+-- reads them; a restricted alert is withheld, as the platform never shows it.
+create view contract.service_alert as
+select a.source_feed || ':' || a.alert_id                as alert_id,
+       a.header                                          as header,
+       a.description                                     as description,
+       a.cause                                           as cause,
+       a.effect                                          as effect,
+       a.url                                             as url,
+       a.active_from                                     as active_from,
+       a.active_to                                       as active_to,
+       a.active_periods                                  as active_periods,
+       a.route_ids                                       as route_ids,
+       a.line_names                                      as line_names,
+       a.stop_ids                                        as stop_ids,
+       a.kreise                                          as district_codes,
+       a.lands                                           as state_codes,
+       a.placed_by                                       as placed_by,
+       a.dedupe_key                                      as dedupe_key,
+       a.source_feed                                     as source_ref,
+       a.first_seen_at                                   as recorded_at,
+       coalesce(a.provider_updated_at, a.last_seen_at)   as changed_at,
+       case when coalesce(a.confidentiality, 'noRestriction') <> 'noRestriction' then 'withhold'
+            else coalesce(k.display_class, 'open') end   as display_class,
+       coalesce(k.audience, 'public')                    as audience,
+       a.confidentiality                                 as confidentiality
+  from public.delfi_service_alerts a
+  left join lateral (select k.* from public.contract_source_rules k where a.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where a.closed_at is null and not coalesce(k.excluded, false);
+grant select on contract.service_alert to api_reader;
+
+-- The region-wide punctuality of the last half hour of Trip Updates, per
+-- Land, Kreis and Germany, as transit_punctuality_area_live computes it at
+-- read time; its licence permits region-wide totals only.
+create view contract.transit_punctuality as
+select p.level                                           as area_level,
+       p.area                                            as area_code,
+       p.name                                            as area_name,
+       p.trips_observed                                  as trips_observed,
+       p.trips_late                                      as trips_late,
+       p.trips_skipped_stop                              as trips_skipped_stop,
+       p.trips_untimed                                   as trips_untimed,
+       p.median_worst_delay_s                            as median_worst_delay_s,
+       p.stops_seen                                      as stops_seen,
+       p.newest                                          as observed_at,
+       'delfi_rt_tu'::text                               as source_ref,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.transit_punctuality_area_live p
+  left join lateral (select k.* from public.contract_source_rules k where 'delfi_rt_tu' ~ k.pattern order by k.priority limit 1) k on true
+ where p.trips_observed + p.trips_untimed + p.trips_skipped_stop > 0 and not coalesce(k.excluded, false);
+grant select on contract.transit_punctuality to api_reader;
+
+-- ----------------------------------------------------------- street bays
+
+-- The on-street bays (disabled-badge and charging bays) we did not close,
+-- with their newest state, as find_parking {kind: disabled_badge} reads them.
+create view contract.street_bay as
+select b.bay_id                                          as bay_id,
+       b.kind                                            as bay_kind,
+       b.publisher_kind                                  as publisher_kind,
+       b.street                                          as street,
+       b.house_number                                    as house_number,
+       b.postcode                                        as postcode,
+       b.city                                            as city,
+       b.charge_point_operator                           as charge_point_operator,
+       b.spaces                                          as spaces,
+       b.reserved_when                                   as reserved_when,
+       b.geom::geometry(Point, 4326)                     as location,
+       t.state                                           as state,
+       t.message_at                                      as state_at,
+       b.last_message_at                                 as last_message_at,
+       b.source_feed                                     as source_ref,
+       b.first_seen_at                                   as recorded_at,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.street_bays b
+  left join public.street_bay_state t on t.bay_id = b.bay_id
+  left join lateral (select k.* from public.contract_source_rules k where b.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where b.closed_at is null and b.geom is not null and not coalesce(k.excluded, false);
+grant select on contract.street_bay to api_reader;
+
 -- ------------------------------------------------------------- comments
 
 DO $$
 DECLARE r record;
 BEGIN
   FOR r IN SELECT * FROM (VALUES
+    ('hydrogen_station', 'public.hydrogen_stations we did not close (hydrogen_stations_live); address, refill and opening as published (JSON).'),
+    ('speed_camera', 'OpenStreetMap cameras (osm:), official enforcement points (se:) and Hamburg police cameras (hh:) we did not close. admin_code: the official AGS; NULL for an OSM camera.'),
+    ('sharing_station', 'public.gbfs_stations of an admitted system that we did not close.'),
+    ('sharing_station_status', 'Every public.gbfs_station_status tick of an admitted system.'),
+    ('sharing_vehicle', 'public.gbfs_vehicles of an admitted system.'),
+    ('poi', 'public.osm_pois we did not close; name_fold and place_fold are the platform''s normalised names.'),
+    ('address', 'public.osm_addresses we did not close; the folds are the platform''s normalised street, house number and place.'),
+    ('service_alert', 'public.delfi_service_alerts we did not close; a restricted alert is withheld.'),
+    ('transit_punctuality', 'public.transit_punctuality_area_live: the last half hour of Trip Updates per Land, Kreis, city and Germany, computed at read time, an area with no trip seen left out; region-wide totals only.'),
+    ('street_bay', 'public.street_bays we did not close, with the newest public.street_bay_state.'),
     ('publisher', 'One row per source of contract.source (public.contract_sources): publisher_id is the source key, display_name the feed title, or for a register-only source its attribution line. website: the page the register names for the source, else the catalogue''s offer page.'),
     ('licence', 'One row per licence label of a published contract source. licence_url: public.licence_texts (0309), else the canonical URL of a CC, ODbL, Datenlizenz Deutschland or GeoNutzV label, else the one source page that carries the label, else the register''s source page; category, share_alike and attribution_required are read off the label.'),
     ('source', 'One row per source of public.contract_sources (feeds, ingestor sources, the register''s static sources), with the envelope of public.contract_source_rules and the domain of public.contract_source_domains. Attribution, changes_statement, use_classes (empty = no use permitted: an unregistered source), review_signed_on and register_version from public.source_register (0309). stale_after_s is 3 x cadence (the catalogue''s, else control.data_status); a source with no cadence is never stale (owner decision 2026-11-16): freshness_target_s and stale_after_s are NULL and the caller shows its as-of time alone. share_alike_offer_url: the Impressum, where the share-alike offer is redeemed, on a share-alike source. A source whose licence was never read is not published.'),
@@ -1311,7 +1621,7 @@ BEGIN
     ('fuel_product', 'public.fuel_products.'),
     ('fuel_price_observation', 'Every public.fuel_prices tick of a permitted source.'),
     ('charging_site', 'public.charging_sites with a location that we did not retract. operator_is_person: no source.'),
-    ('charge_point', 'public.charging_points of a site that we did not retract. point_id is the EVSE id, which the status ticks carry (else feed:point key); the same EVSE listed by two feeds is two rows with one point_id.'),
+    ('charge_point', 'public.charging_points of a site that we did not retract. point_id is the EVSE id, which the status ticks carry (else feed:point key); the same EVSE listed by two feeds is two rows with one point_id. connectors: the plugs of connector_types in the tool vocabulary (ccs2, type2, chademo, mcs); the price and register columns are the terms find_charging_station filters by (open247, card, free, public).'),
     ('charge_point_state_observation', 'Every public.charging_point_status tick; point_id is the EVSE id, as charge_point''s.'),
     ('parking_facility', 'The four parking families (p:, bysa:, odbl:, sid:) we did not retract; SID facilities carry terms_gate sid-terms-1 (a per-request acceptance, contract.terms). direction: no source.'),
     ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility; SID ticks carry terms_gate sid-terms-1 whether or not their site is loaded.'),
