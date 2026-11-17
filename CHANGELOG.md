@@ -13,6 +13,7 @@ edited by hand.
 
 ## [0.3.1](https://github.com/mavrovde/viafrei-database/compare/v0.3.0...v0.3.1) (2026-11-17)
 
+0.3.0 was tagged but never published: its release job stopped on two surviving mutants, so no 0.3.0 image exists. 0.3.1 is the first published release of everything listed under 0.3.0 below, including the 0315 checks on the refresh requests (#41: anchor ids, the source list, and requested_by site, mcp or dev).
 
 ### Fixed
 
