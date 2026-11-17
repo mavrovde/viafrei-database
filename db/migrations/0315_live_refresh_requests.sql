@@ -5,8 +5,7 @@
 -- the API answers from the row. The provider's data never passes through this
 -- schema.
 --
--- The shape is the live ingestor's request protocol (its docs/protocol.md at
--- f5a83fb): live.refresh_requests with an identity id; the API inserts
+-- The shape is the live ingestor's request protocol: live.refresh_requests with an identity id; the API inserts
 -- source, subject, subject_key and requested_by; the ingestor claims by
 -- setting claimed_at (state stays pending), releases a stale claim by
 -- clearing it, and settles once (state, settled_at, reason, reused, where
