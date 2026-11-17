@@ -103,7 +103,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       case "test-fixtures": {
         const ok = (rest.length === 1 && rest[0] === "install") || (rest.length === 2 && rest[0] === "seed");
         if (!ok) return usage("test-fixtures takes one sub-verb: install, or seed FILE");
-        const r = rest[0] === "seed" ? await seedFixtures(process.env, rest[1] ?? "") : await installFixtures(process.env);
+        const r = rest[0] === "seed" ? await seedFixtures(process.env, String(rest[1])) : await installFixtures(process.env);
         for (const l of r.lines) (r.exitCode === 0 ? print : printErr)(l);
         return r.exitCode;
       }

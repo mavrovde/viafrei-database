@@ -93,9 +93,11 @@ export async function seedFixtures(env: NodeJS.ProcessEnv, file: string, run?: P
     return { exitCode: 1, lines: [`✗ test-fixtures seed: ${file} could not be read`] };
   }
   const name = basename(file).replaceAll("'", "''");
-  const psql = run ?? psqlRunner({ databaseUrl: env["DATABASE_URL"] ?? "" });
+  // fixturesRefusal has read DATABASE_URL as set and named test_*.
+  const url = String(env["DATABASE_URL"]);
+  const psql = run ?? psqlRunner({ databaseUrl: url });
   const r = await psql(`${triggers}\nselect vf_test.contract_seed_begin('${name}');\n${rows}\n`, ["-1", "-f", "-"]);
   if (r.code !== 0) return { exitCode: 1, lines: [`✗ test fixtures could not be seeded (psql exit ${String(r.code)}): ${firstLine(r.stderr)}`] };
   const n = (rows.match(/^\s*insert\s+into\s+contract\./gim) ?? []).length;
-  return { exitCode: 0, lines: [`✓ test fixtures: ${String(n)} contract insert(s) seeded from ${basename(file)} (test database ${databaseOf(env["DATABASE_URL"] ?? "") ?? ""})`] };
+  return { exitCode: 0, lines: [`✓ test fixtures: ${String(n)} contract insert(s) seeded from ${basename(file)} (test database ${String(databaseOf(url))})`] };
 }

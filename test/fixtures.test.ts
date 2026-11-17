@@ -123,6 +123,13 @@ describe("seedFixtures", () => {
     expect(r).toEqual({ exitCode: 1, lines: ["✗ test fixtures could not be seeded (psql exit 3): ERROR:  vf_test contract seed: this database was seeded already"] });
   });
 
+  it("counts no insert in a file that has none, and reports stderr's first line when no line is an ERROR, else (no message)", async () => {
+    writeFileSync(rows, "select 1;\n");
+    expect(await seedFixtures(ENV, rows, stubRun({ code: 0, stdout: "", stderr: "" }).run)).toEqual({ exitCode: 0, lines: ["✓ test fixtures: 0 contract insert(s) seeded from it's.sql (test database test_x)"] });
+    expect(await seedFixtures(ENV, rows, stubRun({ code: 2, stdout: "", stderr: "\npsql: could not connect\nmore\n" }).run)).toEqual({ exitCode: 1, lines: ["✗ test fixtures could not be seeded (psql exit 2): psql: could not connect"] });
+    expect(await seedFixtures(ENV, rows, stubRun({ code: 2, stdout: "", stderr: "" }).run)).toEqual({ exitCode: 1, lines: ["✗ test fixtures could not be seeded (psql exit 2): (no message)"] });
+  });
+
   it("exits 2 on a refusal, and exits 1 for a file it cannot read, running no psql either way", async () => {
     const s = stubRun({ code: 0, stdout: "", stderr: "" });
     expect(await seedFixtures({ DATABASE_URL: URL_OK }, rows, s.run)).toEqual({ exitCode: 2, lines: ["✗ test-fixtures seed needs VF_TEST_FIXTURES=1: the fixtures lift guards, and are installed only on purpose"] });

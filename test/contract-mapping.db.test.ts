@@ -222,12 +222,69 @@ describe("reference views", () => {
     }
   });
 
-  it("road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point", async () => {
+  it("road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)", async () => {
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      const pt = (lcd: number, pos: number | null, lon: number, lat: number, name: string | null = null, road = "A97"): string =>
+        `(58, 1, ${String(lcd)}, '22.0', 'P', 1, 1, null, ${name === null ? "null" : `'${name}'`}, '${road}', ${pos === null ? "null" : String(pos)}, ${PT(lon, lat)})`;
+      await c.query("insert into public.autobahn_roads (road) values ('A97'), ('A96') on conflict do nothing");
+      await c.query(
+        `insert into public.tmc_locations (cid, tabcd, lcd, lcl_version, class, tcd, stcd, junction_no, name, road_number, pos_off_lcd, geom) values
+           ${[
+             pt(30, 31, 10.0, 49, "West"), pt(31, 32, 10.01, 49, "West 2"), pt(32, null, 10.02, 49),
+             pt(40, 41, 10.2, 49), pt(41, 42, 10.21, 49), pt(42, null, 10.22, 49),
+             pt(10, 11, 10.4, 49), pt(11, 12, 10.41, 49, "Ost 1"), pt(12, null, 10.42, 49, " "),
+             pt(5, 6, 10.207, 49.003), pt(6, null, 10.2075, 49.003, "Spur"),
+             pt(50, null, 13, 52, "Fern", "A96"),
+           ].join(", ")}`,
+      );
+      await c.query(
+        `insert into public.gazetteer_places (id, kind, name, name_norm, admin_code, geom, source_id, external_id, closed_at) overriding system value values
+           (101, 'city', 'G08', 'g08', '08000001', ${PT(10.0, 49.05)}, 'bkg_gvisys', 'g08', null),
+           (102, 'city', 'G07', 'g07', '07000001', ${PT(10.2075, 49.003)}, 'bkg_gvisys', 'g07', null),
+           (103, 'city', 'G09', 'g09', '09000001', ${PT(10.42, 49.0)}, 'bkg_gvisys', 'g09', null),
+           (104, 'city', 'Geonames', 'geonames', '06000001', ${PT(10.0, 49.0)}, 'geonames', 'gn', null),
+           (105, 'city', 'Short', 'short', '061', ${PT(10.0, 49.0)}, 'bkg_gvisys', 'short', null),
+           (106, 'city', 'Closed', 'closed', '05000001', ${PT(10.0, 49.0)}, 'bkg_gvisys', 'closed', now()),
+           (107, 'district', 'Kreis', 'kreis', '04000001', ${PT(10.0, 49.0)}, 'bkg_gvisys', 'kreis', null),
+           (108, 'city', 'Far', 'far', '03000001', ${PT(13.0, 52.19)}, 'bkg_gvisys', 'far', null),
+           (109, 'city', 'Unnamed', 'unnamed', '01000001', ${PT(10.22, 49.0)}, 'bkg_gvisys', 'unnamed', null)`,
+      );
+      await c.query("set local role api_reader");
+      const { rows: chains } = await c.query<{ chain: string }>(
+        `select string_agg(round(((st_x(p.geom) - 10) * 10000)::numeric)::text, ',' order by p.path) as chain
+           from contract.road r cross join lateral st_dumppoints(r.geometry) p where r.road_ref = 'A97' group by p.path[1] order by p.path[1]`,
+      );
+      expect(chains.map((x) => x.chain)).toEqual(["0,100,200", "2000,2100,2200", "4000,4100,4200", "2070,2075"]);
+      const metres = (alat: number, alon: number, blat: number, blon: number): number => {
+        const rad = Math.PI / 180;
+        const h = Math.sin(((blat - alat) * rad) / 2) ** 2 + Math.cos(alat * rad) * Math.cos(blat * rad) * Math.sin(((blon - alon) * rad) / 2) ** 2;
+        return 2 * 6_371_008.8 * Math.asin(Math.min(1, Math.sqrt(h)));
+      };
+      const km = Math.round((6 * metres(49, 10, 49, 10.01) + metres(49.003, 10.207, 49.003, 10.2075)) / 100) / 10;
+      expect((await c.query("select road_ref, length_km::float8 as length_km, states from contract.road where road_ref in ('A97', 'A96') order by 1")).rows).toEqual([
+        { road_ref: "A96", length_km: null, states: null },
+        { road_ref: "A97", length_km: km, states: ["08", "07", "09"] },
+      ]);
+      expect((await c.query("select junction_id, state_code from contract.junction where junction_id in ('58:1:30', '58:1:6', '58:1:11', '58:1:50') order by 1")).rows).toEqual([
+        { junction_id: "58:1:11", state_code: "09" },
+        { junction_id: "58:1:30", state_code: "08" },
+        { junction_id: "58:1:50", state_code: null },
+        { junction_id: "58:1:6", state_code: "07" },
+      ]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
+  it("road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point and in the platform's order", async () => {
     const tsv = (f: string): string[][] =>
       readFileSync(join(REPO, "test", "road-line", f), "utf8").split("\n").filter((l) => l !== "" && !l.startsWith("#")).map((l) => l.split("\t"));
     const points = tsv("lcl-points.tsv");
     const at = new Map(points.map((p) => [`${p[0] ?? ""}:${p[1] ?? ""}`, `${p[9] ?? ""} ${p[8] ?? ""}`]));
-    const want = tsv("platform-chains.tsv").map(([road, lcds]) => `${road ?? ""} ${(lcds ?? "").split(",").map((l) => at.get(`${road ?? ""}:${l}`) ?? "?").join(";")}`).sort();
+    const want = tsv("platform-chains.tsv").map(([road, lcds]) => `${road ?? ""} ${(lcds ?? "").split(",").map((l) => at.get(`${road ?? ""}:${l}`) ?? "?").join(";")}`);
     const c = await db.pool.connect();
     try {
       await c.query("begin");
@@ -244,10 +301,10 @@ describe("reference views", () => {
       const r = await c.query<{ chain: string }>(
         `select r.road_ref || ' ' || string_agg(st_x(p.geom)::text || ' ' || st_y(p.geom)::text, ';' order by p.path) as chain
            from contract.road r cross join lateral st_dumppoints(r.geometry) p
-          where r.road_ref in ('A1', 'A3', 'A7') group by r.road_ref, p.path[1]`,
+          where r.road_ref in ('A1', 'A3', 'A7') group by r.road_ref, p.path[1] order by r.road_ref, p.path[1]`,
       );
       expect(Date.now() - t0).toBeLessThan(2000);
-      expect(r.rows.map((x) => x.chain).sort()).toEqual(want);
+      expect(r.rows.map((x) => x.chain)).toEqual(want);
       expect(want).toHaveLength(4);
     } finally {
       await c.query("rollback");
@@ -257,7 +314,7 @@ describe("reference views", () => {
 
   it("road and junction: the A-road list (Autobahn API: public, owner 2026-11-16) and its TMC junctions only", async () => {
     expect(await read("select road_ref, road_class, states, source_ref, display_class, audience from contract.road")).toEqual([
-      { road_ref: "A8", road_class: "motorway", states: null, source_ref: "autobahn", display_class: "open", audience: "public" },
+      { road_ref: "A8", road_class: "motorway", states: ["08"], source_ref: "autobahn", display_class: "open", audience: "public" },
     ]);
     expect(await read("select junction_id, road_ref, number, name, junction_kind, chainage_km from contract.junction")).toEqual([
       { junction_id: "58:1:1000", road_ref: "A8", number: "52", name: "Stuttgart-Degerloch", junction_kind: "junction", chainage_km: null },

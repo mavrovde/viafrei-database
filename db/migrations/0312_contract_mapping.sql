@@ -61,7 +61,8 @@
 -- contract.sharing_station_status, contract.sharing_vehicle, contract.poi,
 -- contract.address, contract.service_alert, contract.transit_punctuality,
 -- contract.street_bay,
--- functions public.contract_road_line(text), public.contract_transport_mode(integer),
+-- functions public.contract_metres(float8, float8, float8, float8), public.contract_junction_land(geography),
+-- public.contract_road_shape(text), public.contract_transport_mode(integer),
 -- public.contract_stop_place_of(text), public.contract_search_fold(text),
 -- public.contract_sources, public.contract_source_domains,
 -- public.contract_source_rules; drop trigger autobahn_sweeps_note on
@@ -357,40 +358,101 @@ select g.id::text, g.name_en, 'en', 'exonym', public.contract_search_fold(g.name
  where g.geom is not null and g.name_en is not null;
 
 -- A motorway's line is the one the platform's motorway map draws (ingest
--- analysis motorway-entries: orderedChains; steward M3 and S7: the BASt LCL
--- alone, never OpenStreetMap): the road's LCL points (motorway_points_live)
--- linked by pos_off_lcd, a link kept only to a point of the same road that is
--- not the point itself. A chain starts at each point no link reaches, in
--- ascending location code, and runs until it meets a point already used;
--- what is left lies on a cycle and is walked from its smallest code. One
--- LineString per chain: the line breaks where the chain breaks, and no
--- segment is invented across a gap. A chain of one point draws no line and is
--- left out. The chains keep the order of their first location code (the map
--- draws each apart, so their order draws nothing). It reads the LCL with the
--- owner's rights, as the views do.
-create function public.contract_road_line(road text) returns geometry(MultiLineString, 4326)
-language plpgsql stable security definer set search_path = pg_catalog, public as $$
+-- analysis motorway-entries: orderedChains, roadOrder; digest
+-- motorway-extras: junctionKm; steward M3 and S7: the BASt LCL alone, never
+-- OpenStreetMap): the road's LCL points (motorway_points_live) linked by
+-- pos_off_lcd, a link kept only to a point of the same road that is not the
+-- point itself. A chain starts at each point no link reaches, in ascending
+-- location code, and runs until it meets a point already used; what is left
+-- lies on a cycle and is walked from its smallest code. The chains are laid
+-- along the longest one (the most points, then the smallest first code): by
+-- the projection of their first point on the line from its first to its last
+-- point, then by first code; a spur (a chain of at most two points with a
+-- point within 1 000 m of a chain of more than two) goes after the road's own
+-- pieces. One LineString per chain of two points or more, in that order: the
+-- line breaks where the chain breaks, and no segment is invented across a gap.
+-- length_km is the chains' own length (haversine, R 6 371 008.8 m, over the
+-- segments inside the chains, no break counted), to 0.1 km. states are the
+-- Länder of the named junctions (type 1, a name) in the road's order (the
+-- main chains end to end, each spur's points after the main point nearest
+-- its first point), each the first two digits of the AGS of the nearest live
+-- BKG Gemeinde within 20 000 m (contract.junction's rule), each once. It
+-- reads the LCL with the owner's rights, as the views do.
+create function public.contract_metres(alat float8, alon float8, blat float8, blon float8) returns float8
+language sql immutable parallel safe set search_path = pg_catalog
+as $$
+  select 2 * 6371008.8 * asin(least(1, sqrt(
+    power(sin(radians(blat - alat) / 2), 2) + cos(radians(alat)) * cos(radians(blat)) * power(sin(radians(blon - alon) / 2), 2))))
+$$;
+comment on function public.contract_metres(float8, float8, float8, float8) is
+  'The haversine distance in metres (R 6 371 008.8 m) between two points given as lat, lon: the platform''s metresBetween.';
+
+create function public.contract_junction_land(p geography) returns text
+language sql stable security definer set search_path = pg_catalog, public
+as $$
+  select left(g.admin_code, 2) from public.gazetteer_places g
+   where g.closed_at is null and g.source_id = 'bkg_gvisys' and g.kind = 'city'
+     and g.admin_code ~ '^[0-9]{8}$' and g.geom is not null
+     and st_dwithin(g.geom, p, 20000)
+   order by g.geom <-> p
+   limit 1
+$$;
+comment on function public.contract_junction_land(geography) is
+  'The Land (first two AGS digits) of a motorway junction: the nearest live BKG Gemeinde with an eight-digit AGS within 20 000 m, the platform''s junction rule; NULL when none is near.';
+
+create function public.contract_road_shape(road text, out line geometry(MultiLineString, 4326), out length_km numeric(6,1), out states text[])
+language plpgsql stable security definer set search_path = pg_catalog, public
+as $$
 declare
   lcds integer[];
   links integer[];
   pts geometry[];
+  geos geography[];
+  named boolean[];
+  lat float8[];
+  lon float8[];
   nxt integer[] := '{}';
   reached boolean[];
   used boolean[];
+  mem integer[] := '{}';  -- the chains' members, end to end
+  cs integer[] := '{}';   -- each chain's first offset in mem
+  cl integer[] := '{}';   -- each chain's length
+  ord integer[];          -- the chains in the road's order
+  spur boolean[];
   lines geometry[] := '{}';
   chain geometry[];
+  walk integer[];
+  ro integer[];           -- the points in the road's order
+  main boolean[];
   n integer;
+  m integer;
   i integer;
+  j integer;
+  k integer;
+  c integer;
   cur integer;
   pass integer;
+  longest integer;
+  ax float8;
+  ay float8;
+  dx float8;
+  dy float8;
+  best integer;
+  best_m float8;
+  d float8;
+  total float8 := 0;
+  land text;
+  has_long boolean := false;
 begin
-  select array_agg(p.lcd order by p.lcd), array_agg(p.pos_off_lcd order by p.lcd), array_agg(p.geom::geometry order by p.lcd)
-    into lcds, links, pts
+  select array_agg(p.lcd order by p.lcd), array_agg(p.pos_off_lcd order by p.lcd), array_agg(p.geom::geometry order by p.lcd),
+         array_agg(p.geom order by p.lcd), array_agg(p.tcd = 1 and coalesce(btrim(p.name), '') <> '' order by p.lcd),
+         array_agg(st_y(p.geom::geometry) order by p.lcd), array_agg(st_x(p.geom::geometry) order by p.lcd)
+    into lcds, links, pts, geos, named, lat, lon
     from public.motorway_points_live p
-   where p.road = contract_road_line.road;
+   where p.road = contract_road_shape.road and p.geom is not null;
   n := coalesce(array_length(lcds, 1), 0);
   if n = 0 then
-    return null;
+    return;
   end if;
   reached := array_fill(false, array[n]);
   used := array_fill(false, array[n]);
@@ -403,25 +465,113 @@ begin
   for pass in 1 .. 2 loop
     for i in 1 .. n loop
       continue when used[i] or (pass = 1 and reached[i]);
-      chain := '{}';
+      cs := cs || (coalesce(array_length(mem, 1), 0) + 1);
       cur := i;
+      k := 0;
       while cur is not null and not used[cur] loop
         used[cur] := true;
-        chain := chain || pts[cur];
+        mem := mem || cur;
+        k := k + 1;
         cur := nxt[cur];
       end loop;
-      if array_length(chain, 1) >= 2 then
-        lines := lines || st_makeline(chain);
-      end if;
+      cl := cl || k;
     end loop;
   end loop;
-  if array_length(lines, 1) is null then
-    return null;
+  m := array_length(cs, 1);
+  -- the longest chain: the most points, then the smallest first code
+  longest := 1;
+  for c in 2 .. m loop
+    if cl[c] > cl[longest] or (cl[c] = cl[longest] and lcds[mem[cs[c]]] < lcds[mem[cs[longest]]]) then
+      longest := c;
+    end if;
+  end loop;
+  ax := lon[mem[cs[longest]]];
+  ay := lat[mem[cs[longest]]];
+  dx := lon[mem[cs[longest] + cl[longest] - 1]] - ax;
+  dy := lat[mem[cs[longest] + cl[longest] - 1]] - ay;
+  select array_agg(x.c order by (lon[mem[cs[x.c]]] - ax) * dx + (lat[mem[cs[x.c]]] - ay) * dy, lcds[mem[cs[x.c]]])
+    into ord from generate_series(1, m) as x(c);
+  -- the spurs, by chain number
+  for c in 1 .. m loop
+    has_long := has_long or cl[c] > 2;
+  end loop;
+  spur := array_fill(false, array[m]);
+  if has_long then
+    for c in 1 .. m loop
+      continue when cl[c] > 2;
+      <<probe>>
+      for i in cs[c] .. cs[c] + cl[c] - 1 loop
+        for j in 1 .. m loop
+          continue when cl[j] <= 2;
+          for k in cs[j] .. cs[j] + cl[j] - 1 loop
+            if public.contract_metres(lat[mem[i]], lon[mem[i]], lat[mem[k]], lon[mem[k]]) <= 1000 then
+              spur[c] := true;
+              exit probe;
+            end if;
+          end loop;
+        end loop;
+      end loop;
+    end loop;
   end if;
-  return st_setsrid(st_multi(st_collect(lines)), 4326)::geometry(MultiLineString, 4326);
+  ord := array(select u.o from unnest(ord) with ordinality u(o, x) where not spur[u.o] order by u.x)
+      || array(select u.o from unnest(ord) with ordinality u(o, x) where spur[u.o] order by u.x);
+  -- the line and its length
+  foreach c in array ord loop
+    chain := '{}';
+    for i in cs[c] .. cs[c] + cl[c] - 1 loop
+      chain := chain || pts[mem[i]];
+      if i > cs[c] then
+        total := total + public.contract_metres(lat[mem[i - 1]], lon[mem[i - 1]], lat[mem[i]], lon[mem[i]]);
+      end if;
+    end loop;
+    if cl[c] >= 2 then
+      lines := lines || st_makeline(chain);
+    end if;
+  end loop;
+  if array_length(lines, 1) is not null then
+    line := st_setsrid(st_multi(st_collect(lines)), 4326)::geometry(MultiLineString, 4326);
+    length_km := round((total / 1000)::numeric, 1);
+  end if;
+  -- the road's order: the main chains end to end, each spur after its nearest main point
+  ro := '{}';
+  foreach c in array ord loop
+    continue when spur[c];
+    for i in cs[c] .. cs[c] + cl[c] - 1 loop
+      ro := ro || mem[i];
+    end loop;
+  end loop;
+  main := array_fill(false, array[n]);
+  foreach i in array ro loop
+    main[i] := true;
+  end loop;
+  foreach c in array ord loop
+    continue when not spur[c];
+    best := 0;
+    best_m := 'infinity';
+    for k in 1 .. array_length(ro, 1) loop
+      continue when not main[ro[k]];
+      d := public.contract_metres(lat[mem[cs[c]]], lon[mem[cs[c]]], lat[ro[k]], lon[ro[k]]);
+      if d < best_m then
+        best_m := d;
+        best := k;
+      end if;
+    end loop;
+    walk := '{}';
+    for i in cs[c] .. cs[c] + cl[c] - 1 loop
+      walk := walk || mem[i];
+    end loop;
+    ro := ro[1:best] || walk || ro[best + 1:];
+  end loop;
+  foreach i in array ro loop
+    continue when not named[i];
+    land := public.contract_junction_land(geos[i]);
+    if land is not null and (states is null or not land = any(states)) then
+      states := coalesce(states, '{}') || land;
+    end if;
+  end loop;
 end $$;
-comment on function public.contract_road_line(text) is
-  'The line of one motorway as the platform''s motorway map draws it: its BASt LCL chains linked by pos_off_lcd, one LineString per chain, no segment across a gap; NULL when the LCL holds no chain of two points.';
+comment on function public.contract_road_shape(text) is
+  'One motorway as the platform''s motorway pages read it: its line (the BASt LCL chains in road order, one LineString per chain, no segment across a gap), the chains'' own length in km and the Länder of its named junctions in road order; line and length NULL when the LCL holds no chain of two points, states NULL when no junction has a Land.';
 
 -- autobahn_roads is the Autobahn GmbH API's road list: its rule applies. The
 -- geometry is the BASt LCL's (bast_lcl), credited in source_refs.
@@ -429,23 +579,23 @@ create or replace view contract.road as
 select r.road                                  as road_ref,
        'motorway'::text                        as road_class,
        r.road                                  as name,
-       null::numeric(6,1)                      as length_km,
+       l.length_km::numeric(6,1)               as length_km,
        l.line::geometry(MultiLineString, 4326) as geometry,
-       null::text[]                            as states,
+       l.states                                as states,
        'autobahn'::text                        as source_ref,
        coalesce(k.display_class, 'open')       as display_class,
        coalesce(k.audience, 'public')          as audience,
        case when l.line is null then array['autobahn'] else array['autobahn', 'bast_lcl'] end as source_refs
   from public.autobahn_roads r
-  cross join lateral (select public.contract_road_line(r.road) as line) l
+  cross join lateral public.contract_road_shape(r.road) l
   left join lateral (select k.* from public.contract_source_rules k where 'autobahn' ~ k.pattern order by k.priority limit 1) k on true;
 
 -- tmc_locations names no source key of its own (BASt LCL, lcl_version only).
 -- state_code: the location list names no Land, so it is derived: the Land
--- (the first two digits of the AGS) of the nearest municipality point of the
--- BKG administrative units (gazetteer_places, source bkg_gvisys), one probe of
--- that set's own index (0313). A junction within a few hundred metres of a
--- Land border may take its neighbour's Land.
+-- (the first two digits of the AGS) of the nearest live BKG Gemeinde with an
+-- eight-digit AGS within 20 000 m (public.contract_junction_land, the
+-- platform's junction rule), one probe of that set's own index. A junction
+-- within a few hundred metres of a Land border may take its neighbour's Land.
 create or replace view contract.junction as
 select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
        t.road_number                                          as road_ref,
@@ -454,9 +604,7 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
        case t.stcd when 1 then 'interchange' when 2 then 'triangle' else 'junction' end as junction_kind,
        null::numeric(6,1)                                     as chainage_km,
        t.geom::geometry(Point, 4326)                          as location,
-       (select left(g.admin_code, 2) from public.gazetteer_places g
-         where g.source_id = 'bkg_gvisys' and g.kind = 'city' and g.geom is not null
-         order by g.geom::geometry <-> t.geom::geometry limit 1) as state_code,
+       public.contract_junction_land(t.geom)                 as state_code,
        'bast_lcl'::text                                       as source_ref,
        'open'::text                                           as display_class,
        'public'::text                                         as audience
@@ -1613,7 +1761,7 @@ BEGIN
     ('admin_region', 'public.ags_regions (Land, Kreis). boundary: no source (ags_regions holds a point).'),
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
     ('place_alias', 'The name and the English name of each place; search_fold is contract_search_fold() of the label.'),
-    ('road', 'public.autobahn_roads (Autobahn GmbH API). geometry: the BASt LCL chains of public.contract_road_line(), as the platform''s motorway map draws them; source_refs credits bast_lcl when it is there. length_km and states: no source.'),
+    ('road', 'public.autobahn_roads (Autobahn GmbH API). geometry, length_km and states: public.contract_road_shape(), the BASt LCL chains in the platform''s road order, their own length and the Länder of the named junctions; source_refs credits bast_lcl when a line is there.'),
     ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
     ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
     ('traffic_event_observation', 'Every Autobahn tick and every DATEX II tick of an event we did not retract. version_no: Autobahn ticks have none (NULL).'),
