@@ -994,6 +994,7 @@ END $$;
 -- the source, attribution and licence are the table's own defaults.
 CREATE OR REPLACE FUNCTION vf_test.seed_train_board() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  PERFORM vf_test.ensure_day('domains.train_board_departures', NEW.fetched_at);
   INSERT INTO domains.train_board_departures (eva, observed_at, planned_at, changed_at, platform, changed_platform, category, train_number, line,
                                               destination, cancelled, recorded_at)
   VALUES (NEW.station_eva, NEW.fetched_at, NEW.planned_departure_at, NEW.changed_departure_at, NEW.platform, NEW.changed_platform, NEW.category,
