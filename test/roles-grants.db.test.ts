@@ -168,7 +168,7 @@ describe("the expected-ACL table", () => {
   it("is read off the catalogue by the same query the comparison uses: no privilege of ours is left out of it", async () => {
     const all = (await db.pool.query<{ n: number }>(
       `select count(*)::int as n from pg_class c cross join lateral aclexplode(c.relacl) a join pg_roles g on g.oid = a.grantee
-        where (g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access')) and c.relnamespace in (select oid from pg_namespace where nspname in ('public', 'control', 'domains', 'ingestor', 'contract', 'access')) and not c.relispartition and c.relkind in ('r', 'p', 'v', 'm')`,
+        where (g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access')) and c.relnamespace in (select oid from pg_namespace where nspname in ('public', 'control', 'domains', 'ingestor', 'contract', 'access', 'live')) and not c.relispartition and c.relkind in ('r', 'p', 'v', 'm')`,
     )).rows[0]?.n ?? 0;
     const read = held.filter((r) => r.kind === "relation" && r.grantee !== "PUBLIC").reduce((s, r) => s + r.privileges.split(",").length, 0);
     expect(read).toBe(all);

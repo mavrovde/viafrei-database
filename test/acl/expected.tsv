@@ -3,6 +3,7 @@
 PUBLIC	schema	public	USAGE
 api_access	function	access.prune_audit(before timestamp with time zone)	EXECUTE
 api_access	function	access.prune_usage(keep_days integer)	EXECUTE
+api_access	function	live.prune_refresh_requests(before timestamp with time zone)	EXECUTE
 api_access	relation	access.api_key	INSERT,SELECT,UPDATE
 api_access	relation	access.audit	INSERT,SELECT
 api_access	relation	access.console_enrolment	DELETE,INSERT,SELECT,UPDATE
@@ -11,9 +12,10 @@ api_access	relation	access.plan	INSERT,SELECT,UPDATE
 api_access	relation	access.schema_version	SELECT
 api_access	relation	access.terms_acceptance	INSERT,SELECT
 api_access	relation	access.usage	INSERT,SELECT,UPDATE
-api_access	relation	domains.train_board_departures	INSERT
+api_access	relation	live.refresh_asker	INSERT,SELECT
+api_access	relation	live.refresh_request	INSERT,SELECT
 api_access	schema	access	USAGE
-api_access	schema	domains	USAGE
+api_access	schema	live	USAGE
 api_reader	relation	contract.address	SELECT
 api_reader	relation	contract.admin_region	SELECT
 api_reader	relation	contract.call_observation	SELECT
@@ -200,6 +202,10 @@ viafrei_ingestor	column	ingestor.runs.source_id	INSERT
 viafrei_ingestor	column	ingestor.runs.status	INSERT,UPDATE
 viafrei_ingestor	column	ingestor.runs.unit	INSERT
 viafrei_ingestor	column	ingestor.runs.updated	UPDATE
+viafrei_ingestor	column	live.refresh_request.claimed_at	UPDATE
+viafrei_ingestor	column	live.refresh_request.reason	UPDATE
+viafrei_ingestor	column	live.refresh_request.settled_at	UPDATE
+viafrei_ingestor	column	live.refresh_request.state	UPDATE
 viafrei_ingestor	function	ingestor.project_run(p_run_id bigint)	EXECUTE
 viafrei_ingestor	function	ingestor.register_feed(p_feed_key text, p_display_name text, p_provider text, p_licence_id text, p_licence_label text, p_attribution text, p_cadence_s integer, p_min_interval_s integer, p_enabled boolean, p_registry_version text)	EXECUTE
 viafrei_ingestor	function	ingestor.taken_feed_keys(p_ids text[])	EXECUTE
@@ -237,6 +243,7 @@ viafrei_ingestor	relation	domains.street_bay_state	INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	domains.street_bay_state_merged	SELECT
 viafrei_ingestor	relation	domains.street_bays	INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	domains.street_bays_merged	SELECT
+viafrei_ingestor	relation	domains.train_board_departures	INSERT
 viafrei_ingestor	relation	domains.transit_agencies_odbl	INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	domains.transit_agencies_odbl_merged	SELECT
 viafrei_ingestor	relation	domains.transit_routes_odbl	INSERT,SELECT,UPDATE
@@ -263,8 +270,10 @@ viafrei_ingestor	relation	ingestor.runs	DELETE,SELECT
 viafrei_ingestor	relation	ingestor.source_state	DELETE,INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	ingestor.sources	DELETE,INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	ingestor.units	DELETE,INSERT,SELECT,UPDATE
+viafrei_ingestor	relation	live.refresh_request	SELECT
 viafrei_ingestor	schema	domains	USAGE
 viafrei_ingestor	schema	ingestor	USAGE
+viafrei_ingestor	schema	live	USAGE
 viafrei_mcp	column	control.budgets.budget_key	SELECT
 viafrei_mcp	column	control.budgets.ceiling	SELECT
 viafrei_mcp	column	control.budgets.spacing_ms	SELECT

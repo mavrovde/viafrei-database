@@ -204,14 +204,19 @@ describe("access (0308)", () => {
     ]);
   });
 
-  it("api_access holds nothing outside access but INSERT on the train board ticks (0314), and no other service role holds anything in access or contract", async () => {
+  it("api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract", async () => {
     const out = await db.pool.query<{ n: string }>(
       `select n.nspname || '.' || c.relname || ' ' || p as n from pg_class c join pg_namespace n on n.oid = c.relnamespace
         cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
         where n.nspname <> 'access' and n.nspname not like 'pg\\_%' and n.nspname <> 'information_schema' and c.relkind in ('r', 'p', 'v', 'm', 'f')
           and c.oid not in (select objid from pg_depend where deptype = 'e') and has_table_privilege('api_access', c.oid, p)`,
     );
-    expect(out.rows).toEqual([{ n: "domains.train_board_departures INSERT" }]);
+    expect(out.rows.map((r) => r.n).sort()).toEqual([
+      "live.refresh_asker INSERT",
+      "live.refresh_asker SELECT",
+      "live.refresh_request INSERT",
+      "live.refresh_request SELECT",
+    ]);
     const others = await db.pool.query<{ l: string }>(
       `select r.rolname || ' ' || n.nspname as l from pg_roles r cross join pg_namespace n
         where r.rolname like 'viafrei\\_%' and n.nspname in ('access', 'contract') and has_schema_privilege(r.oid, n.oid, 'USAGE')`,
