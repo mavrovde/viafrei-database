@@ -66,7 +66,7 @@ describe("the shape: the API's own DDL, column for column", () => {
         order by n.nspname || '.' || c.relname, a.attnum`,
     );
     const want = expectedColumns();
-    expect(want).toHaveLength(561);
+    expect(want).toHaveLength(567);
     const envelope = readFileSync(join(REPO, "test", "api", "envelope.tsv"), "utf8")
       .split("\n")
       .filter((l) => l.trim() !== "" && !l.startsWith("#"));

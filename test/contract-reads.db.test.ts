@@ -224,6 +224,27 @@ describe("the region watch's trips, the station board's departures and the warn 
     ]);
   });
 
+  it("service_alert: the last delivery, the message number, whether the publication is the primary, and its publication's last check, cadence and pause", async () => {
+    const alert = (source: string, feed: string, id: string, ref: string | null, seen: string): string =>
+      `insert into public.delfi_service_alerts (source_id, source_feed, alert_id, header, dedupe_key, message_ref, content_hash, last_seen_at)
+         values ('${source}', '${feed}', '${id}', 'Bauarbeiten', 'k-${id}', ${ref === null ? "null" : `'${ref}'`}, 'h-${id}', '${seen}')`;
+    const rows = await readAfter<Record<string, unknown>>(
+      [
+        `insert into public.feed_catalog (feed_key, provider, display_name, licence_id, cadence_s) values ('service_alerts_gtfsrt', 'delfi', 'alerts', 'cc-by-sa', 300) on conflict do nothing`,
+        `insert into control.feed_state (ledger, key, last_success_at, updated_at) values ('feed', 'service_alerts_gtfsrt', '2026-11-16 08:00+00', now())
+           on conflict (ledger, key) do update set last_success_at = excluded.last_success_at`,
+        alert("delfi_rt_sa", "service_alerts_gtfsrt", "a1", null, "2026-11-16 08:00+00"),
+        alert("delfi_siri_sx", "service_alerts_siri_sx", "s1", "m-7", "2026-11-15 08:00+00"),
+      ],
+      `select alert_id, seen_at, message_ref, primary_source, checked_at is not null as checked, cadence_s, paused from contract.service_alert
+        where alert_id in ('service_alerts_gtfsrt:a1', 'service_alerts_siri_sx:s1') order by alert_id`,
+    );
+    expect(rows).toEqual([
+      { alert_id: "service_alerts_gtfsrt:a1", seen_at: new Date("2026-11-16T08:00:00Z"), message_ref: null, primary_source: true, checked: true, cadence_s: 300, paused: false },
+      { alert_id: "service_alerts_siri_sx:s1", seen_at: new Date("2026-11-15T08:00:00Z"), message_ref: "m-7", primary_source: false, checked: false, cadence_s: null, paused: false },
+    ]);
+  });
+
   it("weather_warning: the warn cell, its name and boundary, the DWD event and the message", async () => {
     const rows = await readAfter<{ warn_cell_id: string; area_name: string; event: string; identifier: string; holds: boolean }>(
       [

@@ -353,9 +353,15 @@ contract.service_alert	16	dedupe_key	text
 contract.service_alert	17	source_ref	text
 contract.service_alert	18	recorded_at	timestamp with time zone
 contract.service_alert	19	changed_at	timestamp with time zone
-contract.service_alert	20	display_class	text
-contract.service_alert	21	audience	text
-contract.service_alert	22	confidentiality	text
+contract.service_alert	20	seen_at	timestamp with time zone
+contract.service_alert	21	message_ref	text
+contract.service_alert	22	primary_source	boolean
+contract.service_alert	23	checked_at	timestamp with time zone
+contract.service_alert	24	cadence_s	integer
+contract.service_alert	25	paused	boolean
+contract.service_alert	26	display_class	text
+contract.service_alert	27	audience	text
+contract.service_alert	28	confidentiality	text
 contract.sharing_station	1	station_id	text
 contract.sharing_station	2	system_id	text
 contract.sharing_station	3	system_name	text

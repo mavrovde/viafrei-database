@@ -1677,6 +1677,13 @@ grant select on contract.address to api_reader;
 
 -- The DELFI service alerts we did not close, as check_transit_disruption
 -- reads them; a restricted alert is withheld, as the platform never shows it.
+-- What the platform's alert read decides on rides along: when the alert was
+-- last delivered (seen_at), the publisher's message number, whether the row
+-- is of the primary publication (GTFS-RT; a SIRI SX row sharing its
+-- dedupe_key or message_ref is its duplicate, and a SIRI SX row not repeated
+-- for a day is not shown), and its publication's last check, cadence and
+-- pause (feed_checks), by which a reader keeps the alerts of a publication
+-- that runs.
 create view contract.service_alert as
 select a.source_feed || ':' || a.alert_id                as alert_id,
        a.header                                          as header,
@@ -1697,11 +1704,18 @@ select a.source_feed || ':' || a.alert_id                as alert_id,
        a.source_feed                                     as source_ref,
        a.first_seen_at                                   as recorded_at,
        coalesce(a.provider_updated_at, a.last_seen_at)   as changed_at,
+       a.last_seen_at                                    as seen_at,
+       a.message_ref                                     as message_ref,
+       (a.source_id = 'delfi_rt_sa')                     as primary_source,
+       c.checked_at                                      as checked_at,
+       c.cadence_s                                       as cadence_s,
+       coalesce(c.paused, false)                         as paused,
        case when coalesce(a.confidentiality, 'noRestriction') <> 'noRestriction' then 'withhold'
             else coalesce(k.display_class, 'open') end   as display_class,
        coalesce(k.audience, 'public')                    as audience,
        a.confidentiality                                 as confidentiality
   from public.delfi_service_alerts a
+  left join public.feed_checks c on c.feed_key = a.source_feed
   left join lateral (select k.* from public.contract_source_rules k where a.source_feed ~ k.pattern order by k.priority limit 1) k on true
  where a.closed_at is null and not coalesce(k.excluded, false);
 grant select on contract.service_alert to api_reader;

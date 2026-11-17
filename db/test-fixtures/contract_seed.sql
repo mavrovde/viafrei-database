@@ -874,18 +874,19 @@ BEGIN
   RETURN NEW;
 END $$;
 
--- alert_id is "<feed>:<alert id>"; the source is DELFI's GTFS-RT alerts.
+-- alert_id is "<feed>:<alert id>"; the source is DELFI's GTFS-RT alerts, or its SIRI SX
+-- alerts when primary_source is false; seen_at is the last delivery.
 CREATE OR REPLACE FUNCTION vf_test.seed_service_alert() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE feed text := coalesce(NEW.source_ref, split_part(NEW.alert_id, ':', 1));
 BEGIN
   INSERT INTO public.delfi_service_alerts (source_id, source_feed, alert_id, header, description, cause, effect, url, active_from, active_to,
-                                           active_periods, route_ids, line_names, stop_ids, kreise, lands, placed_by, dedupe_key, content_hash,
+                                           active_periods, route_ids, line_names, stop_ids, kreise, lands, placed_by, dedupe_key, message_ref, content_hash,
                                            confidentiality, first_seen_at, last_seen_at, provider_updated_at)
-  VALUES ('delfi_rt_sa', feed, vf_test.after_colon(NEW.alert_id), NEW.header, NEW.description, NEW.cause, NEW.effect, NEW.url, NEW.active_from,
+  VALUES (CASE WHEN coalesce(NEW.primary_source, true) THEN 'delfi_rt_sa' ELSE 'delfi_siri_sx' END, feed, vf_test.after_colon(NEW.alert_id), NEW.header, NEW.description, NEW.cause, NEW.effect, NEW.url, NEW.active_from,
           NEW.active_to, coalesce(NEW.active_periods, '[]'), coalesce(NEW.route_ids, '{}'), coalesce(NEW.line_names, '{}'), coalesce(NEW.stop_ids, '{}'),
           coalesce(NEW.district_codes, '{}'), coalesce(NEW.state_codes, '{}'),
-          coalesce(NEW.placed_by, 'network'), coalesce(NEW.dedupe_key, NEW.alert_id), md5(NEW.alert_id), NEW.confidentiality,
-          coalesce(NEW.recorded_at, now()), now(), NEW.changed_at);
+          coalesce(NEW.placed_by, 'network'), coalesce(NEW.dedupe_key, NEW.alert_id), NEW.message_ref, md5(NEW.alert_id), NEW.confidentiality,
+          coalesce(NEW.recorded_at, now()), coalesce(NEW.seen_at, now()), NEW.changed_at);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
