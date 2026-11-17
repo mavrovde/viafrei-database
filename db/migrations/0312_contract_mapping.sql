@@ -604,11 +604,13 @@ select t.cid || ':' || t.tabcd || ':' || t.lcd                as junction_id,
        case t.stcd when 1 then 'interchange' when 2 then 'triangle' else 'junction' end as junction_kind,
        null::numeric(6,1)                                     as chainage_km,
        t.geom::geometry(Point, 4326)                          as location,
-       public.contract_junction_land(t.geom)                 as state_code,
+       land.code                                              as state_code,
        'bast_lcl'::text                                       as source_ref,
        'open'::text                                           as display_class,
-       'public'::text                                         as audience
+       'public'::text                                         as audience,
+       case when land.code is not null then 'bkg_gvisys' end  as placement_source_ref
   from public.tmc_locations t
+  cross join lateral (select public.contract_junction_land(t.geom) as code) land
  where t.cid = 58 and t.tabcd = 1 and t.tcd = 1
    and t.road_number ~ '^A[1-9][0-9]{0,2}$'
    and t.geom is not null and t.name is not null;
@@ -804,8 +806,10 @@ select b.event_id, b.event_kind, b.severity, b.road_ref, b.road_class, b.directi
        coalesce(k.audience, 'public')                                       as audience,
        b.confidentiality                                                    as confidentiality,
        k.origin_restriction                                                 as origin_restriction,
-       public.contract_junction_land(b.location::geography)                 as state_code
+       land.code                                                            as state_code,
+       case when land.code is not null then 'bkg_gvisys' end                as placement_source_ref
   from b
+  left join lateral (select public.contract_junction_land(b.location::geography) as code) land on true
   left join lateral (select k.* from public.contract_source_rules k where b.source_ref ~ k.pattern order by k.priority limit 1) k on true
  where not coalesce(k.excluded, false);
 
@@ -1069,7 +1073,8 @@ select s.gtfs_feed_key || ':' || s.id                     as stop_place_id,
                   where g.source_id = 'bkg_gvisys' and g.kind = 'city' and g.geom is not null
                   order by g.geom::geometry <-> s.geom::geometry limit 1)) as municipality_name,
        d.eva_no                                           as eva_no,
-       coalesce(d.ifopt, case when s.id ~ '^[a-z]{2}:[0-9]{5}:[0-9]+$' then s.id end) as ifopt
+       coalesce(d.ifopt, case when s.id ~ '^[a-z]{2}:[0-9]{5}:[0-9]+$' then s.id end) as ifopt,
+       case when exists (select 1 from public.ags_regions a where a.ags = split_part(s.id, ':', 2)) then 'bkg_gvisys' end as placement_source_ref
   from public.stops s
   join public.feeds f on f.gtfs_feed_key = s.gtfs_feed_key
   left join public.transit_stop_modes m on m.gtfs_feed_key = s.gtfs_feed_key and m.root_id = s.id
@@ -1958,8 +1963,8 @@ BEGIN
     ('place', 'public.gazetteer_places with a location (OSM is excluded by that table''s own constraint). published_at: no source.'),
     ('place_alias', 'The name and the English name of each place; search_fold is contract_search_fold() of the label.'),
     ('road', 'public.autobahn_roads (Autobahn GmbH API). geometry, length_km and states: public.contract_road_shape(), the BASt LCL chains in the platform''s road order, their own length and the Länder of the named junctions; source_refs credits bast_lcl when a line is there.'),
-    ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). chainage_km: no source.'),
-    ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows.'),
+    ('junction', 'BASt TMC junction points (public.tmc_locations, class P1) of the A-roads, source bast_lcl. state_code: derived, the Land of the nearest BKG municipality point (bkg_gvisys). placement_source_ref: bkg_gvisys where a Land is derived, the family the platform credits for it. chainage_km: no source.'),
+    ('traffic_event', 'The current Autobahn GmbH events (newest sweep per road and kind) and the DATEX II road events we did not retract, with the publisher''s confidentiality. lanes, length and direction: no source; is_blocked, traffic_type, delay_s only on Autobahn rows. state_code: the Land of the nearest BKG municipality point (contract_junction_land); placement_source_ref: bkg_gvisys where it is derived, the family the platform credits for a Land placement.'),
     ('traffic_event_observation', 'Every Autobahn tick and every DATEX II tick of an event we did not retract. version_no: Autobahn ticks have none (NULL).'),
     ('fuel_station', 'public.fuel_stations we did not retract. open_state_at: no source.'),
     ('fuel_product', 'public.fuel_products.'),
@@ -1970,7 +1975,7 @@ BEGIN
     ('parking_facility', 'The four parking families (p:, bysa:, odbl:, sid:) we did not retract; SID facilities carry terms_gate sid-terms-1 (a per-request acceptance, contract.terms). direction: no source.'),
     ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility; SID ticks carry terms_gate sid-terms-1 whether or not their site is loaded.'),
     ('terms', 'The terms a gated row''s terms_gate names (public.source_terms, 0309): ViaFrei''s terms of use, section 2, per language, verbatim from the site; the German text binds.'),
-    ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes; search_fold is contract_search_fold(name). station_category, eva_no: the DB station (db_stations, StaDa first) whose IFOPT is the stop''s id, else NULL. municipality_name: that station''s city, else the nearest BKG municipality point. ifopt: the DB station''s, else the stop''s own DHID. withdrawn_at: no source.'),
+    ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes; search_fold is contract_search_fold(name). station_category, eva_no: the DB station (db_stations, StaDa first) whose IFOPT is the stop''s id, else NULL. municipality_name: that station''s city, else the nearest BKG municipality point. ifopt: the DB station''s, else the stop''s own DHID. placement_source_ref: bkg_gvisys where region_code names a Kreis, the family the platform credits when it names a stop''s town and Land. withdrawn_at: no source.'),
     ('stop_point', 'Every boarding stop of the static GTFS; name is the stop''s own, which a departure board shows for a trip with no headsign (its last stop''s).'),
     ('transit_line', 'public.routes; transport_mode as transit_stop_modes types it.'),
     ('journey', 'A trip on each of its service dates. extra: the static timetable has no extra trips (false).'),

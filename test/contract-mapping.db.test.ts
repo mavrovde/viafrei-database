@@ -267,11 +267,11 @@ describe("reference views", () => {
         { road_ref: "A96", length_km: null, states: null },
         { road_ref: "A97", length_km: km, states: ["08", "07", "09"] },
       ]);
-      expect((await c.query("select junction_id, state_code from contract.junction where junction_id in ('58:1:30', '58:1:6', '58:1:11', '58:1:50') order by 1")).rows).toEqual([
-        { junction_id: "58:1:11", state_code: "09" },
-        { junction_id: "58:1:30", state_code: "08" },
-        { junction_id: "58:1:50", state_code: null },
-        { junction_id: "58:1:6", state_code: "07" },
+      expect((await c.query("select junction_id, state_code, placement_source_ref from contract.junction where junction_id in ('58:1:30', '58:1:6', '58:1:11', '58:1:50') order by 1")).rows).toEqual([
+        { junction_id: "58:1:11", state_code: "09", placement_source_ref: "bkg_gvisys" },
+        { junction_id: "58:1:30", state_code: "08", placement_source_ref: "bkg_gvisys" },
+        { junction_id: "58:1:50", state_code: null, placement_source_ref: null },
+        { junction_id: "58:1:6", state_code: "07", placement_source_ref: "bkg_gvisys" },
       ]);
     } finally {
       await c.query("rollback");
@@ -518,9 +518,23 @@ describe("0312 additions (owner decisions 2026-11-16)", () => {
     expect(w).toEqual([{ website: "https://example.org/offer/1" }]);
   });
 
-  it("junction state_code: the Land of the nearest BKG municipality", async () => {
-    const r = await read<{ junction_id: string; state_code: string | null }>("select junction_id, state_code from contract.junction order by 1");
-    expect(r).toEqual([{ junction_id: "58:1:1000", state_code: "08" }]);
+  it("junction state_code: the Land of the nearest BKG municipality, placed by bkg_gvisys", async () => {
+    const r = await read<{ junction_id: string; state_code: string | null; placement_source_ref: string | null }>(
+      "select junction_id, state_code, placement_source_ref from contract.junction order by 1",
+    );
+    expect(r).toEqual([{ junction_id: "58:1:1000", state_code: "08", placement_source_ref: "bkg_gvisys" }]);
+  });
+
+  it("placement_source_ref: a traffic event or stop placed in a Land or Kreis names bkg_gvisys, an unplaced one null", async () => {
+    for (const [view, code] of [["traffic_event", "state_code"], ["stop_place", "region_code"]] as const) {
+      const r = await read<{ placed: number; wrong: number }>(
+        `select count(*) filter (where ${code} is not null)::int as placed,
+                count(*) filter (where placement_source_ref is distinct from case when ${code} is not null then 'bkg_gvisys' end)::int as wrong
+           from contract.${view}`,
+      );
+      expect(r[0]?.wrong).toBe(0);
+      expect(r[0]?.placed).toBeGreaterThan(0);
+    }
   });
 
   it("traffic_event: the newest sweep per road and kind is kept by the insert; a newer sweep replaces the last, a late older tick does not, and kinds that are no traffic event stay out", async () => {
