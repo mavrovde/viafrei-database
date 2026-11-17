@@ -482,7 +482,7 @@ BEGIN
   PERFORM vf_test.ensure_feed(k, NEW.source_ref);
   SELECT name, geom INTO p FROM public.stops WHERE gtfs_feed_key = k AND id = parent;
   INSERT INTO public.stops (gtfs_feed_key, id, name, geom, location_type, parent_id, platform_code)
-  VALUES (k, vf_test.after_colon(NEW.stop_point_id), coalesce(p.name, 'Halt'), coalesce(p.geom, vf_test.point(NULL)), 0, parent, NEW.platform_label);
+  VALUES (k, vf_test.after_colon(NEW.stop_point_id), coalesce(NEW.name, p.name, 'Halt'), coalesce(p.geom, vf_test.point(NULL)), 0, parent, NEW.platform_label);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;

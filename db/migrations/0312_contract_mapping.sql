@@ -911,7 +911,8 @@ select s.gtfs_feed_key || ':' || s.id                         as stop_point_id,
        nullif(btrim(s.platform_code), '')                     as platform_label,
        f.source_feed                                          as source_ref,
        'open'::text                                           as display_class,
-       'public'::text                                         as audience
+       'public'::text                                         as audience,
+       nullif(btrim(s.name), '')                              as name
   from public.stops s
   join public.feeds f on f.gtfs_feed_key = s.gtfs_feed_key
  where s.deleted_at is null and coalesce(s.location_type, 0) = 0;
@@ -1316,7 +1317,7 @@ BEGIN
     ('occupancy_observation', 'Every tick of parking_occupancy, _odbl and _sid, keyed like parking_facility; SID ticks carry terms_gate sid-terms-1 whether or not their site is loaded.'),
     ('terms', 'The terms a gated row''s terms_gate names (public.source_terms, 0309): ViaFrei''s terms of use, section 2, per language, verbatim from the site; the German text binds.'),
     ('stop_place', 'Stations and parentless stops of the static GTFS; modes from transit_stop_modes; search_fold is contract_search_fold(name). station_category, eva_no: the DB station (db_stations, StaDa first) whose IFOPT is the stop''s id, else NULL. municipality_name: that station''s city, else the nearest BKG municipality point. ifopt: the DB station''s, else the stop''s own DHID. withdrawn_at: no source.'),
-    ('stop_point', 'Every boarding stop of the static GTFS.'),
+    ('stop_point', 'Every boarding stop of the static GTFS; name is the stop''s own, which a departure board shows for a trip with no headsign (its last stop''s).'),
     ('transit_line', 'public.routes; transport_mode as transit_stop_modes types it.'),
     ('journey', 'A trip on each of its service dates. extra: the static timetable has no extra trips (false).'),
     ('scheduled_call', 'public.stop_times on each service date of its trip, in absolute time.'),
