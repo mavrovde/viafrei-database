@@ -60,7 +60,7 @@
 -- contract.hydrogen_station, contract.speed_camera, contract.sharing_station,
 -- contract.sharing_station_status, contract.sharing_vehicle, contract.poi,
 -- contract.address, contract.service_alert, contract.transit_punctuality,
--- contract.street_bay,
+-- contract.street_bay, contract.low_emission_zone, contract.lorry_rule,
 -- functions public.contract_metres(float8, float8, float8, float8), public.contract_junction_land(geography),
 -- public.contract_road_shape(text), public.contract_transport_mode(integer),
 -- public.contract_stop_place_of(text), public.contract_search_fold(text),
@@ -803,7 +803,8 @@ select b.event_id, b.event_kind, b.severity, b.road_ref, b.road_class, b.directi
             else coalesce(k.display_class, 'open') end                      as display_class,
        coalesce(k.audience, 'public')                                       as audience,
        b.confidentiality                                                    as confidentiality,
-       k.origin_restriction                                                 as origin_restriction
+       k.origin_restriction                                                 as origin_restriction,
+       public.contract_junction_land(b.location::geography)                 as state_code
   from b
   left join lateral (select k.* from public.contract_source_rules k where b.source_ref ~ k.pattern order by k.priority limit 1) k on true
  where not coalesce(k.excluded, false);
@@ -1738,6 +1739,102 @@ select b.bay_id                                          as bay_id,
  where b.closed_at is null and b.geom is not null and not coalesce(k.excluded, false);
 grant select on contract.street_bay to api_reader;
 
+-- The low-emission-zone rows of public.lez_zones_live (the one relation
+-- get_driving_rules, describe_location and the place card read): a zone, a
+-- road it does not apply to (exempt_road) or an area released at its edge
+-- (transfer). geometry_m is the stored EPSG:25832 copy the platform measures
+-- reach and distance on. checked_at, cadence_s and paused are the feed's
+-- public.feed_checks row, so a reader applies the platform's freshness gate
+-- (three cadences, 30 days when none is stated) at its own clock.
+-- same_zone_keys: the other publishers' zone rows that share at least half of
+-- the smaller one's area (public.lez_zone_overlaps, LEZ_SAME_ZONE_SHARE), as
+-- <source_ref>/<zone_id>.
+create view contract.low_emission_zone as
+select z.source_feed || '/' || z.zone_id                    as zone_key,
+       z.zone_id                                            as zone_id,
+       z.role                                               as zone_role,
+       z.name                                               as name,
+       z.place_name                                         as city,
+       z.source_publisher                                   as publisher_name,
+       z.geom                                               as geometry,
+       z.geom_m                                             as geometry_m,
+       coalesce((select array_agg(x.other_feed || '/' || x.other_zone_id order by x.other_feed, x.other_zone_id)
+                   from public.lez_zone_overlaps x
+                  where x.source_feed = z.source_feed and x.zone_id = z.zone_id
+                    and x.shared_area >= 0.5 * x.smaller_area), '{}'::text[]) as same_zone_keys,
+       c.checked_at                                         as checked_at,
+       c.cadence_s                                          as cadence_s,
+       coalesce(c.paused, false)                            as paused,
+       z.provider_updated_at                                as changed_at,
+       z.last_seen_at                                       as recorded_at,
+       z.source_feed                                        as source_ref,
+       coalesce(k.display_class, 'open')                    as display_class,
+       coalesce(k.audience, 'public')                       as audience
+  from public.lez_zones_live z
+  left join public.feed_checks c on c.feed_key = z.source_feed
+  left join lateral (select k.* from public.contract_source_rules k where z.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where not coalesce(k.excluded, false);
+grant select on contract.low_emission_zone to api_reader;
+
+-- The lorry rows the platform's lorry answer reads (analysis/lorry-routes):
+-- the long-lorry positive network (lorry_long_network_live, rule_layer
+-- long_lorry) and the restrictions, priority routes and zones of SEVAS (NRW),
+-- ivm (Frankfurt RheinMain), VMZ Bremen and the cities' own files
+-- (lorry_sevas_live, lorry_ivm_live, lorry_hb_live, lorry_city_live).
+-- rule_id is "<relation>:<id>"; value and unit as the publisher states them,
+-- published_text its own words where it gives them (Bremen: never rewritten
+-- as a number).
+create view contract.lorry_rule as
+with r as (
+  select 'long:' || l.id as rule_id, l.layer, null::text as kind, null::text as sign, null::numeric as value, null::text as unit,
+         null::text as published_text, l.road, null::text as street, null::text as municipality, l.direction,
+         '{}'::text[] as exceptions, null::text as times, null::text as days, null::text as category,
+         l.network_state, l.version_date, l.geom, l.first_seen_at, l.source_feed
+    from public.lorry_long_network_live l
+  union all
+  select 'sevas:' || v.id, v.layer, v.kind, v.sign, v.value, v.unit, null, null, v.street, v.municipality, null,
+         v.exceptions, v.times, v.days, null, v.network_state, v.version_date, v.geom, v.first_seen_at, v.source_feed
+    from public.lorry_sevas_live v
+  union all
+  select 'ivm:' || v.id, v.layer, v.kind, v.sign, v.value, v.unit, null, null, null, null, null,
+         v.exceptions, v.times, v.days, v.category, null, v.version_date, v.geom, v.first_seen_at, v.source_feed
+    from public.lorry_ivm_live v
+  union all
+  select 'hb:' || v.id, v.layer, v.kind, v.sign, v.value, v.unit, v.published_text, null, null, null, null,
+         v.exceptions, v.times, v.days, null, null, v.version_date, v.geom, v.first_seen_at, v.source_feed
+    from public.lorry_hb_live v
+  union all
+  select 'city:' || v.id, v.layer, v.kind, v.sign, v.value, v.unit, v.published_text, v.road, v.street, null, v.direction,
+         v.exceptions, v.times, v.days, v.category, null, v.version_date, v.geom, v.first_seen_at, v.source_feed
+    from public.lorry_city_live v
+)
+select r.rule_id                                   as rule_id,
+       r.layer                                     as rule_layer,
+       r.kind                                      as restriction_kind,
+       r.sign                                      as sign,
+       r.value::numeric                            as value,
+       r.unit                                      as unit,
+       r.published_text                            as published_text,
+       r.road                                      as road_ref,
+       r.street                                    as street,
+       r.municipality                              as municipality,
+       r.direction                                 as direction,
+       r.exceptions                                as exceptions,
+       r.times                                     as times,
+       r.days                                      as days,
+       r.category                                  as category,
+       r.network_state                             as network_state,
+       r.version_date                              as version_date,
+       r.geom::geometry                            as geometry,
+       r.first_seen_at                             as recorded_at,
+       r.source_feed                               as source_ref,
+       coalesce(k.display_class, 'open')           as display_class,
+       coalesce(k.audience, 'public')              as audience
+  from r
+  left join lateral (select k.* from public.contract_source_rules k where r.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where not coalesce(k.excluded, false);
+grant select on contract.lorry_rule to api_reader;
+
 -- ------------------------------------------------------------- comments
 
 DO $$
@@ -1754,6 +1851,8 @@ BEGIN
     ('service_alert', 'public.delfi_service_alerts we did not close; a restricted alert is withheld.'),
     ('transit_punctuality', 'public.transit_punctuality_area_live: the last half hour of Trip Updates per Land, Kreis, city and Germany, computed at read time, an area with no trip seen left out; region-wide totals only.'),
     ('street_bay', 'public.street_bays we did not close, with the newest public.street_bay_state.'),
+    ('lorry_rule', 'The long-lorry network and the lorry restrictions, priority routes and zones of public.lorry_*_live, one row per published feature.'),
+    ('low_emission_zone', 'public.lez_zones_live with its feed''s public.feed_checks row and the same-zone rows of public.lez_zone_overlaps.'),
     ('publisher', 'One row per source of contract.source (public.contract_sources): publisher_id is the source key, display_name the feed title, or for a register-only source its attribution line. website: the page the register names for the source, else the catalogue''s offer page.'),
     ('licence', 'One row per licence label of a published contract source. licence_url: public.licence_texts (0309), else the canonical URL of a CC, ODbL, Datenlizenz Deutschland or GeoNutzV label, else the one source page that carries the label, else the register''s source page; category, share_alike and attribution_required are read off the label.'),
     ('source', 'One row per source of public.contract_sources (feeds, ingestor sources, the register''s static sources), with the envelope of public.contract_source_rules and the domain of public.contract_source_domains. Attribution, changes_statement, use_classes (empty = no use permitted: an unregistered source), review_signed_on and register_version from public.source_register (0309). stale_after_s is 3 x cadence (the catalogue''s, else control.data_status); a source with no cadence is never stale (owner decision 2026-11-16): freshness_target_s and stale_after_s are NULL and the caller shows its as-of time alone. share_alike_offer_url: the Impressum, where the share-alike offer is redeemed, on a share-alike source. A source whose licence was never read is not published.'),

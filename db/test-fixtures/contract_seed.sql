@@ -853,6 +853,41 @@ BEGIN
   RETURN NEW;
 END $$;
 
+-- zone_key is "<feed>/<zone id>"; the feed's check is its source_freshness row.
+CREATE OR REPLACE FUNCTION vf_test.seed_low_emission_zone() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE feed text := coalesce(NEW.source_ref, split_part(NEW.zone_key, '/', 1));
+BEGIN
+  INSERT INTO public.lez_zones (source_feed, source_publisher, zone_id, role, name, props, geom, content_hash, first_seen_at, last_seen_at,
+                                provider_updated_at, place_name)
+  VALUES (feed, coalesce(NEW.publisher_name, 'Test'), coalesce(NEW.zone_id, substr(NEW.zone_key, length(feed) + 2)), coalesce(NEW.zone_role, 'zone'),
+          NEW.name, '{}', NEW.geometry, md5(NEW.zone_key), coalesce(NEW.recorded_at, now()), coalesce(NEW.recorded_at, now()), NEW.changed_at, NEW.city);
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- rule_id is "long:<n>" (the long-lorry network) or "city:<n>" (a city's
+-- restriction or priority route); the id itself is the table's own.
+CREATE OR REPLACE FUNCTION vf_test.seed_lorry_rule() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE n bigint;
+BEGIN
+  IF NEW.rule_id LIKE 'long:%' THEN
+    INSERT INTO public.lorry_long_network (source_feed, feature_key, layer, road, road_raw, direction, network_state, version_date, geom, first_seen_at, source_publisher)
+    VALUES (coalesce(NEW.source_ref, 'lorry_bast_langlkw'), NEW.rule_id, 'long_lorry', NEW.road_ref, NEW.road_ref, NEW.direction, NEW.network_state,
+            NEW.version_date, NEW.geometry::geography, coalesce(NEW.recorded_at, now()), 'Test')
+    RETURNING id INTO n;
+  ELSE
+    INSERT INTO public.lorry_city (source_feed, feature_key, layer, road, road_raw, street, kind, sign, value, unit, exceptions, times, days, category,
+                                   version_date, geom, first_seen_at, source_publisher, published_text, direction)
+    VALUES (coalesce(NEW.source_ref, 'lorry_koeln_beschraenkungen'), NEW.rule_id, coalesce(NEW.rule_layer, 'restriction'), NEW.road_ref, NEW.road_ref,
+            NEW.street, NEW.restriction_kind, NEW.sign, NEW.value, NEW.unit, coalesce(NEW.exceptions, '{}'), NEW.times, NEW.days, NEW.category,
+            NEW.version_date, NEW.geometry::geography, coalesce(NEW.recorded_at, now()), 'Test', NEW.published_text, NEW.direction)
+    RETURNING id INTO n;
+  END IF;
+  NEW.rule_id := split_part(NEW.rule_id, ':', 1) || ':' || n;
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
 -- ------------------------------------------------------------ the triggers
 
 DO $$
