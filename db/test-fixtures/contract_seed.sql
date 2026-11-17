@@ -287,7 +287,7 @@ BEGIN
   OVERRIDING SYSTEM VALUE
   VALUES (NEW.place_id::bigint,
           CASE NEW.place_kind WHEN 'municipality' THEN 'city' WHEN 'district' THEN 'district' WHEN 'state' THEN 'admin'
-                              WHEN 'station_area' THEN 'station' WHEN 'locality' THEN 'island' ELSE 'junction' END,
+                              WHEN 'station_area' THEN 'station' WHEN 'locality' THEN 'island' WHEN 'motorway' THEN 'motorway' ELSE 'junction' END,
           NEW.name, vf_test.admin_core(NEW.name), NEW.official_key, coalesce(NEW.prominence, 0), vf_test.point(NEW.location),
           coalesce(NEW.source_ref, 'geonames'), coalesce(NEW.origin_key, NEW.place_id), coalesce(NEW.recorded_at, now()),
           coalesce(NEW.changed_at, now()), NEW.withdrawn_at);

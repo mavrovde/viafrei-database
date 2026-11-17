@@ -326,6 +326,7 @@ select g.id::text                                          as place_id,
          when 'city' then 'municipality' when 'district' then 'district'
          when 'admin' then 'state' when 'station' then 'station_area'
          when 'stop' then 'station_area' when 'island' then 'locality'
+         when 'motorway' then 'motorway' when 'junction' then 'junction'
          else 'other'
        end                                                 as place_kind,
        g.name                                              as name,

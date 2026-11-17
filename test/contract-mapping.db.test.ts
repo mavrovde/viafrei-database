@@ -32,6 +32,7 @@ const SEED = [
   `insert into public.gazetteer_places (id, kind, name, name_norm, name_en, admin_code, rank, geom, source_id, external_id) overriding system value values
      (1, 'city', 'Stuttgart', 'stuttgart', 'Stuttgart City', '08111000', 600000, ${PT(9.18, 48.78)}, 'geonames', '2825297')`,
   `insert into public.gazetteer_places (id, kind, name, name_norm, road, source_id, external_id) overriding system value values (2, 'motorway', 'A8', 'a8', 'A8', 'autobahn', 'A8')`,
+  `insert into public.gazetteer_places (id, kind, name, name_norm, road, geom, source_id, external_id) overriding system value values (5, 'junction', 'AS Stuttgart-Degerloch', 'stuttgart-degerloch', 'A8', ${PT(9.17, 48.73)}, 'autobahn', 'A8-52')`,
   `insert into public.gazetteer_places (id, kind, name, name_norm, admin_code, geom, source_id, external_id) overriding system value values
      (3, 'city', 'Leinfelden-Echterdingen', 'leinfelden-echterdingen', '08116078', ${PT(9.16, 48.7)}, 'bkg_gvisys', '08116078'),
      (4, 'city', 'Neu-Ulm', 'neu-ulm', '09775139', ${PT(10.0, 48.39)}, 'bkg_gvisys', '09775139')`,
@@ -183,9 +184,10 @@ describe("reference views", () => {
     ]);
   });
 
-  it("place and place_alias: a located gazetteer row, its Kreis, rank and names; a row with no location is not a place", async () => {
-    expect(await read("select place_id, place_kind, region_code, official_key, prominence, source_ref, origin_key, source_refs, st_astext(location) as at from contract.place where source_ref <> 'bkg_gvisys'")).toEqual([
+  it("place and place_alias: a located gazetteer row, its Kreis, rank and names; a junction keeps its kind; a row with no location is not a place", async () => {
+    expect(await read("select place_id, place_kind, region_code, official_key, prominence, source_ref, origin_key, source_refs, st_astext(location) as at from contract.place where source_ref <> 'bkg_gvisys' order by place_id::int")).toEqual([
       { place_id: "1", place_kind: "municipality", region_code: "08111", official_key: "08111000", prominence: 600000, source_ref: "geonames", origin_key: "2825297", source_refs: ["geonames"], at: "POINT(9.18 48.78)" },
+      { place_id: "5", place_kind: "junction", region_code: null, official_key: null, prominence: 0, source_ref: "autobahn", origin_key: "A8-52", source_refs: ["autobahn"], at: "POINT(9.17 48.73)" },
     ]);
     expect(await read("select label, lang, name_kind, search_fold from contract.place_alias where place_id = '1' order by 1")).toEqual([
       { label: "Stuttgart", lang: null, name_kind: "name", search_fold: "stuttgart" },
