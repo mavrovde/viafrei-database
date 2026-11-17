@@ -428,6 +428,38 @@ describe("transit", () => {
     ]);
   });
 
+  it("scheduled_call and departure on the two clock-change Sundays: GTFS times count from noon minus twelve hours, not from midnight", async () => {
+    // On 2026-03-29 and 2026-10-25 Berlin midnight and noon lie on different UTC offsets:
+    // counted from midnight, 08:00 would read 09:00 in March and 07:00 in October.
+    const c = await db.pool.connect();
+    try {
+      await c.query("begin");
+      await c.query("insert into public.gtfs_service_dates (service_date, gtfs_feed_key, service_id) values ('2026-03-29', 1, 'svc1'), ('2026-10-25', 1, 'svc1')");
+      await c.query("set local role api_reader");
+      const times = async (view: string): Promise<{ day: string; call_order: number; arr: string; dep: string }[]> =>
+        (
+          await c.query<{ day: string; call_order: number; arr: string; dep: string }>(
+            `select right(journey_id, 8) as day, call_order,
+                    to_char(planned_arrival_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI') as arr,
+                    to_char(planned_departure_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI') as dep
+               from contract.${view}
+              where journey_id in ('1:t1:20260329', '1:t1:20261025') order by 1, 2`,
+          )
+        ).rows;
+      const want = [
+        { day: "20260329", call_order: 1, arr: "2026-03-29 08:00", dep: "2026-03-29 08:01" },
+        { day: "20260329", call_order: 2, arr: "2026-03-30 01:10", dep: "2026-03-30 01:10" },
+        { day: "20261025", call_order: 1, arr: "2026-10-25 08:00", dep: "2026-10-25 08:01" },
+        { day: "20261025", call_order: 2, arr: "2026-10-26 01:10", dep: "2026-10-26 01:10" },
+      ];
+      expect(await times("scheduled_call")).toEqual(want);
+      expect(await times("departure")).toEqual(want);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
   it("call_observation: the planned call plus the delay, CC BY-SA source", async () => {
     expect(
       await read(
