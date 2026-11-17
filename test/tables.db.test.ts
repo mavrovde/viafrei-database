@@ -146,7 +146,7 @@ describe("every table, catalogue and table both ways", () => {
   });
 });
 
-// 238 tables: 1165 NOT NULL columns without a default, 223 primary keys, 63 unique constraints, 44 foreign keys.
+// 238 tables: 1166 NOT NULL columns without a default, 223 primary keys, 63 unique constraints, 44 foreign keys.
 describe("every table refuses a null, a duplicate key and a dangling reference by name", () => {
   it("every table of schema access refuses each null, duplicate key and dangling reference by name", async () => {
     const r = await unrefused("access");
@@ -175,7 +175,7 @@ describe("every table refuses a null, a duplicate key and a dangling reference b
   it("every table of schema live refuses each null, duplicate key and dangling reference by name", async () => {
     const r = await unrefused("live");
     expect(r.wrong).toEqual([]);
-    expect(r.counts).toEqual({ tables: 2, notnull: 6, p: 2, u: 0, f: 2 });
+    expect(r.counts).toEqual({ tables: 2, notnull: 7, p: 2, u: 0, f: 2 });
   });
 
   it("every table of schema public refuses each null, duplicate key and dangling reference by name", { timeout: 900_000 }, async () => {

@@ -15,9 +15,12 @@
 -- Privacy (data-steward ruling 2026-11-17, owner-approved): a row holds only
 -- public ids, never a person's position. The API resolves the subject before
 -- the insert and stores only its canonical form; per source a check pins it:
--- fuel-prices-de {"at": "ags:<8 digits>" | "anchor:<id>"}, train-board-de
--- {"eva": "<7 digits>"}, the key equal to that id. Retention: 30 days after
--- created_at, in any state (live.prune_refresh_requests).
+-- fuel-prices-de {"at": "ags:<8 digits>" | "anchor:<BASt LCL code, 1-6
+-- digits>"}, train-board-de {"eva": "<7 digits>"}, the key equal to that id.
+-- Only these two sources are accepted: a new source is a migration with its
+-- own subject check. requested_by is our own door only (site, mcp), never
+-- null. Retention: 30 days after created_at, in any state
+-- (live.prune_refresh_requests).
 --
 -- Two notifications:
 --   live_refresh_requested  on insert, payload the source: the ingestor's wake;
@@ -60,7 +63,7 @@ comment on schema live is 'On-demand refreshes of live sources: the requests via
 
 create table live.refresh_requests (
     id           bigint generated always as identity primary key,
-    source       text not null check (source ~ '^[a-z][a-z0-9-]{0,63}$'),
+    source       text not null check (source in ('fuel-prices-de', 'train-board-de')),
     subject      jsonb not null check (jsonb_typeof(subject) = 'object' and length(subject::text) <= 2000),
     subject_key  text not null check (length(subject_key) between 1 and 200),
     state        text not null default 'pending' check (state in ('pending', 'refreshed', 'none_due', 'refused', 'failed', 'paused')),
@@ -69,12 +72,12 @@ create table live.refresh_requests (
     settled_at   timestamptz,
     reason       text check (length(reason) between 1 and 200),
     reused       boolean not null default false,
-    requested_by text check (requested_by ~ '^[a-z][a-z0-9_-]{0,31}$'),
+    requested_by text not null check (requested_by in ('site', 'mcp')),
     constraint refresh_requests_settled check ((state = 'pending') = (settled_at is null)),
     constraint refresh_requests_order check (claimed_at >= created_at and settled_at >= created_at),
     constraint refresh_requests_fuel_subject check (source <> 'fuel-prices-de' or (
         subject = jsonb_build_object('at', subject->>'at')
-        and subject->>'at' ~ '^(ags:[0-9]{8}|anchor:[A-Za-z0-9._-]{1,40})$'
+        and subject->>'at' ~ '^(ags:[0-9]{8}|anchor:[0-9]{1,6})$'
         and subject_key = subject->>'at')),
     constraint refresh_requests_train_board_subject check (source <> 'train-board-de' or (
         subject = jsonb_build_object('eva', subject->>'eva')

@@ -1244,7 +1244,7 @@ live.refresh_requests	column	claimed_at	timestamp with time zone
 live.refresh_requests	column	settled_at	timestamp with time zone
 live.refresh_requests	column	reason	text
 live.refresh_requests	column	reused	boolean not null default false
-live.refresh_requests	column	requested_by	text
+live.refresh_requests	column	requested_by	text not null
 live.refresh_requests	constraint	refresh_requests_pkey	p PRIMARY KEY (id)
 live.refresh_requests	index	refresh_requests_created	CREATE INDEX refresh_requests_created ON live.refresh_requests USING btree (created_at)
 live.refresh_requests	index	refresh_requests_open	CREATE UNIQUE INDEX refresh_requests_open ON live.refresh_requests USING btree (source, subject_key) WHERE (settled_at IS NULL)

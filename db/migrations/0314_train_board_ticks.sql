@@ -47,7 +47,7 @@ create table domains.train_board_departures (
   constraint train_board_departures_fetch_past check (observed_at <= recorded_at + interval '5 minutes')
 ) partition by range (observed_at);
 
-comment on table domains.train_board_departures is 'The DB Timetables departure boards the MCP server fetched live, one row per departure per fetch, appended by viafrei-api (api_access), partitioned by day on observed_at, with no default partition. CC BY 4.0, register key db_timetables.';
+comment on table domains.train_board_departures is 'The DB Timetables departure boards the MCP server fetched live, one row per departure per fetch, appended by the live ingestor (viafrei_live_ingestor, 0315), partitioned by day on observed_at, with no default partition. CC BY 4.0, register key db_timetables.';
 comment on column domains.train_board_departures.eva is 'The station''s EVA number the board was fetched for.';
 comment on column domains.train_board_departures.observed_at is 'When the MCP server fetched the board from DB Timetables; every departure of one fetch shares it.';
 comment on column domains.train_board_departures.planned_at is 'The planned departure time.';

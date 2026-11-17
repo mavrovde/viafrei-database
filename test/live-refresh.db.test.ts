@@ -108,25 +108,28 @@ describe.skipIf(url === undefined)("live.refresh_requests", () => {
 
   it("stores public ids only: a position, a cell, a station name, an extra field or a key other than the id is refused (privacy ruling R1, R2)", async () => {
     const ins = (source: string, subject: string, key: string): string =>
-      `insert into live.refresh_requests (source, subject, subject_key) values ('${source}', '${subject}', '${key}')`;
+      `insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('${source}', '${subject}', '${key}', 'site')`;
     const out = await t.planted(async (c) => [
       await tried(c, ins("fuel-prices-de", '{"at":"pt:48.137,11.575"}', "pt:48.137,11.575")),
       await tried(c, ins("fuel-prices-de", '{"at":"ags:09162000"}', "cell:48.135,11.5725:true")),
       await tried(c, ins("fuel-prices-de", '{"at":"ags:09162000","snap":true}', "ags:09162000")),
       await tried(c, ins("fuel-prices-de", '{"at":"anchor:48.1,11.5"}', "anchor:48.1,11.5")),
+      await tried(c, ins("fuel-prices-de", '{"at":"anchor:48.1371_11.5754"}', "anchor:48.1371_11.5754")),
+      await tried(c, ins("fuel-prices-de", '{"at":"anchor:48.1371-11.5754"}', "anchor:48.1371-11.5754")),
+      await tried(c, ins("fuel-prices", '{"at":"pt:48.137,11.575"}', "pt:48.137,11.575")),
       await tried(c, ins("train-board-de", '{"name":"München Hbf"}', "8000261")),
       await tried(c, ins("train-board-de", '{"eva":"80002x7"}', "80002x7")),
-      await tried(c, ins("fuel-prices-de", '{"at":"anchor:a7-12.n"}', "anchor:a7-12.n")),
+      await tried(c, ins("fuel-prices-de", '{"at":"anchor:12333"}', "anchor:12333")),
       await tried(c, ins("train-board-de", '{"eva":"8000261"}', "8000261")),
     ]);
-    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "ok", "ok"]);
+    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "ok", "ok"]);
   });
 
   it("viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none", async () => {
     const out = await t.planted(async (c) => {
       const id = (
         await c.query<{ id: string }>(
-          `insert into live.refresh_requests (source, subject, subject_key, created_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', clock_timestamp() - interval '10 minutes') returning id::text as id`,
+          `insert into live.refresh_requests (source, subject, subject_key, requested_by, created_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', clock_timestamp() - interval '10 minutes') returning id::text as id`,
         )
       ).rows[0]?.id;
       await c.query("set local role viafrei_live_ingestor");
@@ -186,16 +189,18 @@ describe.skipIf(url === undefined)("live.refresh_requests", () => {
 
   it("refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request", async () => {
     const out = await t.planted(async (c) => [
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, state) values ('x-y', '{}', 'k', 'refreshed')"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, settled_at) values ('x-y', '{}', 'k', now())"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, state, settled_at) values ('x-y', '{}', 'k', 'done', now())"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key) values ('x-y', '[]', 'k')"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key) values ('Fuel', '{}', 'k')"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('x-y', '{}', 'k', 'A visitor')"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, reason) values ('x-y', '{}', 'k', '')"),
-      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, claimed_at) values ('x-y', '{}', 'k', now() - interval '1 day')"),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by, state) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', 'refreshed')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by, settled_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', now())`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by, state, settled_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', 'done', now())`),
+      await tried(c, "insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('fuel-prices-de', '[]', 'ags:09162000', 'site')"),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('Fuel', '{"at":"ags:09162000"}', 'ags:09162000', 'site')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'A visitor')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'free')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by, reason) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', '')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key, requested_by, claimed_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', now() - interval '1 day')`),
+      await tried(c, `insert into live.refresh_requests (source, subject, subject_key) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000')`),
     ]);
-    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514"]);
+    expect(out).toEqual(["23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "23514", "23502"]);
   });
 
   it("notifies the ingestor on insert with the source, and the API's waiters on settle with the id", async () => {
@@ -224,12 +229,12 @@ describe.skipIf(url === undefined)("live.refresh_requests", () => {
       await keys(c);
       const old = (
         await c.query<{ id: string }>(
-          `insert into live.refresh_requests (source, subject, subject_key, created_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', now() - interval '40 days') returning id::text as id`,
+          `insert into live.refresh_requests (source, subject, subject_key, requested_by, created_at) values ('fuel-prices-de', '{"at":"ags:09162000"}', 'ags:09162000', 'site', now() - interval '40 days') returning id::text as id`,
         )
       ).rows[0]?.id;
       const young = (
         await c.query<{ id: string }>(
-          `insert into live.refresh_requests (source, subject, subject_key, created_at, state, settled_at) values ('fuel-prices-de', '{"at":"ags:05315000"}', 'ags:05315000', now() - interval '2 days', 'refreshed', now() - interval '2 days') returning id::text as id`,
+          `insert into live.refresh_requests (source, subject, subject_key, requested_by, created_at, state, settled_at) values ('fuel-prices-de', '{"at":"ags:05315000"}', 'ags:05315000', 'mcp', now() - interval '2 days', 'refreshed', now() - interval '2 days') returning id::text as id`,
         )
       ).rows[0]?.id;
       await c.query("insert into live.refresh_askers values ($1, 'Abc123XYZ0', now() - interval '40 days')", [old]);
