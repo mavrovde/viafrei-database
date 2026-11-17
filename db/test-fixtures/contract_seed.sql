@@ -508,6 +508,9 @@ BEGIN
     no := (800000000 + abs(hashtext(p_ifopt)) % 100000000)::text;
     INSERT INTO public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, ifopt, source_id)
     VALUES (no, p_name, 'seed', now(), now(), now(), p_ifopt, 'db_stada');
+    -- a station has a page (station_index_live): its slug, letters only after "seed-"
+    INSERT INTO public.station_slugs (slug, station_no, name)
+    VALUES ('seed-' || translate(substr(md5(p_ifopt), 1, 12), '0123456789', 'ghijklmnop'), no, p_name);
   END IF;
   RETURN no;
 END $$;
@@ -695,21 +698,27 @@ END $$;
 
 -- ------------------------------------------------------------------ weather
 
--- warning_id is "dwd:<id>"; the warn cell is 1 + the region (a Kreis) + 000.
+-- warning_id is "dwd:<id>"; the warn cell is warn_cell_id when given, else
+-- 1 + the region (a Kreis) + 000; identifier and event default to the id
+-- and the hazard's DWD name.
 CREATE OR REPLACE FUNCTION vf_test.seed_weather_warning() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.weather_warnings (id, source_feed, source_id, identifier, warncell_id, version, level, severity, event, headline,
-                                       official_sha256, area_sha256, valid_from, valid_to, published_at, raw, first_seen_at, closed_at, closed_reason)
+                                       official_sha256, area_sha256, valid_from, valid_to, published_at, raw, first_seen_at, closed_at, closed_reason,
+                                       area_desc, area, last_seen_at)
   OVERRIDING SYSTEM VALUE
-  VALUES (vf_test.after_colon(NEW.warning_id)::bigint, coalesce(NEW.source_ref, 'dwd_warnings'), 'dwd', NEW.warning_id,
-          '1' || coalesce(NEW.region_code, '00000') || '000', 1, NEW.warning_level, NEW.level_label,
-          CASE NEW.hazard WHEN 'thunderstorm' THEN 'GEWITTER' WHEN 'wind' THEN 'STURMBÖEN' WHEN 'flood' THEN 'HOCHWASSER'
+  VALUES (vf_test.after_colon(NEW.warning_id)::bigint, coalesce(NEW.source_ref, 'dwd_warnings'), 'dwd', coalesce(NEW.identifier, NEW.warning_id),
+          coalesce(NEW.warn_cell_id, '1' || coalesce(NEW.region_code, '00000') || '000'), 1, NEW.warning_level, NEW.level_label,
+          coalesce(NEW.event, CASE NEW.hazard WHEN 'thunderstorm' THEN 'GEWITTER' WHEN 'wind' THEN 'STURMBÖEN' WHEN 'flood' THEN 'HOCHWASSER'
                           WHEN 'snow' THEN 'SCHNEEFALL' WHEN 'ice' THEN 'GLÄTTE' WHEN 'rain' THEN 'STARKREGEN' WHEN 'fog' THEN 'NEBEL'
-                          WHEN 'heat' THEN 'HITZE' WHEN 'frost' THEN 'FROST' WHEN 'uv' THEN 'UV-INDEX' ELSE 'SONSTIGES' END,
-          NEW.headline, repeat('a', 64), repeat('a', 64), NEW.valid_from, NEW.valid_to, NEW.published_at, '{}',
+                          WHEN 'heat' THEN 'HITZE' WHEN 'frost' THEN 'FROST' WHEN 'uv' THEN 'UV-INDEX' ELSE 'SONSTIGES' END),
+          NEW.headline, repeat('a', 64), CASE WHEN NEW.area IS NULL THEN repeat('a', 64) ELSE md5(st_astext(NEW.area)) || md5(st_astext(NEW.area)) END,
+          NEW.valid_from, NEW.valid_to, NEW.published_at, '{}',
           coalesce(NEW.recorded_at, now()),
           coalesce(NEW.withdrawn_at, CASE WHEN NEW.message_status = 'cancelled' THEN now() END),
-          CASE WHEN NEW.message_status = 'cancelled' THEN 'withdrawn' WHEN NEW.withdrawn_at IS NOT NULL THEN 'superseded' END);
+          CASE WHEN NEW.message_status = 'cancelled' THEN 'withdrawn' WHEN NEW.withdrawn_at IS NOT NULL THEN 'superseded' END,
+          -- the appended cell columns: its name, its boundary (a polygon made a multipolygon), its newest load
+          NEW.area_name, st_multi(NEW.area)::geography, coalesce(NEW.seen_at, now()));
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
@@ -938,7 +947,7 @@ DECLARE v record;
 BEGIN
   FOR v IN SELECT c.relname FROM pg_class c WHERE c.relnamespace = 'contract'::regnamespace AND c.relkind = 'v' LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS vf_test_seed ON contract.%I', v.relname);
-    IF v.relname IN ('contract_info', 'transit_punctuality') THEN
+    IF v.relname IN ('contract_info', 'transit_punctuality', 'transit_trip_delay', 'station_disruption') THEN
       EXECUTE format('CREATE TRIGGER vf_test_seed INSTEAD OF INSERT ON contract.%I FOR EACH ROW EXECUTE FUNCTION vf_test.seed_refused()', v.relname);
     ELSIF to_regprocedure(format('vf_test.seed_%s()', v.relname)) IS NOT NULL THEN
       EXECUTE format('CREATE TRIGGER vf_test_seed INSTEAD OF INSERT ON contract.%I FOR EACH ROW EXECUTE FUNCTION vf_test.seed_%s()', v.relname, v.relname);

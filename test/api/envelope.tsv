@@ -121,6 +121,7 @@ contract.traffic_event	31	display_class	text
 contract.traffic_event	32	audience	text
 contract.traffic_event	33	confidentiality	text
 contract.traffic_event	34	origin_restriction	text
+contract.traffic_event	35	state_code	text
 contract.traffic_event_observation	4	source_ref	text
 contract.traffic_event_observation	5	display_class	text
 contract.traffic_event_observation	6	audience	text
@@ -129,3 +130,9 @@ contract.transit_line	5	display_class	text
 contract.transit_line	6	audience	text
 contract.weather_warning	16	display_class	text
 contract.weather_warning	17	audience	text
+contract.weather_warning	18	warn_cell_id	text
+contract.weather_warning	19	area_name	text
+contract.weather_warning	20	area	geometry(MultiPolygon,4326)
+contract.weather_warning	21	event	text
+contract.weather_warning	22	identifier	text
+contract.weather_warning	23	seen_at	timestamp with time zone

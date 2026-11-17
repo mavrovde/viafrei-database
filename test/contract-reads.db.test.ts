@@ -139,3 +139,100 @@ describe("the 0.3 read additions", () => {
     ]);
   });
 });
+
+/** Writes rows as the owner, then reads as api_reader, in one transaction that is rolled back. */
+async function readAfter<R extends pg.QueryResultRow>(rows: readonly string[], sql: string): Promise<R[]> {
+  const c = await db.pool.connect();
+  try {
+    await c.query("begin");
+    for (const r of rows) await c.query(r);
+    await c.query("set local role api_reader");
+    return (await c.query<R>(sql)).rows;
+  } finally {
+    await c.query("rollback");
+    c.release();
+  }
+}
+
+describe("the region watch's trips, the station board's departures and the warn cells", () => {
+  const tick = (trip: string, stop: string, delay: number | null, ago: string, rel = "SCHEDULED"): string =>
+    `insert into public.transit_delays (observed_at, feed_ts, trip_id, stop_id, stop_sequence, delay_s, schedule_relationship, source)
+       values (now() - interval '${ago}', now(), '${trip}', '${stop}', 1, ${delay === null ? "null" : String(delay)}, '${rel}', 'delfi_rt_tu')`;
+
+  it("transit_trip_delay: each trip's largest delay of the last half hour per stop key, of DELFI's Trip Updates only", async () => {
+    const rows = await readAfter<{ trip_ref: string; area_code: string; worst_delay_s: number }>(
+      [
+        tick("t1", "de:08111:6115:1:1", 120, "5 minutes"),
+        tick("t1", "de:08111:6115:1:1", 900, "2 minutes"),
+        tick("t1", "de:08116:100", 60, "1 minute"),
+        tick("t2", "de:08111:6115", 30, "40 minutes"),
+        tick("t3", "de:08111:6115", null, "1 minute", "SKIPPED"),
+        tick("t4", "000123", 600, "1 minute"),
+        tick("t5", "de:081110000001:1", 600, "1 minute"),
+        `insert into public.transit_delays (observed_at, feed_ts, trip_id, stop_id, stop_sequence, delay_s, schedule_relationship, source)
+           values (now(), now(), 't6', 'de:08111:1', 1, 700, 'SCHEDULED', 'vbb_rt')`,
+      ],
+      "select trip_ref, area_code, worst_delay_s from contract.transit_trip_delay order by 1, 2",
+    );
+    expect(rows).toEqual([
+      { trip_ref: "t1", area_code: "08111", worst_delay_s: 900 },
+      { trip_ref: "t1", area_code: "08116", worst_delay_s: 60 },
+    ]);
+  });
+
+  it("station_disruption: a station's departures of the next hour per minute, line and live feed, cancelled and late, through its DHID and the bridge", async () => {
+    const call = (ref: string, journey: string, line: string | null, feed: string, aimed: string, delay: number | null, cancelled = false, recorded = false): string =>
+      `insert into public.delfi_siri_et_calls_latest (stop_ref, service_day, journey_ref, visit, source_feed, observed_at, line, category, destination, platform, aimed_dep, expected_dep, delay_s, recorded, cancelled, journey_cancelled)
+         values ('${ref}', current_date, '${journey}', 1, '${feed}', now() - interval '1 minute', ${line === null ? "null" : `'${line}'`}, null, 'Ziel', null,
+                 date_trunc('minute', now()) + interval '${aimed}', date_trunc('minute', now()) + interval '${aimed}' + make_interval(secs => ${String(delay ?? 0)}),
+                 ${delay === null ? "null" : String(delay)}, ${String(recorded)}, ${String(cancelled)}, false)`;
+    const live = (feed: string, ago: string): string[] => [
+      `insert into public.feed_catalog (feed_key, provider, display_name, licence_id, cadence_s) values ('${feed}', 'delfi', '${feed}', 'cc-by-sa', 120) on conflict do nothing`,
+      `insert into control.feed_state (ledger, key, last_success_at, updated_at) values ('feed', '${feed}', now() - interval '${ago}', now())
+         on conflict (ledger, key) do update set last_success_at = excluded.last_success_at`,
+    ];
+    const rows = await readAfter<{ station_ifopt: string; line_key: string; source_ref: string; departures: number; cancelled: number; late: number; display_class: string }>(
+      [
+        `insert into public.db_stations (station_no, name, content_hash, first_seen_at, last_seen_at, updated_at, ifopt, source_id) values
+           ('8000096', 'Stuttgart Hbf', 'x', now(), now(), now(), 'de:08111:6115', 'db_stada'),
+           ('8000001', 'Ohne Seite', 'x', now(), now(), now(), 'de:08111:9', 'db_stada')`,
+        `insert into public.station_slugs (slug, station_no, name) values ('stuttgart-hbf', '8000096', 'Stuttgart Hbf')`,
+        `insert into public.delfi_siri_et_stop_pairs (eva, dhid, station_dhid, matches, first_seen_at, confirmed_at) values ('8000096', 'de:08111:6115:1:1', 'de:08111:6115', 1, now(), now())`,
+        ...live("delfi_siri_et_bw", "1 minute"),
+        ...live("delfi_siri_et_db", "1 minute"),
+        ...live("delfi_siri_et_old", "2 hours"),
+        // one journey through the DHID and the bridged EVA is one departure; a cancelled one and a late one at one minute
+        call("de:08111:6115", "j1", "S 1", "delfi_siri_et_bw", "10 minutes", 400),
+        call("8000096", "j1", "S 1", "delfi_siri_et_bw", "10 minutes", 400),
+        call("de:08111:6115", "j2", "S 1", "delfi_siri_et_bw", "10 minutes", null, true),
+        call("8000096", "x9", "s1", "delfi_siri_et_db", "10 minutes", null, true),
+        call("de:08111:6115", "j3", "S1", "delfi_siri_et_bw", "20 minutes", 60),
+        call("8000096", "x8", null, "delfi_siri_et_db", "30 minutes", 0),
+        // past the hour, recorded, of a dead feed, at a station with no page: not counted
+        call("de:08111:6115", "j4", "RE5", "delfi_siri_et_bw", "90 minutes", 900),
+        call("de:08111:6115", "j5", "RE5", "delfi_siri_et_bw", "15 minutes", 900, false, true),
+        call("de:08111:6115", "j6", "RE5", "delfi_siri_et_old", "15 minutes", 900),
+        call("de:08111:9", "j7", "RE5", "delfi_siri_et_bw", "15 minutes", 900),
+      ],
+      "select station_ifopt, line_key, source_ref, departures, cancelled, late, display_class from contract.station_disruption order by aimed_minute, line_key, source_ref",
+    );
+    expect(rows).toEqual([
+      { station_ifopt: "de:08111:6115", line_key: "s1", source_ref: "delfi_siri_et_bw", departures: 2, cancelled: 1, late: 1, display_class: "open" },
+      { station_ifopt: "de:08111:6115", line_key: "s1", source_ref: "delfi_siri_et_db", departures: 1, cancelled: 1, late: 0, display_class: "open" },
+      { station_ifopt: "de:08111:6115", line_key: "s1", source_ref: "delfi_siri_et_bw", departures: 1, cancelled: 0, late: 0, display_class: "open" },
+      { station_ifopt: "de:08111:6115", line_key: "x8", source_ref: "delfi_siri_et_db", departures: 1, cancelled: 0, late: 0, display_class: "open" },
+    ]);
+  });
+
+  it("weather_warning: the warn cell, its name and boundary, the DWD event and the message", async () => {
+    const rows = await readAfter<{ warn_cell_id: string; area_name: string; event: string; identifier: string; holds: boolean }>(
+      [
+        `insert into public.weather_warnings (id, source_feed, source_id, identifier, warncell_id, version, level, event, official_sha256, area_sha256, valid_from, raw, area_desc, area)
+           overriding system value values (77, 'dwd_warnings', 'dwd', 'msg-1', '808111000', 1, 2, 'STURMBÖEN', repeat('a', 64), repeat('b', 64), now(), '{}', 'Stadt Stuttgart',
+           st_multi(st_makeenvelope(9.0, 48.7, 9.3, 48.9, 4326))::geography)`,
+      ],
+      "select warn_cell_id, area_name, event, identifier, st_intersects(area, st_setsrid(st_makepoint(9.18, 48.78), 4326)) as holds from contract.weather_warning",
+    );
+    expect(rows).toEqual([{ warn_cell_id: "808111000", area_name: "Stadt Stuttgart", event: "STURMBÖEN", identifier: "msg-1", holds: true }]);
+  });
+});

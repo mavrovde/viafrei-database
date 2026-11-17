@@ -3,6 +3,7 @@
 # 0307 and 0308 must build exactly these (test/api-schemas.db.test.ts). A change here is a change of the API's contract.
 # contract.terms is new in 0312 (the SID terms text, owner 2026-11-16): the API's DDL adds it with contract 0.3.
 # contract.departure is new in 0312 (the live departure board, #29): the API's DDL adds it with contract 0.3.
+# contract.low_emission_zone, lorry_rule, transit_trip_delay and station_disruption are new in 0312 (#29): the API's DDL adds them with contract 0.3.
 access.api_key	1	key_id	text
 access.api_key	2	environment	text
 access.api_key	3	plan_name	text
@@ -193,6 +194,45 @@ contract.licence	3	licence_url	text
 contract.licence	4	licence_category	text
 contract.licence	5	share_alike	boolean
 contract.licence	6	attribution_required	boolean
+contract.lorry_rule	1	rule_id	text
+contract.lorry_rule	2	rule_layer	text
+contract.lorry_rule	3	restriction_kind	text
+contract.lorry_rule	4	sign	text
+contract.lorry_rule	5	value	numeric
+contract.lorry_rule	6	unit	text
+contract.lorry_rule	7	published_text	text
+contract.lorry_rule	8	road_ref	text
+contract.lorry_rule	9	street	text
+contract.lorry_rule	10	municipality	text
+contract.lorry_rule	11	direction	text
+contract.lorry_rule	12	exceptions	text[]
+contract.lorry_rule	13	times	text
+contract.lorry_rule	14	days	text
+contract.lorry_rule	15	category	text
+contract.lorry_rule	16	network_state	text
+contract.lorry_rule	17	version_date	date
+contract.lorry_rule	18	geometry	geometry
+contract.lorry_rule	19	recorded_at	timestamp with time zone
+contract.lorry_rule	20	source_ref	text
+contract.lorry_rule	21	display_class	text
+contract.lorry_rule	22	audience	text
+contract.low_emission_zone	1	zone_key	text
+contract.low_emission_zone	2	zone_id	text
+contract.low_emission_zone	3	zone_role	text
+contract.low_emission_zone	4	name	text
+contract.low_emission_zone	5	city	text
+contract.low_emission_zone	6	publisher_name	text
+contract.low_emission_zone	7	geometry	geometry(Geometry,4326)
+contract.low_emission_zone	8	geometry_m	geometry(Geometry,25832)
+contract.low_emission_zone	9	same_zone_keys	text[]
+contract.low_emission_zone	10	checked_at	timestamp with time zone
+contract.low_emission_zone	11	cadence_s	integer
+contract.low_emission_zone	12	paused	boolean
+contract.low_emission_zone	13	changed_at	timestamp with time zone
+contract.low_emission_zone	14	recorded_at	timestamp with time zone
+contract.low_emission_zone	15	source_ref	text
+contract.low_emission_zone	16	display_class	text
+contract.low_emission_zone	17	audience	text
 contract.message_coverage	1	state_code	text
 contract.message_coverage	2	source_ref	text
 contract.message_coverage	3	coverage_role	text
@@ -477,6 +517,23 @@ contract.transit_punctuality	10	observed_at	timestamp with time zone
 contract.transit_punctuality	11	source_ref	text
 contract.transit_punctuality	12	display_class	text
 contract.transit_punctuality	13	audience	text
+contract.transit_trip_delay	1	trip_ref	text
+contract.transit_trip_delay	2	area_code	text
+contract.transit_trip_delay	3	worst_delay_s	integer
+contract.transit_trip_delay	4	observed_at	timestamp with time zone
+contract.transit_trip_delay	5	source_ref	text
+contract.transit_trip_delay	6	display_class	text
+contract.transit_trip_delay	7	audience	text
+contract.station_disruption	1	station_ifopt	text
+contract.station_disruption	2	window_start	timestamp with time zone
+contract.station_disruption	3	aimed_minute	timestamp with time zone
+contract.station_disruption	4	line_key	text
+contract.station_disruption	5	departures	integer
+contract.station_disruption	6	cancelled	integer
+contract.station_disruption	7	late	integer
+contract.station_disruption	8	source_ref	text
+contract.station_disruption	9	display_class	text
+contract.station_disruption	10	audience	text
 contract.weather_warning	1	warning_id	text
 contract.weather_warning	2	hazard	text
 contract.weather_warning	3	warning_level	integer

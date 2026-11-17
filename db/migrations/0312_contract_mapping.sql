@@ -1362,6 +1362,13 @@ select 'fasta:' || f.equipment_no,
 -- DWD warnings, one row per warning and warn cell. A warn cell is 1 + the
 -- five-digit Kreis + 000, or 8 + the eight-digit municipality key: either
 -- way digits 2-6 are the Kreis, which is the region when we hold it.
+-- Appended for the platform's per-cell reads: warn_cell_id, area_name (the
+-- DWD's area description) and area (the cell's boundary) name the cell a
+-- weather watch is keyed on (watch_situation: the cell a place lies in,
+-- WARNCELL_AT_POINT, or the cell id or name given) and the Land a Land page
+-- counts a warning in (digits 2-3 of a 7 or 8 cell, STATE_WARNINGS_SQL);
+-- event is the DWD's own event name and identifier the message the cells
+-- share (a Land page counts notices by it); seen_at the cell's newest load.
 create or replace view contract.weather_warning as
 select 'dwd:' || w.id                                                 as warning_id,
        case
@@ -1391,7 +1398,13 @@ select 'dwd:' || w.id                                                 as warning
        w.first_seen_at                                                as recorded_at,
        w.closed_at                                                    as withdrawn_at,
        'open'::text                                                   as display_class,
-       'public'::text                                                 as audience
+       'public'::text                                                 as audience,
+       w.warncell_id                                                  as warn_cell_id,
+       w.area_desc                                                    as area_name,
+       w.area::geometry(MultiPolygon, 4326)                           as area,
+       w.event                                                        as event,
+       w.identifier                                                   as identifier,
+       w.last_seen_at                                                 as seen_at
   from public.weather_warnings w
  where w.deleted_at is null and w.valid_from is not null;
 
@@ -1710,6 +1723,90 @@ select p.level                                           as area_level,
  where p.trips_observed + p.trips_untimed + p.trips_skipped_stop > 0 and not coalesce(k.excluded, false);
 grant select on contract.transit_punctuality to api_reader;
 
+-- Each trip's largest DELFI Trip Updates delay of the last half hour per
+-- official key of the stops it was observed at (the stop's DHID key of 2, 3,
+-- 5 or 8 digits, as the platform's region watch places a stop,
+-- watchDhidAgsSql). A reader counts an area's trips (the rows whose key
+-- starts with the area's key, each trip once) and those more than its
+-- threshold late, as the region watch counts them at any delay_min; the
+-- region-wide totals are what the licence permits a reader to publish.
+create view contract.transit_trip_delay as
+select d.trip_id                                         as trip_ref,
+       split_part(d.stop_id, ':', 2)                     as area_code,
+       max(d.delay_s)::integer                           as worst_delay_s,
+       max(d.observed_at)                                as observed_at,
+       'delfi_rt_tu'::text                               as source_ref,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from public.transit_delays d
+  left join lateral (select k.* from public.contract_source_rules k where 'delfi_rt_tu' ~ k.pattern order by k.priority limit 1) k on true
+ where d.source = 'delfi_rt_tu' and d.delay_s is not null
+   and d.stop_id ~* '^de:[0-9]+(:|$)' and length(split_part(d.stop_id, ':', 2)) in (2, 3, 5, 8)
+   and d.observed_at >= now() - interval '30 minutes' and d.observed_at <= now()
+   and not coalesce(k.excluded, false)
+ group by d.trip_id, split_part(d.stop_id, ':', 2), k.display_class, k.audience;
+grant select on contract.transit_trip_delay to api_reader;
+
+-- The departures of the next hour at each station with a page, as the
+-- site's station board counts them (digest STATION_TOP_DISRUPTION_SQL, at
+-- now()): from every SIRI ET feed alive by its feed_checks row (three
+-- cadences, a paused feed keeps its data), the newest row of each call not
+-- yet recorded and observed in the last eight hours, AIMED in the next 60
+-- minutes, at the station's DHID or an EVA the EVA-DHID bridge pairs with
+-- it. One row per station, aimed minute, line (spaces and case ignored; a
+-- call without a line keys on its journey) and feed: that feed's departures,
+-- cancelled ones (the call or the journey) and late ones (5 minutes or
+-- more, not cancelled). Inside one feed a journey reached through two refs
+-- of one station is one departure. A reader counts a departure once across
+-- feeds as the board does: per station, minute and line the largest count
+-- any feed reports, the largest cancelled count, and as late what is left of
+-- the largest number affected. CC BY-SA (the delfi_siri_et boundary): the
+-- calls and the bridge only, the station ids read in the same statement.
+create view contract.station_disruption as
+with stations as materialized (
+  select distinct s.ifopt from public.station_index_live s where s.ifopt is not null
+), refs as materialized (
+  select s.ifopt as ref, s.ifopt as station_ifopt from stations s
+  union
+  select p.eva, p.station_dhid from public.delfi_siri_et_stop_pairs p join stations s on s.ifopt = p.station_dhid
+), calls as (
+  select distinct on (r.station_ifopt, c.source_feed, c.journey_ref, c.aimed_dep)
+         r.station_ifopt, date_trunc('minute', c.aimed_dep) as aimed_minute, c.source_feed,
+         coalesce(nullif(lower(replace(c.line, ' ', '')), ''), c.journey_ref) as line_key,
+         (c.cancelled or c.journey_cancelled) as cancelled, coalesce(c.delay_s, 0) >= 300 as late
+    from refs r
+    cross join lateral (
+      select x.aimed_dep, x.journey_ref, x.line, x.cancelled, x.journey_cancelled, x.delay_s, x.source_feed, x.observed_at
+        from public.delfi_siri_et_calls_latest x
+       where x.stop_ref = r.ref
+         and coalesce(x.expected_dep, x.aimed_dep) >= now() - interval '30 minutes'
+         and coalesce(x.expected_dep, x.aimed_dep) < now() + interval '3 hours'
+         and x.aimed_dep between now() and now() + interval '60 minutes'
+         and x.observed_at > now() - interval '8 hours' and x.observed_at <= now()
+         and not x.recorded
+         and exists (select 1 from public.feed_checks k
+                      where k.feed_key = x.source_feed and k.checked_at is not null
+                        and (k.paused or k.checked_at >= now() - 3 * make_interval(secs => coalesce(nullif(k.cadence_s, 0), 600))))
+       limit 500
+    ) c
+   order by r.station_ifopt, c.source_feed, c.journey_ref, c.aimed_dep, c.observed_at desc
+)
+select c.station_ifopt                                   as station_ifopt,
+       now()                                             as window_start,
+       c.aimed_minute                                    as aimed_minute,
+       c.line_key                                        as line_key,
+       count(*)::integer                                 as departures,
+       (count(*) filter (where c.cancelled))::integer    as cancelled,
+       (count(*) filter (where c.late and not c.cancelled))::integer as late,
+       c.source_feed                                     as source_ref,
+       coalesce(k.display_class, 'open')                 as display_class,
+       coalesce(k.audience, 'public')                    as audience
+  from calls c
+  left join lateral (select k.* from public.contract_source_rules k where c.source_feed ~ k.pattern order by k.priority limit 1) k on true
+ where not coalesce(k.excluded, false)
+ group by c.station_ifopt, c.aimed_minute, c.line_key, c.source_feed, k.display_class, k.audience;
+grant select on contract.station_disruption to api_reader;
+
 -- ----------------------------------------------------------- street bays
 
 -- The on-street bays (disabled-badge and charging bays) we did not close,
@@ -1881,7 +1978,9 @@ BEGIN
     ('departure', 'One row per scheduled call of the static GTFS with its line, mode and the live figure by the platform''s precedence (SIRI ET > GTFS-RT Trip Updates > timetable), the realtime platform and platform change, cancellation, delay in seconds and minutes; source_refs credits every feed that carried the call. The caller groups a station''s stops, keeps one row per train and drops departed rows.'),
     ('call_observation', 'DELFI GTFS-RT stop-time ticks (CC BY-SA), expected = planned + delay on the tick''s Berlin date.'),
     ('station_facility', 'Lifts and escalators of DB OpenStation and KVB with their state, and DB FaSta. stop_place_id: the DELFI stop of the equipment''s DHID (contract_stop_place_of), FaSta''s through its DB station''s IFOPT; NULL when the timetable holds no such stop.'),
-    ('weather_warning', 'DWD warnings per warn cell (German text). English warnings: no level, not mapped.'),
+    ('weather_warning', 'DWD warnings per warn cell (German text). English warnings: no level, not mapped. Appended: the warn cell, its name and boundary, the DWD event, the message identifier and the newest load.'),
+    ('transit_trip_delay', 'Per trip and stop key (the DHID''s AGS), the largest DELFI Trip Updates delay of the last half hour: the region watch''s count at any threshold.'),
+    ('station_disruption', 'Per station with a page, aimed minute, line and live SIRI ET feed: the departures of the next hour, cancelled and late (>= 300 s), as the site''s station board counts them before it folds the feeds.'),
     ('source_note', 'The condition and purpose notes of public.source_register_notes (0309), per source that names the register row. The MTS-K purpose note is German only and is published verbatim under lang de and en.'),
     ('rule_topic', 'public.driving_rule_topics (0310): title in German, title_en appended.'),
     ('rule_statement', 'public.driving_rule_facts (0310): body in German, legal_basis the official source''s name; appended the English text, the source URL and note, the to-verify note, the review date and the headline flag.'),

@@ -27,6 +27,8 @@ api_reader	relation	contract.hydrogen_station	SELECT
 api_reader	relation	contract.journey	SELECT
 api_reader	relation	contract.junction	SELECT
 api_reader	relation	contract.licence	SELECT
+api_reader	relation	contract.lorry_rule	SELECT
+api_reader	relation	contract.low_emission_zone	SELECT
 api_reader	relation	contract.message_coverage	SELECT
 api_reader	relation	contract.occupancy_observation	SELECT
 api_reader	relation	contract.parking_facility	SELECT
@@ -46,6 +48,7 @@ api_reader	relation	contract.source	SELECT
 api_reader	relation	contract.source_freshness	SELECT
 api_reader	relation	contract.source_note	SELECT
 api_reader	relation	contract.speed_camera	SELECT
+api_reader	relation	contract.station_disruption	SELECT
 api_reader	relation	contract.station_facility	SELECT
 api_reader	relation	contract.stop_place	SELECT
 api_reader	relation	contract.stop_point	SELECT
@@ -55,6 +58,7 @@ api_reader	relation	contract.traffic_event	SELECT
 api_reader	relation	contract.traffic_event_observation	SELECT
 api_reader	relation	contract.transit_line	SELECT
 api_reader	relation	contract.transit_punctuality	SELECT
+api_reader	relation	contract.transit_trip_delay	SELECT
 api_reader	relation	contract.weather_warning	SELECT
 api_reader	schema	contract	USAGE
 viafrei_digest	column	control.budgets.budget_key	SELECT

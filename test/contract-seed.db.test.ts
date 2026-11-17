@@ -52,8 +52,8 @@ afterAll(async () => {
 });
 
 describe("test-fixtures seed: the round trip", () => {
-  it("the sample seeds every contract relation but contract_info and transit_punctuality (both computed by the migrations)", async () => {
-    const r = await db.pool.query<{ v: string }>("select relname as v from pg_class where relnamespace = 'contract'::regnamespace and relkind = 'v' and relname not in ('contract_info', 'transit_punctuality') order by 1");
+  it("the sample seeds every contract relation but contract_info, transit_punctuality, transit_trip_delay and station_disruption (computed by the migrations)", async () => {
+    const r = await db.pool.query<{ v: string }>("select relname as v from pg_class where relnamespace = 'contract'::regnamespace and relkind = 'v' and relname not in ('contract_info', 'transit_punctuality', 'transit_trip_delay', 'station_disruption') order by 1");
     expect(RELATIONS).toEqual(r.rows.map((x) => x.v));
   });
 
