@@ -197,3 +197,27 @@ describe("test-fixtures seed: the refusals", () => {
     expect(await count()).toBe(before);
   });
 });
+
+describe("test-fixtures seed: names are folded as the platform's ingest folds them", () => {
+  // normalizeName (lower case, ß as ss, no diacritic, non-letters one space) and stripAdminWords, which the
+  // gazetteer and the Kreis map store as name_norm: a lower() fold kept "ü" and "ß", which no query fold produces.
+  it.each([
+    ["vf_test.name_fold('Köln-Ehrenfeld  Süd!')", "koln ehrenfeld sud"],
+    ["vf_test.name_fold('Großenhain')", "grossenhain"],
+    ["vf_test.admin_core('Seßnütal Kreis')", "sessnutal kreis"],
+    ["vf_test.admin_core('Fulda, Landkreis')", "fulda"],
+    ["vf_test.admin_core('Landkreis Fulda')", "fulda"],
+    ["vf_test.admin_core('Kreis')", "kreis"],
+  ])("%s is %s", async (expr, want) => {
+    const r = await db.pool.query<{ v: string }>(`select ${expr} as v`);
+    expect(r.rows[0]?.v).toBe(want);
+  });
+
+  it("a seeded region and place carry the folded name, not lower()", async () => {
+    const r = await db.pool.query<{ n: string }>(
+      `select count(*)::text as n from (select name, name_norm from public.ags_regions union all select name, name_norm from public.gazetteer_places) x
+        where name_norm <> vf_test.admin_core(name) and name_norm not like 'gemeinde %'`,
+    );
+    expect(r.rows[0]?.n).toBe("0");
+  });
+});

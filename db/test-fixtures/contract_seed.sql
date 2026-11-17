@@ -32,6 +32,39 @@ SET client_min_messages = warning;  -- a re-run's "already exists" notices are n
 CREATE SCHEMA IF NOT EXISTS vf_test;
 REVOKE ALL ON SCHEMA vf_test FROM PUBLIC;
 
+-- The platform's name folds, so a seeded row is searched as an ingested one is:
+-- vf_test.name_fold is the ingest's normalizeName (lower case, ß as ss, the
+-- diacritic dropped, every run of non-letters and non-digits one space), and
+-- vf_test.admin_core its stripAdminWords (a ", Landkreis" suffix and leading
+-- administrative words taken off), which the gazetteer and the Kreis map store
+-- as name_norm; an address's street and house number are folded as the
+-- address ingest folds them (normalizeStreet, normalizeHouseNumber). A plain lower() kept "ü" and "ß", which no query fold produces.
+CREATE OR REPLACE FUNCTION vf_test.name_fold(t text) RETURNS text LANGUAGE sql IMMUTABLE AS $f$
+  SELECT btrim(regexp_replace(
+           translate(replace(lower(t), 'ß', 'ss'),
+                     'àáâãäåāăąçćčĉèéêëēėęěìíîïīįñńňòóôõöøōśšşùúûüūůűýÿźżžłřğďť',
+                     'aaaaaaaaacccceeeeeeeeiiiiiinnnooooooosssuuuuuuuyyzzzlrgdt'),
+           '[^[:alnum:]]+', ' ', 'g'))
+$f$;
+
+CREATE OR REPLACE FUNCTION vf_test.admin_core(t text) RETURNS text LANGUAGE plpgsql IMMUTABLE AS $f$
+DECLARE
+  c int := length(t) - strpos(reverse(t), ',') + 1;
+  cand text := t;
+  w text[];
+  i int := 1;
+BEGIN
+  IF strpos(t, ',') > 1 AND vf_test.name_fold(substr(t, c + 1)) = ANY (ARRAY['landkreis','kreis','stadtkreis','kreisfreie stadt','stadt','gemeinde',
+       'verbandsgemeinde','samtgemeinde','markt','regierungsbezirk','bezirk','land','freistaat','bundesland']) THEN
+    cand := substr(t, 1, c - 1);
+  END IF;
+  w := regexp_split_to_array(vf_test.name_fold(cand), ' ');
+  WHILE i < coalesce(array_length(w, 1), 0) AND w[i] = ANY (ARRAY['landkreis','kreis','stadtkreis','regierungsbezirk','verbandsgemeinde','samtgemeinde','bundesland','freistaat']) LOOP
+    i := i + 1;
+  END LOOP;
+  RETURN coalesce(nullif(array_to_string(w[i:], ' '), ''), vf_test.name_fold(t));
+END $f$;
+
 CREATE TABLE IF NOT EXISTS vf_test.contract_seed_runs (
     run_id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     file_name text NOT NULL,
@@ -187,7 +220,7 @@ END $$;
 CREATE OR REPLACE FUNCTION vf_test.seed_admin_region() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.ags_regions (ags, level, name, name_norm, parent_ags, source_id)
-  VALUES (NEW.region_code, CASE NEW.region_level WHEN 'state' THEN 'land' ELSE 'kreis' END, NEW.name, lower(NEW.name),
+  VALUES (NEW.region_code, CASE NEW.region_level WHEN 'state' THEN 'land' ELSE 'kreis' END, NEW.name, vf_test.admin_core(NEW.name),
           NEW.parent_code, coalesce(NEW.source_ref, 'destatis_gv'))
   ON CONFLICT (ags) DO UPDATE SET level = excluded.level, name = excluded.name, name_norm = excluded.name_norm,
                                   parent_ags = excluded.parent_ags, source_id = excluded.source_id;
@@ -202,7 +235,7 @@ BEGIN
   VALUES (NEW.place_id::bigint,
           CASE NEW.place_kind WHEN 'municipality' THEN 'city' WHEN 'district' THEN 'district' WHEN 'state' THEN 'admin'
                               WHEN 'station_area' THEN 'station' WHEN 'locality' THEN 'island' ELSE 'junction' END,
-          NEW.name, lower(NEW.name), NEW.official_key, coalesce(NEW.prominence, 0), vf_test.point(NEW.location),
+          NEW.name, vf_test.admin_core(NEW.name), NEW.official_key, coalesce(NEW.prominence, 0), vf_test.point(NEW.location),
           coalesce(NEW.source_ref, 'geonames'), coalesce(NEW.origin_key, NEW.place_id), coalesce(NEW.recorded_at, now()),
           coalesce(NEW.changed_at, now()), NEW.withdrawn_at);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
@@ -809,7 +842,7 @@ DECLARE t text := substring(NEW.poi_id from '^osm:([a-z]+)');
 BEGIN
   INSERT INTO public.osm_pois (osm_type, osm_id, name, name_norm, category, category_value, brand, operator, street, house_number, postcode,
                                place, place_norm, geom, source_id, extract_date, first_seen_at, last_seen_at, land, access)
-  VALUES (t, substring(NEW.poi_id from '[0-9]+$')::bigint, NEW.name, coalesce(NEW.name_fold, lower(NEW.name)), NEW.category, NEW.category_value,
+  VALUES (t, substring(NEW.poi_id from '[0-9]+$')::bigint, NEW.name, coalesce(NEW.name_fold, vf_test.name_fold(NEW.name)), NEW.category, NEW.category_value,
           NEW.brand, NEW.operator_name, NEW.street, NEW.house_number, NEW.postcode, NEW.place_name, NEW.place_fold, vf_test.point(NEW.location), 'osm',
           coalesce(NEW.data_as_of, current_date), coalesce(NEW.recorded_at, now()), now(), NEW.land_name, NEW.access);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
@@ -822,7 +855,9 @@ BEGIN
   INSERT INTO public.osm_addresses (osm_type, osm_id, street, house_number, postcode, place, street_norm, house_number_norm, place_norm, geom,
                                     source_id, extract_date, first_seen_at, last_seen_at, land)
   VALUES (t, substring(NEW.address_id from '[0-9]+$')::bigint, NEW.street, NEW.house_number, NEW.postcode, NEW.place_name,
-          coalesce(NEW.street_fold, lower(NEW.street)), coalesce(NEW.house_number_fold, lower(NEW.house_number)), coalesce(NEW.place_fold, lower(NEW.place_name)),
+          coalesce(NEW.street_fold, (SELECT string_agg(CASE WHEN w = 'str' THEN 'strasse' ELSE regexp_replace(w, 'str$', 'strasse') END, '' ORDER BY n)
+                                      FROM unnest(string_to_array(vf_test.name_fold(NEW.street), ' ')) WITH ORDINALITY AS x(w, n))),
+          coalesce(NEW.house_number_fold, regexp_replace(lower(NEW.house_number), '\s+', '', 'g')), coalesce(NEW.place_fold, vf_test.name_fold(NEW.place_name)),
           vf_test.point(NEW.location), 'osm', coalesce(NEW.data_as_of, current_date), coalesce(NEW.recorded_at, now()), now(), NEW.land_name);
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
