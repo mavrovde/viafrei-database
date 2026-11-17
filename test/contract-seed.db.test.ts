@@ -127,6 +127,15 @@ describe("test-fixtures seed: the platform's own readers", () => {
   });
 });
 
+describe("test-fixtures seed: the junction's municipality point", () => {
+  it("is loaded at the fixture world's first day, not at seed time, so a gazetteer's newest load reads the same on every run", async () => {
+    const r = await db.pool.query<{ first: string; last: string }>(
+      "select first_seen_at::text as first, last_seen_at::text as last from public.gazetteer_places where external_id = 'seed:58:1:4711'",
+    );
+    expect(r.rows).toEqual([{ first: "2026-03-28 00:00:00+00", last: "2026-03-28 00:00:00+00" }]);
+  });
+});
+
 describe("test-fixtures seed: the refusals", () => {
   it("a row the contract cannot read back as given is refused, naming the column, and writes nothing", async () => {
     const c = await db.pool.connect();

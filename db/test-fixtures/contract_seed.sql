@@ -260,7 +260,9 @@ BEGIN
 END $$;
 
 -- junction_id is "cid:tabcd:lcd". A state_code is read from the nearest BKG
--- municipality point, so one is planted at the junction for it.
+-- municipality point, so one is planted at the junction for it, loaded at a
+-- fixed instant (the API fixture world's first day) rather than at seed time:
+-- a gazetteer's newest load per kind then reads the same on every run.
 CREATE OR REPLACE FUNCTION vf_test.seed_junction() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tmc_locations (cid, tabcd, lcd, lcl_version, class, tcd, stcd, junction_no, name, road_number, geom)
@@ -268,9 +270,9 @@ BEGIN
           '22.0', 'P', 1, CASE NEW.junction_kind WHEN 'interchange' THEN 1 WHEN 'triangle' THEN 2 ELSE 3 END,
           NEW.number, NEW.name, NEW.road_ref, vf_test.point(NEW.location));
   IF NEW.state_code IS NOT NULL THEN
-    INSERT INTO public.gazetteer_places (kind, name, name_norm, admin_code, geom, source_id, external_id)
+    INSERT INTO public.gazetteer_places (kind, name, name_norm, admin_code, geom, source_id, external_id, first_seen_at, last_seen_at)
     VALUES ('city', 'Gemeinde ' || NEW.state_code, 'gemeinde ' || NEW.state_code, NEW.state_code || '000000',
-            vf_test.point(NEW.location), 'bkg_gvisys', 'seed:' || NEW.junction_id);
+            vf_test.point(NEW.location), 'bkg_gvisys', 'seed:' || NEW.junction_id, '2026-03-28T00:00:00Z', '2026-03-28T00:00:00Z');
   END IF;
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
