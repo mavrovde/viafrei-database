@@ -181,13 +181,14 @@ union all
 select distinct 'grant', coalesce(g.rolname, 'PUBLIC') || '@' || r.name
   from rel r join pg_class c on c.oid = r.oid cross join lateral aclexplode(c.relacl) x
   left join pg_roles g on g.oid = x.grantee
- where x.grantee <> c.relowner and (x.grantee = 0 or g.rolname like 'viafrei\\_%')
+ where x.grantee <> c.relowner and (x.grantee = 0 or g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access'))
 union all
-select 'role', rolname from pg_roles where rolname like 'viafrei\\_%'
+select 'role', rolname from pg_roles where rolname like 'viafrei\\_%' or rolname in ('api_reader', 'api_access')
 order by 1, 2`;
 
 /**
- * The test-only fixture functions (db/test-fixtures/vf_test.sql, #31 item 9):
+ * The test-only fixture functions (db/test-fixtures/vf_test.sql, #31 item 9,
+ * and contract_seed.sql, #29):
  * not in a migrated catalogue by design, so they are read from their file, one
  * object per `CREATE OR REPLACE FUNCTION <schema>.<name>(`.
  */
@@ -282,7 +283,10 @@ async function main(argv: readonly string[]): Promise<number> {
       await pool.end();
     }
   }
-  objects = withFixtures(objects, readFileSync(join(root, "db", "test-fixtures", "vf_test.sql"), "utf8"));
+  objects = withFixtures(
+    objects,
+    ["vf_test.sql", "contract_seed.sql"].map((f) => readFileSync(join(root, "db", "test-fixtures", f), "utf8")).join("\n"),
+  );
   if (dbHead !== head) throw new Refusal(`the database is at ${String(dbHead)}, the checkout's head is ${String(head)}: its catalogue is not this schema's`);
   const manifest = parseManifest(readFileSync(join(root, "test", "coverage", "schema.tsv"), "utf8"));
   const gap = parseGap(readFileSync(join(root, "test", "coverage", "gap.tsv"), "utf8"));

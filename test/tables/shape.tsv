@@ -1,5 +1,89 @@
 # Every table of ours (test/tables.ts): relation, column | constraint | index, name, definition; columns in attnum order.
 # A migration that changes a table changes its rows here in the same commit.
+access.api_key	column	key_id	text not null
+access.api_key	column	environment	text not null
+access.api_key	column	plan_name	text not null
+access.api_key	column	label	text not null
+access.api_key	column	contact	text not null
+access.api_key	column	mac	bytea not null
+access.api_key	column	previous_mac	bytea
+access.api_key	column	previous_until	timestamp with time zone
+access.api_key	column	issued_at	timestamp with time zone not null
+access.api_key	column	expires_at	timestamp with time zone not null
+access.api_key	column	revoked_at	timestamp with time zone
+access.api_key	column	revoke_reason	text
+access.api_key	column	changed_at	timestamp with time zone not null
+access.api_key	column	audience	text not null default 'public'::text
+access.api_key	constraint	api_key_pkey	p PRIMARY KEY (key_id)
+access.api_key	constraint	api_key_plan_name_fkey	f FOREIGN KEY (plan_name) REFERENCES access.plan(plan_name)
+access.api_key	index	api_key_changed_at	CREATE INDEX api_key_changed_at ON access.api_key USING btree (changed_at)
+access.api_key	index	api_key_pkey	CREATE UNIQUE INDEX api_key_pkey ON access.api_key USING btree (key_id)
+access.audit	column	audit_id	bigint not null identity always
+access.audit	column	at	timestamp with time zone not null
+access.audit	column	action	text not null
+access.audit	column	key_id	text
+access.audit	column	plan_before	text
+access.audit	column	plan_after	text
+access.audit	column	actor	text not null
+access.audit	column	reason	text
+access.audit	constraint	audit_pkey	p PRIMARY KEY (audit_id)
+access.audit	index	audit_at	CREATE INDEX audit_at ON access.audit USING btree (at)
+access.audit	index	audit_pkey	CREATE UNIQUE INDEX audit_pkey ON access.audit USING btree (audit_id)
+access.console_enrolment	column	code_mac	bytea not null
+access.console_enrolment	column	owner_name	text not null
+access.console_enrolment	column	expires_at	timestamp with time zone not null
+access.console_enrolment	column	used_at	timestamp with time zone
+access.console_enrolment	constraint	console_enrolment_pkey	p PRIMARY KEY (code_mac)
+access.console_enrolment	index	console_enrolment_pkey	CREATE UNIQUE INDEX console_enrolment_pkey ON access.console_enrolment USING btree (code_mac)
+access.console_passkey	column	credential_id	bytea not null
+access.console_passkey	column	owner_name	text not null
+access.console_passkey	column	user_handle	bytea not null
+access.console_passkey	column	public_key	bytea not null
+access.console_passkey	column	sign_count	bigint not null
+access.console_passkey	column	flags	smallint not null
+access.console_passkey	column	created_at	timestamp with time zone not null
+access.console_passkey	column	last_used_at	timestamp with time zone
+access.console_passkey	constraint	console_passkey_pkey	p PRIMARY KEY (credential_id)
+access.console_passkey	index	console_passkey_owner	CREATE INDEX console_passkey_owner ON access.console_passkey USING btree (owner_name)
+access.console_passkey	index	console_passkey_pkey	CREATE UNIQUE INDEX console_passkey_pkey ON access.console_passkey USING btree (credential_id)
+access.plan	column	plan_name	text not null
+access.plan	column	use_class	text not null
+access.plan	column	tier	text not null
+access.plan	column	scopes	text[] not null
+access.plan	column	sources	text[] not null
+access.plan	column	changed_at	timestamp with time zone not null
+access.plan	column	rate_per_second	integer not null
+access.plan	column	burst	integer not null
+access.plan	column	quota_day	bigint not null
+access.plan	column	quota_month	bigint not null
+access.plan	constraint	plan_pkey	p PRIMARY KEY (plan_name)
+access.plan	index	plan_changed_at	CREATE INDEX plan_changed_at ON access.plan USING btree (changed_at)
+access.plan	index	plan_pkey	CREATE UNIQUE INDEX plan_pkey ON access.plan USING btree (plan_name)
+access.schema_version	column	version	integer not null
+access.schema_version	column	applied_at	timestamp with time zone not null default now()
+access.schema_version	constraint	schema_version_pkey	p PRIMARY KEY (version)
+access.schema_version	index	schema_version_pkey	CREATE UNIQUE INDEX schema_version_pkey ON access.schema_version USING btree (version)
+access.terms_acceptance	column	key_id	text not null
+access.terms_acceptance	column	source_family	text not null
+access.terms_acceptance	column	terms_version	text not null
+access.terms_acceptance	column	accepted_at	timestamp with time zone not null
+access.terms_acceptance	constraint	terms_acceptance_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+access.terms_acceptance	constraint	terms_acceptance_pkey	p PRIMARY KEY (key_id, source_family, terms_version)
+access.terms_acceptance	index	terms_acceptance_pkey	CREATE UNIQUE INDEX terms_acceptance_pkey ON access.terms_acceptance USING btree (key_id, source_family, terms_version)
+access.usage	column	key_id	text not null
+access.usage	column	hour	timestamp with time zone not null
+access.usage	column	operation	text not null
+access.usage	column	requests	bigint not null
+access.usage	column	not_modified	bigint not null
+access.usage	column	rate_limited	bigint not null
+access.usage	column	quota_exceeded	bigint not null
+access.usage	column	overloaded	bigint not null
+access.usage	column	deadline_exhausted	bigint not null
+access.usage	column	storage_ms	bigint not null
+access.usage	constraint	usage_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+access.usage	constraint	usage_pkey	p PRIMARY KEY (key_id, hour, operation)
+access.usage	index	usage_hour	CREATE INDEX usage_hour ON access.usage USING btree (hour)
+access.usage	index	usage_pkey	CREATE UNIQUE INDEX usage_pkey ON access.usage USING btree (key_id, hour, operation)
 control.budget_state	column	budget_key	text not null
 control.budget_state	column	last_admitted_at	timestamp with time zone
 control.budget_state	column	last_admitted_by	text
@@ -731,6 +815,26 @@ domains.street_bays	index	street_bays_match	CREATE INDEX street_bays_match ON do
 domains.street_bays	index	street_bays_owner_key	CREATE UNIQUE INDEX street_bays_owner_key ON domains.street_bays USING btree (source_id, feed, external_id)
 domains.street_bays	index	street_bays_owner_open	CREATE INDEX street_bays_owner_open ON domains.street_bays USING btree (source_id, feed) WHERE (closed_at IS NULL)
 domains.street_bays	index	street_bays_pkey	CREATE UNIQUE INDEX street_bays_pkey ON domains.street_bays USING btree (id)
+domains.train_board_departures	column	id	bigint not null identity always
+domains.train_board_departures	column	eva	text not null
+domains.train_board_departures	column	observed_at	timestamp with time zone not null
+domains.train_board_departures	column	planned_at	timestamp with time zone not null
+domains.train_board_departures	column	changed_at	timestamp with time zone
+domains.train_board_departures	column	platform	text
+domains.train_board_departures	column	changed_platform	text
+domains.train_board_departures	column	category	text
+domains.train_board_departures	column	train_number	text
+domains.train_board_departures	column	line	text
+domains.train_board_departures	column	destination	text
+domains.train_board_departures	column	cancelled	boolean not null default false
+domains.train_board_departures	column	source_id	text not null default 'db_timetables'::text
+domains.train_board_departures	column	attribution	text not null default 'Fahrplandaten: Deutsche Bahn AG, DB API Marketplace, CC BY 4.0, bearbeitet'::text
+domains.train_board_departures	column	licence	text not null default 'CC BY 4.0'::text
+domains.train_board_departures	column	recorded_at	timestamp with time zone not null default clock_timestamp()
+domains.train_board_departures	constraint	train_board_departures_pkey	p PRIMARY KEY (id, observed_at)
+domains.train_board_departures	index	train_board_departures_brin	CREATE INDEX train_board_departures_brin ON ONLY domains.train_board_departures USING brin (observed_at)
+domains.train_board_departures	index	train_board_departures_eva_fetch	CREATE INDEX train_board_departures_eva_fetch ON ONLY domains.train_board_departures USING btree (eva, observed_at DESC)
+domains.train_board_departures	index	train_board_departures_pkey	CREATE UNIQUE INDEX train_board_departures_pkey ON ONLY domains.train_board_departures USING btree (id, observed_at)
 domains.transit_agencies_odbl	column	id	bigint not null identity always
 domains.transit_agencies_odbl	column	source_id	text not null
 domains.transit_agencies_odbl	column	feed	text not null default 'default'::text
@@ -1122,6 +1226,31 @@ ingestor.units	column	last_seen_at	timestamp with time zone not null default clo
 ingestor.units	column	last_pod	text
 ingestor.units	constraint	units_pkey	p PRIMARY KEY (name)
 ingestor.units	index	units_pkey	CREATE UNIQUE INDEX units_pkey ON ingestor.units USING btree (name)
+live.refresh_askers	column	request_id	bigint not null
+live.refresh_askers	column	key_id	text not null
+live.refresh_askers	column	asked_at	timestamp with time zone not null
+live.refresh_askers	constraint	refresh_askers_key_id_fkey	f FOREIGN KEY (key_id) REFERENCES access.api_key(key_id)
+live.refresh_askers	constraint	refresh_askers_pkey	p PRIMARY KEY (request_id, key_id)
+live.refresh_askers	constraint	refresh_askers_request_id_fkey	f FOREIGN KEY (request_id) REFERENCES live.refresh_requests(id) ON DELETE CASCADE
+live.refresh_askers	index	refresh_askers_key	CREATE INDEX refresh_askers_key ON live.refresh_askers USING btree (key_id)
+live.refresh_askers	index	refresh_askers_pkey	CREATE UNIQUE INDEX refresh_askers_pkey ON live.refresh_askers USING btree (request_id, key_id)
+live.refresh_requests	column	id	bigint not null identity always
+live.refresh_requests	column	source	text not null
+live.refresh_requests	column	subject	jsonb not null
+live.refresh_requests	column	subject_key	text not null
+live.refresh_requests	column	state	text not null default 'pending'::text
+live.refresh_requests	column	created_at	timestamp with time zone not null default clock_timestamp()
+live.refresh_requests	column	claimed_at	timestamp with time zone
+live.refresh_requests	column	settled_at	timestamp with time zone
+live.refresh_requests	column	reason	text
+live.refresh_requests	column	reused	boolean not null default false
+live.refresh_requests	column	requested_by	text not null
+live.refresh_requests	constraint	refresh_requests_pkey	p PRIMARY KEY (id)
+live.refresh_requests	index	refresh_requests_created	CREATE INDEX refresh_requests_created ON live.refresh_requests USING btree (created_at)
+live.refresh_requests	index	refresh_requests_open	CREATE UNIQUE INDEX refresh_requests_open ON live.refresh_requests USING btree (source, subject_key) WHERE (settled_at IS NULL)
+live.refresh_requests	index	refresh_requests_pending	CREATE INDEX refresh_requests_pending ON live.refresh_requests USING btree (created_at, id) WHERE (settled_at IS NULL)
+live.refresh_requests	index	refresh_requests_pkey	CREATE UNIQUE INDEX refresh_requests_pkey ON live.refresh_requests USING btree (id)
+live.refresh_requests	index	refresh_requests_settled	CREATE INDEX refresh_requests_settled ON live.refresh_requests USING btree (source, subject_key, settled_at DESC) WHERE (settled_at IS NOT NULL)
 public.ags_regions	column	ags	text not null
 public.ags_regions	column	level	text not null
 public.ags_regions	column	name	text not null
@@ -1188,6 +1317,11 @@ public.autobahn_roads	column	last_seen_at	timestamp with time zone not null defa
 public.autobahn_roads	column	last_listed_at	timestamp with time zone
 public.autobahn_roads	constraint	autobahn_roads_pkey	p PRIMARY KEY (road)
 public.autobahn_roads	index	autobahn_roads_pkey	CREATE UNIQUE INDEX autobahn_roads_pkey ON public.autobahn_roads USING btree (road)
+public.autobahn_sweeps	column	road	text not null
+public.autobahn_sweeps	column	kind	text not null
+public.autobahn_sweeps	column	observed_at	timestamp with time zone not null
+public.autobahn_sweeps	constraint	autobahn_sweeps_pkey	p PRIMARY KEY (road, kind)
+public.autobahn_sweeps	index	autobahn_sweeps_pkey	CREATE UNIQUE INDEX autobahn_sweeps_pkey ON public.autobahn_sweeps USING btree (road, kind)
 public.bfrk_stops	column	source_feed	text not null
 public.bfrk_stops	column	source_publisher	text not null
 public.bfrk_stops	column	dhid	text not null
@@ -1310,6 +1444,7 @@ public.charging_points	column	extras	jsonb
 public.charging_points	column	price_adhoc_zero	boolean
 public.charging_points	constraint	charging_points_pkey	p PRIMARY KEY (source_feed, point_key)
 public.charging_points	constraint	charging_points_source_feed_site_id_fkey	f FOREIGN KEY (source_feed, site_id) REFERENCES public.charging_sites(source_feed, site_id)
+public.charging_points	index	charging_points_contract_site	CREATE INDEX charging_points_contract_site ON public.charging_points USING btree ((((source_feed || ':'::text) || site_id))) WHERE (deleted_at IS NULL)
 public.charging_points	index	charging_points_deleted	CREATE INDEX charging_points_deleted ON public.charging_points USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_points	index	charging_points_evse	CREATE INDEX charging_points_evse ON public.charging_points USING btree (evse_id) WHERE (evse_id IS NOT NULL)
 public.charging_points	index	charging_points_evse_norm	CREATE INDEX charging_points_evse_norm ON public.charging_points USING btree (upper(translate(evse_id, '*-'::text, ''::text))) WHERE (evse_id IS NOT NULL)
@@ -1351,6 +1486,7 @@ public.charging_sites	column	street_key	text generated public.charging_street_ke
 public.charging_sites	column	house_key	text generated public.charging_house_key(street, house_number)
 public.charging_sites	column	access_private	boolean generated (COALESCE(name, ''::text) ~* '((?<![[:alpha:]])privat(e|er|es)?(?![[:alpha:]])(?![ _-]+((fach)?hochschulen?|universit(ä|ae)t(en)?|uni|kliniken|klinik(um)?|krankenh(a|ä|ae)us(er)?|schulen?|akademie|gymnasium|bank|brauerei|university|school|clinic|hospital|college)(?![[:alpha:]]))|(?<![[:alpha:]])privat(parkpl(a|ä|ae)tz(e|es)?|grundst(ü|ue)ck(e|es|s)?|gel(ä|ae)nde(s)?|einfahrt(en)?)(?![[:alpha:]])|nicht[ _-]?(ö|oe)ffentlich|kein(e|en)?[ _-](ö|oe)ffentlich|(?<![[:alpha:]])not[ _](for[ _])?public(?![[:alpha:]])|(?<![[:alpha:]])non[ _-]public(?![[:alpha:]])|nur[ _]f(ü|ue)r[ _](mitarbeiter|bewohner|anwohner|mieter))'::text)
 public.charging_sites	constraint	charging_sites_pkey	p PRIMARY KEY (source_feed, site_id)
+public.charging_sites	index	charging_sites_contract_location	CREATE INDEX charging_sites_contract_location ON public.charging_sites USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.charging_sites	index	charging_sites_deleted	CREATE INDEX charging_sites_deleted ON public.charging_sites USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_sites	index	charging_sites_geom_gist	CREATE INDEX charging_sites_geom_gist ON public.charging_sites USING gist (geom) WHERE (closed_at IS NULL)
 public.charging_sites	index	charging_sites_page_key	CREATE INDEX charging_sites_page_key ON public.charging_sites USING btree (public.vf_page_key(((('charging:'::text || source_feed) || ':'::text) || site_id)))
@@ -1531,6 +1667,7 @@ public.db_stations	column	last_seen_at	timestamp with time zone not null
 public.db_stations	column	updated_at	timestamp with time zone not null
 public.db_stations	column	closed_at	timestamp with time zone
 public.db_stations	constraint	db_stations_pkey	p PRIMARY KEY (station_no)
+public.db_stations	index	db_stations_contract_ifopt	CREATE INDEX db_stations_contract_ifopt ON public.db_stations USING btree (ifopt) WHERE (ifopt IS NOT NULL)
 public.db_stations	index	db_stations_evas	CREATE INDEX db_stations_evas ON public.db_stations USING gin (eva_nos)
 public.db_stations	index	db_stations_geom_open	CREATE INDEX db_stations_geom_open ON public.db_stations USING gist (geom) WHERE (closed_at IS NULL)
 public.db_stations	index	db_stations_pkey	CREATE UNIQUE INDEX db_stations_pkey ON public.db_stations USING btree (station_no)
@@ -1613,6 +1750,7 @@ public.delfi_siri_et_calls_latest	column	recorded	boolean not null
 public.delfi_siri_et_calls_latest	column	cancelled	boolean not null
 public.delfi_siri_et_calls_latest	column	journey_cancelled	boolean not null
 public.delfi_siri_et_calls_latest	constraint	delfi_siri_et_calls_latest_pkey	p PRIMARY KEY (stop_ref, service_day, journey_ref, visit, source_feed)
+public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_contract_ref_aimed	CREATE INDEX delfi_siri_et_calls_latest_contract_ref_aimed ON public.delfi_siri_et_calls_latest USING btree (stop_ref, aimed_dep)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_departed	CREATE INDEX delfi_siri_et_calls_latest_departed ON public.delfi_siri_et_calls_latest USING btree (aimed_dep)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_next	CREATE INDEX delfi_siri_et_calls_latest_next ON public.delfi_siri_et_calls_latest USING btree (stop_ref, COALESCE(expected_dep, aimed_dep))
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_pkey	CREATE UNIQUE INDEX delfi_siri_et_calls_latest_pkey ON public.delfi_siri_et_calls_latest USING btree (stop_ref, service_day, journey_ref, visit, source_feed)
@@ -1642,6 +1780,30 @@ public.deployments	column	translator_digest	text
 public.deployments	constraint	deployments_pkey	p PRIMARY KEY (id)
 public.deployments	index	deployments_deployed_at_idx	CREATE INDEX deployments_deployed_at_idx ON public.deployments USING btree (deployed_at DESC)
 public.deployments	index	deployments_pkey	CREATE UNIQUE INDEX deployments_pkey ON public.deployments USING btree (id)
+public.driving_rule_facts	column	fact_key	text not null
+public.driving_rule_facts	column	topic_code	text not null
+public.driving_rule_facts	column	position	integer not null
+public.driving_rule_facts	column	body_de	text not null
+public.driving_rule_facts	column	body_en	text not null
+public.driving_rule_facts	column	source_url	text not null
+public.driving_rule_facts	column	source_name	text not null
+public.driving_rule_facts	column	source_note_de	text
+public.driving_rule_facts	column	source_note_en	text
+public.driving_rule_facts	column	to_verify_de	text
+public.driving_rule_facts	column	to_verify_en	text
+public.driving_rule_facts	column	reviewed_on	date not null
+public.driving_rule_facts	column	headline	boolean not null
+public.driving_rule_facts	constraint	driving_rule_facts_pkey	p PRIMARY KEY (fact_key)
+public.driving_rule_facts	constraint	driving_rule_facts_topic_code_fkey	f FOREIGN KEY (topic_code) REFERENCES public.driving_rule_topics(topic_code)
+public.driving_rule_facts	constraint	driving_rule_facts_topic_code_position_key	u UNIQUE (topic_code, "position")
+public.driving_rule_facts	index	driving_rule_facts_pkey	CREATE UNIQUE INDEX driving_rule_facts_pkey ON public.driving_rule_facts USING btree (fact_key)
+public.driving_rule_facts	index	driving_rule_facts_topic_code_position_key	CREATE UNIQUE INDEX driving_rule_facts_topic_code_position_key ON public.driving_rule_facts USING btree (topic_code, "position")
+public.driving_rule_topics	column	topic_code	text not null
+public.driving_rule_topics	column	title_de	text not null
+public.driving_rule_topics	column	title_en	text not null
+public.driving_rule_topics	column	reviewed_on	date not null
+public.driving_rule_topics	constraint	driving_rule_topics_pkey	p PRIMARY KEY (topic_code)
+public.driving_rule_topics	index	driving_rule_topics_pkey	CREATE UNIQUE INDEX driving_rule_topics_pkey ON public.driving_rule_topics USING btree (topic_code)
 public.energy_page_key_heads	column	kind	text not null
 public.energy_page_key_heads	column	generation	bigint not null
 public.energy_page_key_heads	column	total	integer not null
@@ -1947,6 +2109,8 @@ public.gazetteer_places	constraint	gazetteer_places_pkey	p PRIMARY KEY (id)
 public.gazetteer_places	constraint	gazetteer_places_source_id_external_id_key	u UNIQUE (source_id, external_id)
 public.gazetteer_places	index	gazetteer_places_admin_code	CREATE INDEX gazetteer_places_admin_code ON public.gazetteer_places USING btree (admin_code) WHERE ((admin_code IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_bkg_city_geom_gist	CREATE INDEX gazetteer_places_bkg_city_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (closed_at IS NULL) AND (geom IS NOT NULL))
+public.gazetteer_places	index	gazetteer_places_bkg_municipality_geom	CREATE INDEX gazetteer_places_bkg_municipality_geom ON public.gazetteer_places USING gist (((geom)::public.geometry)) WHERE ((source_id = 'bkg_gvisys'::text) AND (kind = 'city'::text) AND (geom IS NOT NULL))
+public.gazetteer_places	index	gazetteer_places_contract_search_fold	CREATE INDEX gazetteer_places_contract_search_fold ON public.gazetteer_places USING gin (public.contract_search_fold(name) public.gin_trgm_ops) WHERE (geom IS NOT NULL)
 public.gazetteer_places	index	gazetteer_places_geom_gist	CREATE INDEX gazetteer_places_geom_gist ON public.gazetteer_places USING gist (geom) WHERE ((geom IS NOT NULL) AND (closed_at IS NULL))
 public.gazetteer_places	index	gazetteer_places_geonames_name_en	CREATE INDEX gazetteer_places_geonames_name_en ON public.gazetteer_places USING btree (lower(name_en)) WHERE ((closed_at IS NULL) AND (kind = 'city'::text) AND (source_id = 'geonames'::text) AND (name_en IS NOT NULL) AND (geom IS NOT NULL))
 public.gazetteer_places	index	gazetteer_places_kind_rank	CREATE INDEX gazetteer_places_kind_rank ON public.gazetteer_places USING btree (kind, rank DESC)
@@ -2198,6 +2362,24 @@ public.landing_status_hourly	column	status	smallint not null
 public.landing_status_hourly	column	n	bigint not null
 public.landing_status_hourly	constraint	landing_status_hourly_pkey	p PRIMARY KEY (hour, route_class, agent_class, status)
 public.landing_status_hourly	index	landing_status_hourly_pkey	CREATE UNIQUE INDEX landing_status_hourly_pkey ON public.landing_status_hourly USING btree (hour, route_class, agent_class, status)
+public.lez_feed_places	column	feed_key	text not null
+public.lez_feed_places	column	scope	text not null
+public.lez_feed_places	column	place_code	text
+public.lez_feed_places	column	city	text
+public.lez_feed_places	constraint	lez_feed_places_pkey	p PRIMARY KEY (feed_key)
+public.lez_feed_places	index	lez_feed_places_pkey	CREATE UNIQUE INDEX lez_feed_places_pkey ON public.lez_feed_places USING btree (feed_key)
+public.lez_list_entries	column	entry_key	text not null
+public.lez_list_entries	column	name	text not null
+public.lez_list_entries	column	aliases	text[] not null
+public.lez_list_entries	column	place_codes	text[] not null
+public.lez_list_entries	column	plaque	text
+public.lez_list_entries	column	covered	boolean not null
+public.lez_list_entries	column	lifted_on	date
+public.lez_list_entries	column	reviewed_on	date not null
+public.lez_list_entries	column	source_url	text not null
+public.lez_list_entries	column	source_name	text not null
+public.lez_list_entries	constraint	lez_list_entries_pkey	p PRIMARY KEY (entry_key)
+public.lez_list_entries	index	lez_list_entries_pkey	CREATE UNIQUE INDEX lez_list_entries_pkey ON public.lez_list_entries USING btree (entry_key)
 public.lez_zone_overlaps	column	source_feed	text not null
 public.lez_zone_overlaps	column	zone_id	text not null
 public.lez_zone_overlaps	column	other_feed	text not null
@@ -2243,6 +2425,12 @@ public.lez_zones	constraint	lez_zones_pkey	p PRIMARY KEY (source_feed, zone_id)
 public.lez_zones	index	lez_zones_open_geom	CREATE INDEX lez_zones_open_geom ON public.lez_zones USING gist (geom) WHERE (closed_at IS NULL)
 public.lez_zones	index	lez_zones_open_geom_m	CREATE INDEX lez_zones_open_geom_m ON public.lez_zones USING gist (geom_m) WHERE (closed_at IS NULL)
 public.lez_zones	index	lez_zones_pkey	CREATE UNIQUE INDEX lez_zones_pkey ON public.lez_zones USING btree (source_feed, zone_id)
+public.licence_texts	column	licence_label	text not null
+public.licence_texts	column	url	text not null
+public.licence_texts	column	url_kind	text not null
+public.licence_texts	column	note	text
+public.licence_texts	constraint	licence_texts_pkey	p PRIMARY KEY (licence_label)
+public.licence_texts	index	licence_texts_pkey	CREATE UNIQUE INDEX licence_texts_pkey ON public.licence_texts USING btree (licence_label)
 public.lorry_city	column	id	bigint not null identity always
 public.lorry_city	column	source_feed	text not null
 public.lorry_city	column	feature_key	text not null
@@ -2571,6 +2759,13 @@ public.mcp_usage_exports	column	totals	jsonb not null default '{}'::jsonb
 public.mcp_usage_exports	column	error	text
 public.mcp_usage_exports	constraint	mcp_usage_exports_pkey	p PRIMARY KEY (destination, day)
 public.mcp_usage_exports	index	mcp_usage_exports_pkey	CREATE UNIQUE INDEX mcp_usage_exports_pkey ON public.mcp_usage_exports USING btree (destination, day)
+public.message_coverage_sources	column	state_code	text not null
+public.message_coverage_sources	column	source_ref	text not null
+public.message_coverage_sources	column	coverage_role	text not null
+public.message_coverage_sources	column	current_only	boolean not null default false
+public.message_coverage_sources	column	measured_on	date
+public.message_coverage_sources	constraint	message_coverage_sources_pkey	p PRIMARY KEY (state_code, source_ref)
+public.message_coverage_sources	index	message_coverage_sources_pkey	CREATE UNIQUE INDEX message_coverage_sources_pkey ON public.message_coverage_sources USING btree (state_code, source_ref)
 public.motorway_summary	column	road	text not null
 public.motorway_summary	column	refreshed_at	timestamp with time zone not null
 public.motorway_summary	column	read_at	timestamp with time zone
@@ -2956,6 +3151,8 @@ public.parking_facilities	column	facilities_extra	text[] not null default '{}'::
 public.parking_facilities	column	facilities_source	text
 public.parking_facilities	constraint	parking_facilities_pkey	p PRIMARY KEY (id)
 public.parking_facilities	constraint	parking_facilities_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities	index	parking_facilities_contract_id	CREATE INDEX parking_facilities_contract_id ON public.parking_facilities USING btree ((('p:'::text || id)))
+public.parking_facilities	index	parking_facilities_contract_location	CREATE INDEX parking_facilities_contract_location ON public.parking_facilities USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities	index	parking_facilities_deleted	CREATE INDEX parking_facilities_deleted ON public.parking_facilities USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.parking_facilities	index	parking_facilities_geom_gist	CREATE INDEX parking_facilities_geom_gist ON public.parking_facilities USING gist (geom)
 public.parking_facilities	index	parking_facilities_pkey	CREATE UNIQUE INDEX parking_facilities_pkey ON public.parking_facilities USING btree (id)
@@ -2988,6 +3185,7 @@ public.parking_facilities_bysa	column	updated_at	timestamp with time zone not nu
 public.parking_facilities_bysa	column	confidentiality	text
 public.parking_facilities_bysa	constraint	parking_facilities_bysa_pkey	p PRIMARY KEY (id)
 public.parking_facilities_bysa	constraint	parking_facilities_bysa_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_bysa	index	parking_facilities_bysa_contract_location	CREATE INDEX parking_facilities_bysa_contract_location ON public.parking_facilities_bysa USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_bysa	index	parking_facilities_bysa_geom_gist	CREATE INDEX parking_facilities_bysa_geom_gist ON public.parking_facilities_bysa USING gist (geom)
 public.parking_facilities_bysa	index	parking_facilities_bysa_pkey	CREATE UNIQUE INDEX parking_facilities_bysa_pkey ON public.parking_facilities_bysa USING btree (id)
 public.parking_facilities_bysa	index	parking_facilities_bysa_road	CREATE INDEX parking_facilities_bysa_road ON public.parking_facilities_bysa USING btree (road, kind) WHERE (closed_at IS NULL)
@@ -3018,6 +3216,8 @@ public.parking_facilities_odbl	column	updated_at	timestamp with time zone not nu
 public.parking_facilities_odbl	column	confidentiality	text
 public.parking_facilities_odbl	constraint	parking_facilities_odbl_pkey	p PRIMARY KEY (id)
 public.parking_facilities_odbl	constraint	parking_facilities_odbl_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_odbl	index	parking_facilities_odbl_contract_id	CREATE INDEX parking_facilities_odbl_contract_id ON public.parking_facilities_odbl USING btree ((('odbl:'::text || id)))
+public.parking_facilities_odbl	index	parking_facilities_odbl_contract_location	CREATE INDEX parking_facilities_odbl_contract_location ON public.parking_facilities_odbl USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_odbl	index	parking_facilities_odbl_geom_gist	CREATE INDEX parking_facilities_odbl_geom_gist ON public.parking_facilities_odbl USING gist (geom)
 public.parking_facilities_odbl	index	parking_facilities_odbl_pkey	CREATE UNIQUE INDEX parking_facilities_odbl_pkey ON public.parking_facilities_odbl USING btree (id)
 public.parking_facilities_odbl	index	parking_facilities_odbl_road	CREATE INDEX parking_facilities_odbl_road ON public.parking_facilities_odbl USING btree (road, kind) WHERE (closed_at IS NULL)
@@ -3048,6 +3248,8 @@ public.parking_facilities_sid	column	facilities_extra	text[] not null default '{
 public.parking_facilities_sid	column	facilities_source	text
 public.parking_facilities_sid	constraint	parking_facilities_sid_pkey	p PRIMARY KEY (id)
 public.parking_facilities_sid	constraint	parking_facilities_sid_source_key	u UNIQUE (source_feed, external_id)
+public.parking_facilities_sid	index	parking_facilities_sid_contract_id	CREATE INDEX parking_facilities_sid_contract_id ON public.parking_facilities_sid USING btree ((('sid:'::text || id)))
+public.parking_facilities_sid	index	parking_facilities_sid_contract_location	CREATE INDEX parking_facilities_sid_contract_location ON public.parking_facilities_sid USING gist ((((public.st_pointonsurface((geom)::public.geometry))::public.geometry(Point,4326))::public.geography)) WHERE (closed_at IS NULL)
 public.parking_facilities_sid	index	parking_facilities_sid_geom_gist	CREATE INDEX parking_facilities_sid_geom_gist ON public.parking_facilities_sid USING gist (geom)
 public.parking_facilities_sid	index	parking_facilities_sid_pkey	CREATE UNIQUE INDEX parking_facilities_sid_pkey ON public.parking_facilities_sid USING btree (id)
 public.parking_facilities_sid	index	parking_facilities_sid_source_key	CREATE UNIQUE INDEX parking_facilities_sid_source_key ON public.parking_facilities_sid USING btree (source_feed, external_id)
@@ -3328,6 +3530,8 @@ public.road_events	column	valid_windows	tstzmultirange
 public.road_events	column	suspended	boolean
 public.road_events	constraint	road_events_pkey	p PRIMARY KEY (id)
 public.road_events	constraint	road_events_source_id_publication_id_key	u UNIQUE (source_id, publication_id)
+public.road_events	index	road_events_contract_event_id	CREATE INDEX road_events_contract_event_id ON public.road_events USING btree ((((('datex:'::text || source_id) || ':'::text) || publication_id))) WHERE (deleted_at IS NULL)
+public.road_events	index	road_events_contract_location	CREATE INDEX road_events_contract_location ON public.road_events USING gist ((((public.st_pointonsurface(geom))::public.geometry(Point,4326))::public.geography)) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_deleted	CREATE INDEX road_events_deleted ON public.road_events USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)
@@ -3494,6 +3698,27 @@ public.source_hosts	column	app_version	text
 public.source_hosts	column	sources	integer not null
 public.source_hosts	constraint	source_hosts_pkey	p PRIMARY KEY (host)
 public.source_hosts	index	source_hosts_pkey	CREATE UNIQUE INDEX source_hosts_pkey ON public.source_hosts USING btree (host)
+public.source_register	column	source_id	text not null
+public.source_register	column	attribution_text	text not null
+public.source_register	column	source_url	text not null
+public.source_register	column	licence_label	text not null
+public.source_register	column	share_alike	boolean not null
+public.source_register	column	share_alike_database	boolean not null
+public.source_register	column	changes_statement	text
+public.source_register	column	use_classes	text[] not null
+public.source_register	column	consumer_answers_only	boolean not null
+public.source_register	column	no_redistribution	boolean not null
+public.source_register	column	verified_on	date
+public.source_register	column	register_version	date not null
+public.source_register	constraint	source_register_pkey	p PRIMARY KEY (source_id)
+public.source_register	index	source_register_pkey	CREATE UNIQUE INDEX source_register_pkey ON public.source_register USING btree (source_id)
+public.source_register_notes	column	source_id	text not null
+public.source_register_notes	column	note_kind	text not null
+public.source_register_notes	column	lang	text not null
+public.source_register_notes	column	body	text not null
+public.source_register_notes	constraint	source_register_notes_pkey	p PRIMARY KEY (source_id, note_kind, lang)
+public.source_register_notes	constraint	source_register_notes_source_id_fkey	f FOREIGN KEY (source_id) REFERENCES public.source_register(source_id)
+public.source_register_notes	index	source_register_notes_pkey	CREATE UNIQUE INDEX source_register_notes_pkey ON public.source_register_notes USING btree (source_id, note_kind, lang)
 public.source_schedule	column	source_key	text not null
 public.source_schedule	column	host	text not null
 public.source_schedule	column	state	text not null default 'unknown'::text
@@ -3517,6 +3742,26 @@ public.source_schedule	column	updated_at	timestamp with time zone not null defau
 public.source_schedule	constraint	source_schedule_pkey	p PRIMARY KEY (source_key)
 public.source_schedule	index	source_schedule_host	CREATE INDEX source_schedule_host ON public.source_schedule USING btree (host)
 public.source_schedule	index	source_schedule_pkey	CREATE UNIQUE INDEX source_schedule_pkey ON public.source_schedule USING btree (source_key)
+public.source_terms	column	terms_gate	text not null
+public.source_terms	column	terms_id	text not null
+public.source_terms	column	terms_version	text not null
+public.source_terms	column	effective_on	date not null
+public.source_terms	column	source_id	text not null
+public.source_terms	column	provider_terms_url	text not null
+public.source_terms	constraint	source_terms_pkey	p PRIMARY KEY (terms_gate)
+public.source_terms	constraint	source_terms_source_id_fkey	f FOREIGN KEY (source_id) REFERENCES public.source_register(source_id)
+public.source_terms	constraint	source_terms_terms_id_terms_version_key	u UNIQUE (terms_id, terms_version)
+public.source_terms	index	source_terms_pkey	CREATE UNIQUE INDEX source_terms_pkey ON public.source_terms USING btree (terms_gate)
+public.source_terms	index	source_terms_terms_id_terms_version_key	CREATE UNIQUE INDEX source_terms_terms_id_terms_version_key ON public.source_terms USING btree (terms_id, terms_version)
+public.source_terms_texts	column	terms_gate	text not null
+public.source_terms_texts	column	lang	text not null
+public.source_terms_texts	column	binding	boolean not null
+public.source_terms_texts	column	terms_url	text not null
+public.source_terms_texts	column	heading	text not null
+public.source_terms_texts	column	body	text not null
+public.source_terms_texts	constraint	source_terms_texts_pkey	p PRIMARY KEY (terms_gate, lang)
+public.source_terms_texts	constraint	source_terms_texts_terms_gate_fkey	f FOREIGN KEY (terms_gate) REFERENCES public.source_terms(terms_gate)
+public.source_terms_texts	index	source_terms_texts_pkey	CREATE UNIQUE INDEX source_terms_texts_pkey ON public.source_terms_texts USING btree (terms_gate, lang)
 public.speed_enforcement	column	id	bigint not null default nextval('public.speed_enforcement_id_seq'::regclass)
 public.speed_enforcement	column	source_feed	text not null
 public.speed_enforcement	column	source_publisher	text not null
@@ -3720,6 +3965,10 @@ public.stops	column	deleted_reason	text
 public.stops	column	geom	public.geography(Point,4326) not null
 public.stops	column	extras	jsonb not null default '{}'::jsonb
 public.stops	constraint	stops_pkey	p PRIMARY KEY (gtfs_feed_key, id)
+public.stops	index	stops_contract_location	CREATE INDEX stops_contract_location ON public.stops USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_search_fold	CREATE INDEX stops_contract_search_fold ON public.stops USING gin (public.contract_search_fold(name) public.gin_trgm_ops) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_stop_place	CREATE INDEX stops_contract_stop_place ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || COALESCE(parent_id, id)))) WHERE (deleted_at IS NULL)
+public.stops	index	stops_contract_stop_point	CREATE INDEX stops_contract_stop_point ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || id))) WHERE (deleted_at IS NULL)
 public.stops	index	stops_deleted	CREATE INDEX stops_deleted ON public.stops USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.stops	index	stops_geom_gist	CREATE INDEX stops_geom_gist ON public.stops USING gist (geom)
 public.stops	index	stops_id_prefix	CREATE INDEX stops_id_prefix ON public.stops USING btree (gtfs_feed_key, id text_pattern_ops)
@@ -3794,6 +4043,7 @@ public.tmc_locations	column	pos_off_lcd	integer
 public.tmc_locations	column	geom	public.geography(Point,4326) not null
 public.tmc_locations	column	loaded_at	timestamp with time zone not null default now()
 public.tmc_locations	constraint	tmc_locations_pkey	p PRIMARY KEY (cid, tabcd, lcd)
+public.tmc_locations	index	tmc_locations_contract_junction_location	CREATE INDEX tmc_locations_contract_junction_location ON public.tmc_locations USING gist ((((geom)::public.geometry(Point,4326))::public.geography)) WHERE ((cid = 58) AND (tabcd = 1) AND (tcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_motorway_gist	CREATE INDEX tmc_locations_motorway_gist ON public.tmc_locations USING gist (geom) WHERE ((tcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_motorway_points_gist	CREATE INDEX tmc_locations_motorway_points_gist ON public.tmc_locations USING gist (geom) WHERE ((cid = 58) AND (tabcd = 1) AND (road_number ~ '^A[1-9][0-9]{0,2}$'::text))
 public.tmc_locations	index	tmc_locations_pkey	CREATE UNIQUE INDEX tmc_locations_pkey ON public.tmc_locations USING btree (cid, tabcd, lcd)

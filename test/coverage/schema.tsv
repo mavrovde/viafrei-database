@@ -3195,3 +3195,577 @@ fixture	vf_test.shadow_put	test/fixtures.db.test.ts > shadow_slow: an unqualifie
 fixture	vf_test.shadow_slow	test/fixtures.db.test.ts > shadow_slow: an unqualified read of the relation waits first, rows unchanged; shadow_rows: the role reads the test's rows
 fixture	vf_test.shadow_rows	test/fixtures.db.test.ts > shadow_slow: an unqualified read of the relation waits first, rows unchanged; shadow_rows: the role reads the test's rows
 fixture	vf_test.revoke_select	test/fixtures.db.test.ts > revoke_select takes exactly one role's SELECT on one relation, and the rollback gives it back
+check	access.api_key.api_key_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_check1	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_environment_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_key_id_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_mac_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_previous_mac_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.audit.audit_action_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_enrolment.console_enrolment_code_mac_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_enrolment.console_enrolment_owner_name_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_credential_id_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_flags_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_owner_name_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_public_key_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_sign_count_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.console_passkey.console_passkey_user_handle_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_burst_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_plan_name_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_quota_day_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_quota_month_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_rate_per_second_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_tier_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.plan.plan_use_class_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_deadline_exhausted_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_not_modified_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_operation_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_overloaded_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_quota_exceeded_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_rate_limited_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_requests_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.usage.usage_storage_ms_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+function	access.prune_audit(before timestamp with time zone)	test/api-schemas.db.test.ts > the prune functions keep every row younger than 30 days, remove older ones, and only api_access (or the owner) may call them
+function	access.prune_audit(before timestamp with time zone)	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+function	access.prune_usage(keep_days integer)	test/api-schemas.db.test.ts > the prune functions keep every row younger than 30 days, remove older ones, and only api_access (or the owner) may call them
+function	access.prune_usage(keep_days integer)	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.api_key	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.api_key	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.audit	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.audit	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.console_enrolment	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.console_enrolment	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.console_passkey	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.console_passkey	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.plan	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.plan	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.schema_version	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.schema_version	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.terms_acceptance	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.terms_acceptance	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_access@access.usage	test/api-schemas.db.test.ts > api_access holds exactly the store's grants, and PUBLIC none of the store
+grant	api_access@access.usage	test/roles-grants.db.test.ts > api_access: every privilege it holds is a row, every row is held
+grant	api_reader@contract.admin_region	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.admin_region	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.call_observation	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.call_observation	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.charge_point	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.charge_point	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.charge_point_state_observation	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.charge_point_state_observation	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.charging_site	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.charging_site	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.contract_info	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.contract_info	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.fuel_price_observation	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.fuel_price_observation	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.fuel_product	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.fuel_product	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.fuel_station	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.fuel_station	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.journey	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.journey	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.junction	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.junction	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.licence	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.licence	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.message_coverage	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.message_coverage	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.occupancy_observation	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.occupancy_observation	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.parking_facility	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.parking_facility	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.place	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.place	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.place_alias	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.place_alias	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.publisher	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.publisher	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.road	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.road	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.rule_statement	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.rule_statement	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.rule_topic	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.rule_topic	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.scheduled_call	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.scheduled_call	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.source	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.source	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.source_freshness	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.source_freshness	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.source_note	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.source_note	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.station_facility	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.station_facility	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.stop_place	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.stop_place	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.stop_point	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.stop_point	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.traffic_event	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.traffic_event	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.traffic_event_observation	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.traffic_event_observation	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.transit_line	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.transit_line	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@contract.weather_warning	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.weather_warning	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+role	api_access	test/roles-grants.db.test.ts > api_access: as 0308 creates it
+role	api_reader	test/roles-grants.db.test.ts > api_reader: as 0307 creates it
+table	access.api_key	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.api_key	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.audit	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.audit	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.console_enrolment	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.console_enrolment	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.console_passkey	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.console_passkey	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.plan	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.plan	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.schema_version	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.schema_version	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.terms_acceptance	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.terms_acceptance	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+table	access.usage	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+table	access.usage	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.admin_region	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.admin_region	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.admin_region	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.call_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.call_observation	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.call_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.charge_point	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.charge_point	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charge_point	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charge_point_state_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.charging_site	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.charging_site	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.charging_site	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.contract_info	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.contract_info	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.contract_info	test/api-schemas.db.test.ts > contract_info states version 0.3, once, as the API's readiness reads it
+view	contract.fuel_price_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.fuel_price_observation	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_price_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.fuel_product	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.fuel_product	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_product	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.fuel_station	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.fuel_station	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.fuel_station	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.journey	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.journey	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.journey	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.junction	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.junction	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.junction	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.licence	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.licence	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.licence	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.message_coverage	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.message_coverage	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.message_coverage	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.occupancy_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.occupancy_observation	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.occupancy_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.parking_facility	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.parking_facility	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.parking_facility	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.place	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.place	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.place	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.place_alias	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.place_alias	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.place_alias	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.publisher	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.publisher	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.publisher	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.road	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.road	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.road	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.rule_statement	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.rule_statement	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.rule_statement	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.rule_topic	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.rule_topic	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.rule_topic	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.scheduled_call	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.scheduled_call	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.scheduled_call	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.source	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.source	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.source_freshness	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.source_freshness	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source_freshness	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.source_note	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.source_note	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.source_note	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.station_facility	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.station_facility	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.station_facility	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.stop_place	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.stop_place	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.stop_place	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.stop_point	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.stop_point	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.stop_point	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.traffic_event	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.traffic_event	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.traffic_event	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.traffic_event_observation	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.traffic_event_observation	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.traffic_event_observation	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.transit_line	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.transit_line	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.transit_line	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.weather_warning	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.weather_warning	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.weather_warning	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+check	access.api_key.api_key_key_id_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+check	access.api_key.api_key_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+check	access.audit.audit_action_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+check	access.plan.plan_rate_per_second_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+check	access.usage.usage_requests_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+table	access.audit	test/api-schemas.db.test.ts > as api_access: a plan, a key (public by default, made own), an acceptance, usage and an audit row are written; the audit is append-only
+view	public.contract_source_rules	test/contract-mapping.db.test.ts > source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID public behind its per-request terms gate; an excluded source has no row
+check	public.driving_rule_facts.driving_rule_facts_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.driving_rule_facts.driving_rule_facts_check1	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.driving_rule_facts.driving_rule_facts_fact_key_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.driving_rule_facts.driving_rule_facts_position_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.driving_rule_facts.driving_rule_facts_source_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.driving_rule_topics.driving_rule_topics_topic_code_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.message_coverage_sources.message_coverage_sources_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.message_coverage_sources.message_coverage_sources_check1	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.message_coverage_sources.message_coverage_sources_coverage_role_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.message_coverage_sources.message_coverage_sources_source_ref_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.message_coverage_sources.message_coverage_sources_state_code_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_attribution_text_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_licence_label_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_source_id_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_source_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register.source_register_use_classes_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register_notes.source_register_notes_body_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register_notes.source_register_notes_lang_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_register_notes.source_register_notes_note_kind_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	access.api_key.api_key_audience_check	test/api-schemas.db.test.ts > every constraint and index of access is the one the API's DDL built, by name and definition, and no other
+check	access.api_key.api_key_audience_check	test/api-schemas.db.test.ts > refuses a malformed key id, an unknown audit action or key audience, a rate out of bounds, a negative count and a half-set rotation
+table	public.driving_rule_facts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.driving_rule_facts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.driving_rule_facts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.driving_rule_topics	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.driving_rule_topics	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.driving_rule_topics	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.message_coverage_sources	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.message_coverage_sources	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.message_coverage_sources	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_register	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_register	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_register	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_register_notes	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_register_notes	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_register_notes	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.driving_rule_topics	test/contract-mapping.db.test.ts > rule_topic and rule_statement: the curated topics and facts, German first, English appended, each with its legal basis, review date and to-verify note
+table	public.driving_rule_facts	test/contract-mapping.db.test.ts > rule_topic and rule_statement: the curated topics and facts, German first, English appended, each with its legal basis, review date and to-verify note
+table	public.message_coverage_sources	test/contract-mapping.db.test.ts > message_coverage: every Land carried by the NMS relay as measured, Berlin, BW and SH by their own feeds, BW current-only
+table	public.source_register	test/contract-mapping.db.test.ts > source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)
+table	public.source_register_notes	test/contract-mapping.db.test.ts > source_note: the conditions and the MTS-K purpose note, verbatim, under the feed that names the register row
+view	public.contract_source_domains	test/contract-mapping.db.test.ts > source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)
+view	public.contract_sources	test/contract-mapping.db.test.ts > source: a feed with its catalogue licence, offer page and stale rule, the register's attribution, conditions and review where its licence id names a register row; SID public behind its per-request terms gate; an excluded source has no row
+view	public.contract_sources	test/contract-mapping.db.test.ts > source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)
+view	contract.terms	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.terms	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.terms	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.terms	test/contract-mapping.db.test.ts > terms: sid-terms-1 in German (binding) and English, the verbatim section A.2, and every SID row's terms_gate names it
+grant	api_reader@contract.terms	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.terms	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+table	public.autobahn_sweeps	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.autobahn_sweeps	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.autobahn_sweeps	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.licence_texts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.licence_texts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.licence_texts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_terms	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_terms	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_terms	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.source_terms_texts	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.source_terms_texts	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
+table	public.source_terms_texts	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.licence_texts	test/contract-mapping.db.test.ts > licence: every label a source names has a URL; the licence texts are listed with theirs
+table	public.source_terms	test/contract-mapping.db.test.ts > terms: sid-terms-1 in German (binding) and English, the verbatim section A.2, and every SID row's terms_gate names it
+table	public.source_terms_texts	test/contract-mapping.db.test.ts > terms: sid-terms-1 in German (binding) and English, the verbatim section A.2, and every SID row's terms_gate names it
+table	public.autobahn_sweeps	test/contract-mapping.db.test.ts > traffic_event: the newest sweep per road and kind is kept by the insert; a newer sweep replaces the last, a late older tick does not, and kinds that are no traffic event stay out
+function	public.autobahn_sweeps_note()	test/contract-mapping.db.test.ts > traffic_event: the newest sweep per road and kind is kept by the insert; a newer sweep replaces the last, a late older tick does not, and kinds that are no traffic event stay out
+trigger	public.autobahn_events.autobahn_sweeps_note	test/contract-mapping.db.test.ts > traffic_event: the newest sweep per road and kind is kept by the insert; a newer sweep replaces the last, a late older tick does not, and kinds that are no traffic event stay out
+check	public.licence_texts.licence_texts_licence_label_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.licence_texts.licence_texts_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.licence_texts.licence_texts_url_kind_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms.source_terms_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms.source_terms_provider_terms_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms.source_terms_terms_gate_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms.source_terms_terms_id_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms.source_terms_terms_version_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms_texts.source_terms_texts_body_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms_texts.source_terms_texts_heading_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms_texts.source_terms_texts_lang_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.source_terms_texts.source_terms_texts_terms_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+fixture	vf_test.contract_seed_begin	test/contract-seed.db.test.ts > a second seed is refused and changes nothing
+fixture	vf_test.seed_check	test/contract-seed.db.test.ts > a row the contract cannot read back as given is refused, naming the column, and writes nothing
+fixture	vf_test.seed_check	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.ensure_day	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.after_colon	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.point	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.ensure_register	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_publisher	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_source	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_licence	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_source_note	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_source_freshness	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_terms	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_admin_region	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_place	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_place_alias	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_road	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_junction	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_traffic_event	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_traffic_event_observation	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_fuel_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_fuel_product	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_fuel_price_observation	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_charging_site	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_charge_point	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_charge_point_state_observation	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_parking_facility	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_occupancy_observation	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.ensure_feed	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_stop_place	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_stop_point	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_transit_line	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_journey	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_scheduled_call	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_call_observation	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_station_facility	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_weather_warning	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_rule_topic	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_rule_statement	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_message_coverage	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_refused	test/contract-seed.db.test.ts > contract_info is never seeded, and api_reader inserts into no contract view
+function	public.contract_search_fold(t text)	test/contract-mapping.db.test.ts > search_fold: lower case, umlauts and ß spelled out, other diacritics dropped, letters and digits only
+function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: a KVB Haltestelle DELFI keeps no parent for maps to its first parentless stop
+function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: an OpenStation lift with its state, and a FaSta escalator
+fixture	vf_test.ensure_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+view	contract.departure	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.departure	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.departure	test/contract-mapping.db.test.ts > departure: Trip Updates, the newest row of the latest earlier stop when the stop has none; SKIPPED here or a newer CANCELED trip cancels
+view	contract.departure	test/contract-mapping.db.test.ts > departure: a SIRI ET call of the line in the minute wins over Trip Updates, with its platform change; every carrier is credited
+grant	api_reader@contract.departure	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.departure	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+function	public.contract_transport_mode(route_type integer)	test/contract-mapping.db.test.ts > departure: with no feed up, the timetable's call, its line and mode, says no figure
+function	public.contract_transport_mode(route_type integer)	test/contract-mapping.db.test.ts > stop_place, stop_point and transit_line from the static GTFS
+fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_departure	test/contract-seed.db.test.ts > a departure seeded with a realtime source reads back with its figure, its platform and its carriers
+view	contract.traffic_event	test/contract-mapping.db.test.ts > severity: a closed or blocked road, an accident, a long jam, roadworks, a short jam, a restriction, a hazard; a lane deviation is no closure
+view	public.contract_source_domains	test/contract-mapping.db.test.ts > domain: station equipment and stop accessibility sources answer for accessibility, the timetable for transit
+function	public.contract_road_shape(road text, OUT line geometry, OUT length_km numeric, OUT states text[])	test/contract-mapping.db.test.ts > road: the BASt LCL chains linked by pos_off_lcd, one line each, broken at a gap; a self-link, a foreign code and a lone point draw nothing; a cycle starts at its smallest code
+view	contract.road	test/contract-mapping.db.test.ts > road: the BASt LCL chains linked by pos_off_lcd, one line each, broken at a gap; a self-link, a foreign code and a lone point draw nothing; a cycle starts at its smallest code
+function	public.contract_road_shape(road text, OUT line geometry, OUT length_km numeric, OUT states text[])	test/contract-mapping.db.test.ts > road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point and in the platform's order
+view	contract.road	test/contract-mapping.db.test.ts > road: parity with the platform's motorway map on the A1, A3 and A7 of LCL 22.0, every chain point for point and in the platform's order
+grant	api_reader@contract.address	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.address	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.address	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.address	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.address	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.address	test/contract-reads.db.test.ts > poi and address: the OSM rows with the platform's folds
+fixture	vf_test.seed_address	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.poi	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.poi	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.poi	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.poi	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.poi	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.poi	test/contract-reads.db.test.ts > poi and address: the OSM rows with the platform's folds
+fixture	vf_test.seed_poi	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.hydrogen_station	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.hydrogen_station	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.hydrogen_station	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.hydrogen_station	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.hydrogen_station	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.hydrogen_station	test/contract-reads.db.test.ts > hydrogen_station: an open station with its refill and opening as published; a closed one is gone
+fixture	vf_test.seed_hydrogen_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.service_alert	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.service_alert	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.service_alert	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.service_alert	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.service_alert	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.service_alert	test/contract-reads.db.test.ts > service_alert: an alert with its lines; a restricted one is withheld
+fixture	vf_test.seed_service_alert	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.sharing_station	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.sharing_station	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.sharing_station	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.sharing_station	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.sharing_station	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.sharing_station	test/contract-reads.db.test.ts > sharing: the stations and vehicles of an admitted system only, with the system's name
+fixture	vf_test.seed_sharing_station	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.sharing_station_status	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.sharing_station_status	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.sharing_station_status	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.sharing_station_status	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.sharing_station_status	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.sharing_station_status	test/contract-reads.db.test.ts > sharing: the stations and vehicles of an admitted system only, with the system's name
+fixture	vf_test.seed_sharing_station_status	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.sharing_vehicle	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.sharing_vehicle	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.sharing_vehicle	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.sharing_vehicle	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.sharing_vehicle	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.sharing_vehicle	test/contract-reads.db.test.ts > sharing: the stations and vehicles of an admitted system only, with the system's name
+fixture	vf_test.seed_sharing_vehicle	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.speed_camera	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.speed_camera	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.speed_camera	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.speed_camera	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.speed_camera	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.speed_camera	test/contract-reads.db.test.ts > speed_camera: an OSM camera, an official point with no position but its AGS, and a Hamburg camera under its origin's condition
+fixture	vf_test.seed_speed_camera	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.street_bay	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.street_bay	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.street_bay	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.street_bay	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.street_bay	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.street_bay	test/contract-reads.db.test.ts > street_bay: a disabled-badge bay with its newest sensor state
+fixture	vf_test.seed_street_bay	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.transit_punctuality	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.transit_punctuality	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.transit_punctuality	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.transit_punctuality	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.transit_punctuality	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.transit_punctuality	test/contract-reads.db.test.ts > transit_punctuality: no area is listed while no trip was seen
+fixture	vf_test.ensure_gbfs_system	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+function	public.contract_road_shape(road text, OUT line geometry, OUT length_km numeric, OUT states text[])	test/contract-mapping.db.test.ts > road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)
+view	contract.road	test/contract-mapping.db.test.ts > road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)
+function	public.contract_metres(alat double precision, alon double precision, blat double precision, blon double precision)	test/contract-mapping.db.test.ts > road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)
+function	public.contract_junction_land(p geography)	test/contract-mapping.db.test.ts > road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)
+view	contract.junction	test/contract-mapping.db.test.ts > road: chains in the platform's road order (along the longest, then the first code; a spur last), their own length, and the Länder of the named junctions in road order (a spur's after its nearest main point; the nearest live keyed BKG Gemeinde within 20 km)
+grant	api_reader@contract.lorry_rule	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.lorry_rule	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.lorry_rule	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.lorry_rule	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.lorry_rule	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.lorry_rule	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.low_emission_zone	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.low_emission_zone	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.low_emission_zone	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.low_emission_zone	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.low_emission_zone	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.low_emission_zone	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+grant	api_reader@contract.transit_trip_delay	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.transit_trip_delay	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.transit_trip_delay	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.transit_trip_delay	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.transit_trip_delay	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.transit_trip_delay	test/contract-reads.db.test.ts > transit_trip_delay: each trip's largest delay of the last half hour per stop key, of DELFI's Trip Updates only
+grant	api_reader@contract.station_disruption	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.station_disruption	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+view	contract.station_disruption	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.station_disruption	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.station_disruption	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.station_disruption	test/contract-reads.db.test.ts > station_disruption: a station's departures of the next hour per minute, line and live feed, cancelled and late, through its DHID and the bridge
+fixture	vf_test.name_fold	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.admin_core	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_low_emission_zone	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+fixture	vf_test.seed_lorry_rule	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+check	public.lez_feed_places.lez_feed_places_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_feed_places.lez_feed_places_feed_key_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_feed_places.lez_feed_places_place_code_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_feed_places.lez_feed_places_scope_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_entry_key_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_name_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_place_codes_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_plaque_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.lez_list_entries.lez_list_entries_source_url_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+grant	api_reader@contract.low_emission_zone_entry	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.low_emission_zone_entry	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+table	public.lez_feed_places	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lez_list_entries	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.lez_feed_places	test/contract-reads.db.test.ts > low_emission_zone: a city document names its Gemeinde and city, the register its scope alone, a feed the list does not name nothing; the data's own date and the last read
+table	public.lez_list_entries	test/contract-reads.db.test.ts > low_emission_zone_entry: the curated list as the platform's, a zone in force with its plaque, a lifted one with its day and no plaque, a closed-licence one not covered
+view	contract.low_emission_zone_entry	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+view	contract.low_emission_zone_entry	test/api-schemas.db.test.ts > contract holds views only, 50 of them; access holds its 8 tables, and neither holds anything else
+view	contract.low_emission_zone_entry	test/api-schemas.db.test.ts > on a database with no platform rows, only the views over the reference and register rows the migrations load publish anything
+view	contract.low_emission_zone_entry	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+view	contract.low_emission_zone_entry	test/contract-reads.db.test.ts > low_emission_zone_entry: the curated list as the platform's, a zone in force with its plaque, a lifted one with its day and no plaque, a closed-licence one not covered
+fixture	vf_test.seed_low_emission_zone_entry	test/contract-seed.db.test.ts > contract.%s reads back each seeded row as given, source_ref unchanged
+check	domains.train_board_departures.train_board_departures_attribution	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_category_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_changed_platform_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_destination_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_eva_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_fetch_past	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_licence	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_line_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_planned_near	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_platform_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_source	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_train_number_check	test/checks.db.test.ts > every check of schema domains refuses its plant with its own name
+check	domains.train_board_departures.train_board_departures_source	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
+grant	viafrei_live_ingestor@domains.train_board_departures	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
+grant	api_reader@contract.train_board	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
+grant	api_reader@contract.train_board	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
+partitioned	domains.train_board_departures	test/train-board.db.test.ts > is a tick table on the daily schedule: partitioned by day on observed_at, with a retention row and no default partition
+policy	domains.train_board_departures.train_board_departures_live_insert	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
+policy	domains.train_board_departures.train_board_departures_read	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
+table	domains.train_board_departures	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
+table	domains.train_board_departures	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
+view	contract.train_board	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
+view	contract.train_board	test/api-schemas.db.test.ts > every column of schemas contract and access is the one the API's DDL built, in its position and type, then the envelope 0312 appends, and no other
+fixture	vf_test.seed_train_board	test/contract-seed.db.test.ts > the sample seeds every contract relation but contract_info, transit_punctuality, transit_trip_delay and station_disruption (computed by the migrations)
+fixture	vf_test.contract_seed_end	test/contract-seed.db.test.ts > a row the contract cannot read back as given is refused, naming the column, and writes nothing
+fixture	vf_test.seed_read_back	test/contract-seed.db.test.ts > a row the contract cannot read back as given is refused, naming the column, and writes nothing
+check	live.refresh_requests.refresh_requests_fuel_subject	test/live-refresh.db.test.ts > stores public ids only: a position, a cell, a station name, an extra field or a key other than the id is refused (privacy ruling R1, R2)
+check	live.refresh_requests.refresh_requests_train_board_subject	test/live-refresh.db.test.ts > stores public ids only: a position, a cell, a station name, an extra field or a key other than the id is refused (privacy ruling R1, R2)
+check	live.refresh_requests.refresh_requests_order	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_reason_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_requested_by_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_settled	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_source_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_state_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_subject_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_subject_key_check	test/live-refresh.db.test.ts > refuses a settled state without settled_at, an open one with it, an unknown state or source, a subject that is no object, a free-text door, an empty reason and a claim before the request
+check	live.refresh_requests.refresh_requests_order	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+function	live.prune_refresh_requests(before timestamp with time zone)	test/live-refresh.db.test.ts > prunes requests made before a date in any state with their askers, never one made less than 30 days ago, for api_access
+function	live.refresh_requests_notify()	test/live-refresh.db.test.ts > notifies the ingestor on insert with the source, and the API's waiters on settle with the id
+function	live.refresh_requests_transition()	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+grant	api_access@live.refresh_askers	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+grant	api_access@live.refresh_askers	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
+grant	api_access@live.refresh_requests	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+grant	api_access@live.refresh_requests	test/api-schemas.db.test.ts > api_access holds nothing outside access but SELECT and INSERT on the refresh requests and their askers (0315), and no other service role holds anything in access or contract
+grant	viafrei_live_ingestor@live.refresh_requests	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+grant	viafrei_live_ingestor@control.data_status	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@control.data_status	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.db_station_numbers	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.db_station_numbers	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_price_latest	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_price_latest	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_price_latest_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_price_latest_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_station_watch	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_station_watch	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_stations	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_stations	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.fuel_stations_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.fuel_stations_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.gazetteer_places	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.gazetteer_places	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.ingest_runs	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.ingest_runs	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+grant	viafrei_live_ingestor@public.motorway_points_live	test/live-refresh.db.test.ts > viafrei_live_ingestor writes the fuel path's run ledger and reads its tables, and nothing in access
+grant	viafrei_live_ingestor@public.motorway_points_live	test/roles-grants.db.test.ts > viafrei_live_ingestor: every privilege it holds is a row, every row is held
+role	viafrei_live_ingestor	test/roles-grants.db.test.ts > viafrei_live_ingestor: as 0315 creates it
+role	viafrei_live_ingestor	test/roles-grants.db.test.ts > viafrei_live_ingestor: every relation, column, schema and function of ours
+table	live.refresh_askers	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+table	live.refresh_requests	test/live-refresh.db.test.ts > holds one open request per source and subject key: a second insert does nothing until the first settles
+table	live.refresh_requests	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
+trigger	live.refresh_requests.refresh_requests_notify	test/live-refresh.db.test.ts > notifies the ingestor on insert with the source, and the API's waiters on settle with the id
+trigger	live.refresh_requests.refresh_requests_transition	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none

@@ -27,9 +27,16 @@ import { domainOf, expectedPolicies, policyLine, readPolicies } from "./policies
 
 type Table = { readonly relation: string; readonly domain: string; readonly update: boolean };
 
+/**
+ * The domains tables the ingestor writes by source: those with an insert
+ * policy for viafrei_ingestor. domains.train_board_departures is appended by
+ * the live ingestor under a policy of its own (0315), whose behaviour
+ * test/train-board.db.test.ts proves.
+ */
 function tables(): Table[] {
   const rows = expectedPolicies();
-  return [...new Set(rows.map((r) => r.relation))].map((relation) => {
+  const ingestor = new Set(rows.filter((r) => r.cmd === "INSERT" && r.roles === "viafrei_ingestor").map((r) => r.relation));
+  return [...new Set(rows.map((r) => r.relation))].filter((relation) => ingestor.has(relation)).map((relation) => {
     const own = rows.filter((r) => r.relation === relation);
     const insert = own.find((r) => r.cmd === "INSERT");
     const domain = insert === undefined ? null : domainOf(insert.check);
@@ -79,7 +86,7 @@ describe("the policy table", () => {
     const want = expectedPolicies().map(policyLine);
     expect(held.filter((k) => !want.includes(k))).toEqual([]);
     expect(want.filter((k) => !held.includes(k))).toEqual([]);
-    expect(want.length).toBe(84);
+    expect(want.length).toBe(86);
   });
 
   it("every domains table with policies has a read, an own insert naming its domain, and at most an own update", () => {

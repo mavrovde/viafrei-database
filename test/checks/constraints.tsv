@@ -1,5 +1,36 @@
 # Every CHECK constraint of ours (test/checks.ts): relation, constraint, definition, a plant row that breaks it alone (JSON) or -.
 # A migration that adds, changes or drops a check changes its row here in the same commit.
+access.api_key	api_key_audience_check	CHECK ((audience = ANY (ARRAY['public'::text, 'own'::text])))	{"audience":""}
+access.api_key	api_key_check	CHECK (((previous_mac IS NULL) = (previous_until IS NULL)))	{"previous_mac":""}
+access.api_key	api_key_check1	CHECK (((revoked_at IS NULL) = (revoke_reason IS NULL)))	{"revoked_at":"2026-01-01 00:30:17.5+00"}
+access.api_key	api_key_environment_check	CHECK ((environment = ANY (ARRAY['live'::text, 'test'::text])))	{"environment":""}
+access.api_key	api_key_key_id_check	CHECK ((key_id ~ '^[0-9A-Za-z]{10}$'::text))	{"key_id":""}
+access.api_key	api_key_mac_check	CHECK ((length(mac) = 32))	{"mac":""}
+access.api_key	api_key_previous_mac_check	CHECK ((length(previous_mac) = 32))	{"previous_mac":""}
+access.audit	audit_action_check	CHECK ((action = ANY (ARRAY['plan_put'::text, 'plan_move'::text, 'issue'::text, 'rotate'::text, 'revoke'::text, 'accept_terms'::text, 'audit_pruned'::text, 'usage_pruned'::text, 'console_enrolment'::text, 'console_passkey_added'::text, 'console_passkey_removed'::text, 'console_sign_in'::text])))	{"action":""}
+access.console_enrolment	console_enrolment_code_mac_check	CHECK ((length(code_mac) = 32))	{"code_mac":""}
+access.console_enrolment	console_enrolment_owner_name_check	CHECK ((owner_name ~ '^[a-z][a-z0-9._-]{0,31}$'::text))	{"owner_name":""}
+access.console_passkey	console_passkey_credential_id_check	CHECK (((length(credential_id) >= 16) AND (length(credential_id) <= 1023)))	{"credential_id":"15"}
+access.console_passkey	console_passkey_flags_check	CHECK (((flags >= 0) AND (flags <= 255)))	{"flags":"-1"}
+access.console_passkey	console_passkey_owner_name_check	CHECK ((owner_name ~ '^[a-z][a-z0-9._-]{0,31}$'::text))	{"owner_name":""}
+access.console_passkey	console_passkey_public_key_check	CHECK (((length(public_key) >= 1) AND (length(public_key) <= 2048)))	{"public_key":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+access.console_passkey	console_passkey_sign_count_check	CHECK (((sign_count >= 0) AND (sign_count <= '4294967295'::bigint)))	{"sign_count":"-1"}
+access.console_passkey	console_passkey_user_handle_check	CHECK ((length(user_handle) = 32))	{"user_handle":""}
+access.plan	plan_burst_check	CHECK (((burst >= 1) AND (burst <= 100000)))	{"burst":"0"}
+access.plan	plan_plan_name_check	CHECK ((plan_name ~ '^[a-z][a-z0-9_-]{0,31}$'::text))	{"plan_name":""}
+access.plan	plan_quota_day_check	CHECK ((quota_day >= 0))	{"quota_day":"-1"}
+access.plan	plan_quota_month_check	CHECK ((quota_month >= 0))	{"quota_month":"-1"}
+access.plan	plan_rate_per_second_check	CHECK (((rate_per_second >= 1) AND (rate_per_second <= 100000)))	{"rate_per_second":"0"}
+access.plan	plan_tier_check	CHECK ((tier = ANY (ARRAY['critical'::text, 'standard'::text, 'bulk'::text])))	{"tier":""}
+access.plan	plan_use_class_check	CHECK ((use_class = ANY (ARRAY['consumer'::text, 'non_commercial'::text, 'commercial'::text])))	{"use_class":""}
+access.usage	usage_deadline_exhausted_check	CHECK ((deadline_exhausted >= 0))	{"deadline_exhausted":"-1"}
+access.usage	usage_not_modified_check	CHECK ((not_modified >= 0))	{"not_modified":"-1"}
+access.usage	usage_operation_check	CHECK ((operation ~ '^[A-Za-z][A-Za-z0-9]{0,63}$'::text))	{"operation":""}
+access.usage	usage_overloaded_check	CHECK ((overloaded >= 0))	{"overloaded":"-1"}
+access.usage	usage_quota_exceeded_check	CHECK ((quota_exceeded >= 0))	{"quota_exceeded":"-1"}
+access.usage	usage_rate_limited_check	CHECK ((rate_limited >= 0))	{"rate_limited":"-1"}
+access.usage	usage_requests_check	CHECK ((requests >= 0))	{"requests":"-1"}
+access.usage	usage_storage_ms_check	CHECK ((storage_ms >= 0))	{"storage_ms":"-1"}
 control.budget_state	budget_state_held_reason_check	CHECK ((held_reason = ANY (ARRAY['429'::text, '5xx'::text, 'owner'::text])))	{"held_reason":""}
 control.budget_state	budget_state_owed_by_check	CHECK (((owed_by IS NULL) OR (owed_by ~ '^[a-z][a-z0-9_]{0,31}$'::text)))	{"owed_by":""}
 control.budget_state	budget_state_owed_pair	CHECK (((owed_by IS NULL) = (owed_at IS NULL)))	{"owed_by":""}
@@ -149,6 +180,18 @@ domains.street_bays	street_bays_kind	CHECK ((kind = ANY (ARRAY['disabled'::text,
 domains.street_bays	street_bays_postcode	CHECK (((postcode IS NULL) OR (postcode ~ '^[0-9]{5}$'::text)))	{"postcode":""}
 domains.street_bays	street_bays_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
 domains.street_bays	street_bays_spaces	CHECK (((spaces IS NULL) OR ((spaces >= 1) AND (spaces <= 99))))	{"spaces":"0"}
+domains.train_board_departures	train_board_departures_attribution	CHECK ((attribution = 'Fahrplandaten: Deutsche Bahn AG, DB API Marketplace, CC BY 4.0, bearbeitet'::text))	{"attribution":"x"}
+domains.train_board_departures	train_board_departures_category_check	CHECK (((category IS NULL) OR ((btrim(category) <> ''::text) AND (length(category) <= 16))))	{"category":" "}
+domains.train_board_departures	train_board_departures_changed_platform_check	CHECK (((changed_platform IS NULL) OR ((btrim(changed_platform) <> ''::text) AND (length(changed_platform) <= 16))))	{"changed_platform":" "}
+domains.train_board_departures	train_board_departures_destination_check	CHECK (((destination IS NULL) OR ((btrim(destination) <> ''::text) AND (length(destination) <= 120))))	{"destination":" "}
+domains.train_board_departures	train_board_departures_eva_check	CHECK ((eva ~ '^[0-9]{7}$'::text))	{"eva":"123"}
+domains.train_board_departures	train_board_departures_fetch_past	CHECK ((observed_at <= (recorded_at + '00:05:00'::interval)))	{"recorded_at":"2000-01-01 00:00:00+00"}
+domains.train_board_departures	train_board_departures_licence	CHECK ((licence = 'CC BY 4.0'::text))	{"licence":"CC BY-SA 4.0"}
+domains.train_board_departures	train_board_departures_line_check	CHECK (((line IS NULL) OR ((btrim(line) <> ''::text) AND (length(line) <= 32))))	{"line":" "}
+domains.train_board_departures	train_board_departures_planned_near	CHECK (((planned_at >= (observed_at - '1 day'::interval)) AND (planned_at <= (observed_at + '1 day'::interval))))	{"planned_at":"2000-01-01 00:00:00+00"}
+domains.train_board_departures	train_board_departures_platform_check	CHECK (((platform IS NULL) OR ((btrim(platform) <> ''::text) AND (length(platform) <= 16))))	{"platform":" "}
+domains.train_board_departures	train_board_departures_source	CHECK ((source_id = 'db_timetables'::text))	{"source_id":"other_source"}
+domains.train_board_departures	train_board_departures_train_number_check	CHECK (((train_number IS NULL) OR ((btrim(train_number) <> ''::text) AND (length(train_number) <= 16))))	{"train_number":" "}
 domains.transit_agencies_odbl	transit_agencies_odbl_agency_name_nonempty	CHECK ((agency_name <> ''::text))	{"agency_name":""}
 domains.transit_agencies_odbl	transit_agencies_odbl_agency_timezone_nonempty	CHECK ((agency_timezone <> ''::text))	{"agency_timezone":""}
 domains.transit_agencies_odbl	transit_agencies_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}
@@ -224,6 +267,16 @@ ingestor.units	units_config_sha256_check	CHECK ((config_sha256 ~ '^[0-9a-f]{64}$
 ingestor.units	units_members_check	CHECK ((cardinality(members) >= 1))	{"members":"{}"}
 ingestor.units	units_mode_check	CHECK ((mode = ANY (ARRAY['cron'::text, 'service'::text, 'stream'::text])))	{"mode":""}
 ingestor.units	units_name_check	CHECK ((name ~ '^[a-z][a-z0-9-]{1,40}$'::text))	{"name":""}
+live.refresh_requests	refresh_requests_fuel_subject	CHECK (((source <> 'fuel-prices-de'::text) OR ((subject = jsonb_build_object('at', (subject ->> 'at'::text))) AND ((subject ->> 'at'::text) ~ '^(ags:[0-9]{8}|anchor:[0-9]{1,6})$'::text) AND (subject_key = (subject ->> 'at'::text)))))	{"source":"fuel-prices-de","subject":"{\"at\":\"pt:48.1,11.5\"}","subject_key":"pt:48.1,11.5"}
+live.refresh_requests	refresh_requests_order	CHECK (((claimed_at >= created_at) AND (settled_at >= created_at)))	{"claimed_at":"2026-01-01 00:30:17.5+00"}
+live.refresh_requests	refresh_requests_reason_check	CHECK (((length(reason) >= 1) AND (length(reason) <= 200)))	{"reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+live.refresh_requests	refresh_requests_requested_by_check	CHECK ((requested_by = ANY (ARRAY['site'::text, 'mcp'::text, 'dev'::text])))	{"requested_by":"free"}
+live.refresh_requests	refresh_requests_settled	CHECK (((state = 'pending'::text) = (settled_at IS NULL)))	{"state":""}
+live.refresh_requests	refresh_requests_source_check	CHECK ((source = ANY (ARRAY['fuel-prices-de'::text, 'train-board-de'::text])))	{"source":"fuel-prices"}
+live.refresh_requests	refresh_requests_state_check	CHECK ((state = ANY (ARRAY['pending'::text, 'refreshed'::text, 'none_due'::text, 'refused'::text, 'failed'::text, 'paused'::text])))	{"state":""}
+live.refresh_requests	refresh_requests_subject_check	CHECK (((jsonb_typeof(subject) = 'object'::text) AND (length((subject)::text) <= 2000)))	{"subject":"\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\""}
+live.refresh_requests	refresh_requests_subject_key_check	CHECK (((length(subject_key) >= 1) AND (length(subject_key) <= 200)))	{"subject_key":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+live.refresh_requests	refresh_requests_train_board_subject	CHECK (((source <> 'train-board-de'::text) OR ((subject = jsonb_build_object('eva', (subject ->> 'eva'::text))) AND ((subject ->> 'eva'::text) ~ '^[0-9]{7}$'::text) AND (subject_key = (subject ->> 'eva'::text)))))	{"source":"train-board-de","subject":"{\"name\":\"x\"}","subject_key":"x"}
 public.ags_regions	ags_regions_code_shape	CHECK (((ags ~ '^[0-9]{2}$'::text) OR (ags ~ '^[0-9]{5}$'::text)))	{"ags":""}
 public.ags_regions	ags_regions_level_matches_code	CHECK ((((level = 'land'::text) AND (length(ags) = 2)) OR ((level = 'kreis'::text) AND (length(ags) = 5))))	{"ags":""}
 public.ags_regions	ags_regions_name_en_paired	CHECK (((name_en IS NULL) = (name_en_norm IS NULL)))	{"name_en":""}
@@ -305,6 +358,12 @@ public.deployments	deployments_note_is_short	CHECK (((note IS NULL) OR (length(n
 public.deployments	deployments_previous_git_sha_is_hex	CHECK (((previous_git_sha IS NULL) OR (previous_git_sha ~ '^[0-9a-f]{7,40}$'::text)))	{"previous_git_sha":""}
 public.deployments	deployments_translator_digest_is_a_digest	CHECK (((translator_digest IS NULL) OR (translator_digest ~ '^sha256:[0-9a-f]{64}$'::text)))	{"translator_digest":""}
 public.deployments	deployments_version_is_a_version	CHECK ((version ~ '^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.\\-]+)?$'::text))	{"version":""}
+public.driving_rule_facts	driving_rule_facts_check	CHECK (((source_note_de IS NULL) = (source_note_en IS NULL)))	{"source_note_de":"x","source_note_en":null}
+public.driving_rule_facts	driving_rule_facts_check1	CHECK (((to_verify_de IS NULL) = (to_verify_en IS NULL)))	{"to_verify_de":"x","to_verify_en":null}
+public.driving_rule_facts	driving_rule_facts_fact_key_check	CHECK ((fact_key ~ '^[a-z_]+\\.[a-z0-9_]+$'::text))	{"fact_key":""}
+public.driving_rule_facts	driving_rule_facts_position_check	CHECK (("position" > 0))	{"position":"-1"}
+public.driving_rule_facts	driving_rule_facts_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
+public.driving_rule_topics	driving_rule_topics_topic_code_check	CHECK ((topic_code ~ '^[a-z_]+$'::text))	{"topic_code":""}
 public.energy_page_key_heads	energy_page_key_heads_build_ms_check	CHECK ((build_ms >= 0))	{"build_ms":"-1"}
 public.energy_page_key_heads	energy_page_key_heads_feed_counts_check	CHECK ((jsonb_typeof(feed_counts) = 'object'::text))	{"feed_counts":"\"x\""}
 public.energy_page_key_heads	energy_page_key_heads_kind_check	CHECK ((kind = ANY (ARRAY['fuel'::text, 'charging'::text])))	{"kind":""}
@@ -430,9 +489,22 @@ public.landing_status_hourly	landing_status_hourly_hour_check	CHECK (((EXTRACT(m
 public.landing_status_hourly	landing_status_hourly_n_check	CHECK ((n >= 0))	{"n":"-1"}
 public.landing_status_hourly	landing_status_hourly_route_class_check	CHECK ((route_class = ANY (ARRAY['home'::text, 'page'::text, 'place'::text, 'station'::text, 'motorway'::text, 'fragment'::text, 'asset'::text, 'meta'::text, 'other'::text])))	{"route_class":""}
 public.landing_status_hourly	landing_status_hourly_status_check	CHECK (((status >= 100) AND (status <= 599)))	{"status":"99"}
+public.lez_feed_places	lez_feed_places_check	CHECK (((scope = 'city'::text) = ((place_code IS NOT NULL) AND (city IS NOT NULL))))	{"scope":"city","place_code":null}
+public.lez_feed_places	lez_feed_places_feed_key_check	CHECK ((feed_key ~ '^[a-z0-9_]+$'::text))	{"feed_key":""}
+public.lez_feed_places	lez_feed_places_place_code_check	CHECK ((place_code ~ '^[0-9]{8}$'::text))	{"place_code":""}
+public.lez_feed_places	lez_feed_places_scope_check	CHECK ((scope = ANY (ARRAY['city'::text, 'national'::text])))	{"scope":""}
+public.lez_list_entries	lez_list_entries_check	CHECK (((lifted_on IS NULL) OR (plaque IS NULL)))	{"lifted_on":"2024-02-22","plaque":"green"}
+public.lez_list_entries	lez_list_entries_entry_key_check	CHECK ((entry_key ~ '^[a-z]+$'::text))	{"entry_key":""}
+public.lez_list_entries	lez_list_entries_name_check	CHECK ((name <> ''::text))	{"name":""}
+public.lez_list_entries	lez_list_entries_place_codes_check	CHECK ((cardinality(place_codes) > 0))	{"place_codes":"{}"}
+public.lez_list_entries	lez_list_entries_plaque_check	CHECK ((plaque = 'green'::text))	{"plaque":""}
+public.lez_list_entries	lez_list_entries_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
 public.lez_zone_overlaps	lez_zone_overlaps_two_feeds	CHECK ((source_feed <> other_feed))	{"source_feed":"a","other_feed":"a"}
 public.lez_zones	lez_zones_area_is_area	CHECK (((role = 'exempt_road'::text) OR (public.geometrytype(geom) = ANY (ARRAY['POLYGON'::text, 'MULTIPOLYGON'::text]))))	{"role":"zone","geom":"SRID=4326;POINT(0 0)"}
 public.lez_zones	lez_zones_role_known	CHECK ((role = ANY (ARRAY['zone'::text, 'exempt_road'::text, 'transfer'::text])))	{"role":""}
+public.licence_texts	licence_texts_licence_label_check	CHECK ((btrim(licence_label) <> ''::text))	{"licence_label":""}
+public.licence_texts	licence_texts_url_check	CHECK ((url ~ '^https://'::text))	{"url":""}
+public.licence_texts	licence_texts_url_kind_check	CHECK ((url_kind = ANY (ARRAY['licence_text'::text, 'source_terms'::text, 'statute'::text, 'rights_class'::text, 'provider_page'::text])))	{"url_kind":""}
 public.lorry_city	lorry_city_category	CHECK ((category = ANY (ARRAY['connection_motorway'::text, 'connection_primary'::text, 'connection_secondary'::text, 'connection_delivery'::text, 'lorry_priority_route'::text, 'heavy_transport'::text])))	{"category":""}
 public.lorry_city	lorry_city_class_on_network	CHECK (((layer = 'priority_route'::text) = (category IS NOT NULL)))	{"layer":"priority_route"}
 public.lorry_city	lorry_city_kind	CHECK (((layer = 'priority_route'::text) OR (kind IS NOT NULL)))	{"layer":""}
@@ -485,6 +557,11 @@ public.mcp_usage_exports	mcp_usage_exports_finished	CHECK (((state = 'claimed'::
 public.mcp_usage_exports	mcp_usage_exports_http_status_check	CHECK (((http_status >= 100) AND (http_status <= 599)))	{"http_status":"99"}
 public.mcp_usage_exports	mcp_usage_exports_state_check	CHECK ((state = ANY (ARRAY['claimed'::text, 'sent'::text, 'failed'::text])))	{"state":""}
 public.mcp_usage_exports	mcp_usage_exports_totals_check	CHECK ((jsonb_typeof(totals) = 'object'::text))	{"totals":"\"x\""}
+public.message_coverage_sources	message_coverage_sources_check	CHECK (((NOT current_only) OR (coverage_role = 'own'::text)))	{"current_only":"true","coverage_role":"carried","measured_on":"2026-01-01"}
+public.message_coverage_sources	message_coverage_sources_check1	CHECK (((coverage_role = 'own'::text) OR (measured_on IS NOT NULL)))	{"coverage_role":"carried","measured_on":null}
+public.message_coverage_sources	message_coverage_sources_coverage_role_check	CHECK ((coverage_role = ANY (ARRAY['own'::text, 'carried'::text])))	{"coverage_role":""}
+public.message_coverage_sources	message_coverage_sources_source_ref_check	CHECK ((btrim(source_ref) <> ''::text))	{"source_ref":""}
+public.message_coverage_sources	message_coverage_sources_state_code_check	CHECK ((state_code ~ '^[0-9]{2}$'::text))	{"state_code":""}
 public.motorway_summary	motorway_summary_closures_check	CHECK ((closures >= 0))	{"closures":"-1"}
 public.motorway_summary	motorway_summary_jams_check	CHECK ((jams >= 0))	{"jams":"-1"}
 public.motorway_summary	motorway_summary_road_check	CHECK ((road ~ '^A[1-9][0-9]{0,2}$'::text))	{"road":""}
@@ -685,6 +762,15 @@ public.source_hosts	source_hosts_app_version_check	CHECK (((app_version IS NULL)
 public.source_hosts	source_hosts_host_check	CHECK ((host = ANY (ARRAY['ingest-autobahn'::text, 'ingest-tankerkoenig'::text, 'ingest-mobilithek'::text, 'ingest-dwd'::text, 'ingest-vbb-rt'::text, 'ingest-db-fasta'::text, 'ingest-gtfs-roll'::text, 'ingest-gtfs-fetch'::text, 'ingest-zhv'::text, 'ingest-bnetza'::text, 'ingest-ocpdb'::text, 'ingest-hamburg'::text, 'ingest-gbfs'::text, 'retention'::text])))	{"host":""}
 public.source_hosts	source_hosts_order	CHECK ((heartbeat_at >= started_at))	{"started_at":"2026-01-02 00:00:00+00","heartbeat_at":"2026-01-01 00:00:00+00"}
 public.source_hosts	source_hosts_sources_check	CHECK ((sources >= 0))	{"sources":"-1"}
+public.source_register	source_register_attribution_text_check	CHECK ((btrim(attribution_text) <> ''::text))	{"attribution_text":""}
+public.source_register	source_register_check	CHECK (((NOT share_alike_database) OR share_alike))	{"share_alike":"false","share_alike_database":"true"}
+public.source_register	source_register_licence_label_check	CHECK ((btrim(licence_label) <> ''::text))	{"licence_label":""}
+public.source_register	source_register_source_id_check	CHECK ((source_id ~ '^[a-z0-9_]+$'::text))	{"source_id":""}
+public.source_register	source_register_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
+public.source_register	source_register_use_classes_check	CHECK (((cardinality(use_classes) > 0) AND (use_classes <@ ARRAY['consumer'::text, 'non_commercial'::text, 'commercial'::text])))	{"use_classes":"{zz-not-allowed}"}
+public.source_register_notes	source_register_notes_body_check	CHECK ((btrim(body) <> ''::text))	{"body":""}
+public.source_register_notes	source_register_notes_lang_check	CHECK ((lang = ANY (ARRAY['de'::text, 'en'::text])))	{"lang":""}
+public.source_register_notes	source_register_notes_note_kind_check	CHECK ((note_kind = ANY (ARRAY['condition'::text, 'purpose'::text])))	{"note_kind":""}
 public.source_schedule	source_schedule_declared_cadence_s_check	CHECK ((declared_cadence_s > 0))	{"declared_cadence_s":"-1"}
 public.source_schedule	source_schedule_floor_s_check	CHECK ((floor_s >= 0))	{"floor_s":"-1"}
 public.source_schedule	source_schedule_grant_reason_check	CHECK (((grant_reason IS NULL) OR (length(grant_reason) <= 200)))	{"grant_reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
@@ -700,6 +786,15 @@ public.source_schedule	source_schedule_paused_reason_check	CHECK (((paused_reaso
 public.source_schedule	source_schedule_running	CHECK (((state = 'running'::text) = (running_since IS NOT NULL)))	{"running_since":"2026-01-01 00:30:17.5+00"}
 public.source_schedule	source_schedule_source_key_check	CHECK ((source_key ~ '^[a-z][a-z0-9_]{0,63}$'::text))	{"source_key":""}
 public.source_schedule	source_schedule_state_check	CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text, 'misconfigured'::text, 'running'::text, 'unknown'::text])))	{"state":""}
+public.source_terms	source_terms_check	CHECK ((terms_gate = ((terms_id || '-'::text) || terms_version)))	{"terms_gate":"a-1","terms_id":"b","terms_version":"1"}
+public.source_terms	source_terms_provider_terms_url_check	CHECK ((provider_terms_url ~ '^https://'::text))	{"provider_terms_url":""}
+public.source_terms	source_terms_terms_gate_check	CHECK ((terms_gate ~ '^[a-z0-9-]+-[0-9]+$'::text))	{"terms_gate":""}
+public.source_terms	source_terms_terms_id_check	CHECK ((btrim(terms_id) <> ''::text))	{"terms_id":""}
+public.source_terms	source_terms_terms_version_check	CHECK ((btrim(terms_version) <> ''::text))	{"terms_version":""}
+public.source_terms_texts	source_terms_texts_body_check	CHECK ((btrim(body) <> ''::text))	{"body":""}
+public.source_terms_texts	source_terms_texts_heading_check	CHECK ((btrim(heading) <> ''::text))	{"heading":""}
+public.source_terms_texts	source_terms_texts_lang_check	CHECK ((lang = ANY (ARRAY['de'::text, 'en'::text])))	{"lang":""}
+public.source_terms_texts	source_terms_texts_terms_url_check	CHECK ((terms_url ~ '^https://'::text))	{"terms_url":""}
 public.speed_enforcement	speed_enforcement_ags	CHECK (((ags IS NULL) OR (ags ~ '^[0-9]{8}$'::text)))	{"ags":""}
 public.speed_enforcement	speed_enforcement_announced	CHECK (((kind <> 'mobile_announced'::text) OR (valid_from IS NOT NULL)))	{"kind":"mobile_announced"}
 public.speed_enforcement	speed_enforcement_attribution	CHECK ((attribution_id <> ''::text))	{"attribution_id":""}

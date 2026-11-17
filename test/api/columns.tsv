@@ -1,0 +1,591 @@
+# The columns of viafrei-api's schemas as the API's own DDL built them (contract 0.2: db/contract 0001, 0003, 0004;
+# access store version 3: db/access 0001-0004), read off that database's catalogue: relation, position, column, type.
+# 0307 and 0308 must build exactly these (test/api-schemas.db.test.ts). A change here is a change of the API's contract.
+# contract.terms is new in 0312 (the SID terms text, owner 2026-11-16): the API's DDL adds it with contract 0.3.
+# contract.departure is new in 0312 (the live departure board, #29): the API's DDL adds it with contract 0.3.
+# contract.low_emission_zone, lorry_rule, transit_trip_delay and station_disruption are new in 0312 (#29): the API's DDL adds them with contract 0.3.
+# contract.low_emission_zone_entry (the curated zone list) is new in 0312 (#29) too.
+access.api_key	1	key_id	text
+access.api_key	2	environment	text
+access.api_key	3	plan_name	text
+access.api_key	4	label	text
+access.api_key	5	contact	text
+access.api_key	6	mac	bytea
+access.api_key	7	previous_mac	bytea
+access.api_key	8	previous_until	timestamp with time zone
+access.api_key	9	issued_at	timestamp with time zone
+access.api_key	10	expires_at	timestamp with time zone
+access.api_key	11	revoked_at	timestamp with time zone
+access.api_key	12	revoke_reason	text
+access.api_key	13	changed_at	timestamp with time zone
+access.api_key	14	audience	text
+access.audit	1	audit_id	bigint
+access.audit	2	at	timestamp with time zone
+access.audit	3	action	text
+access.audit	4	key_id	text
+access.audit	5	plan_before	text
+access.audit	6	plan_after	text
+access.audit	7	actor	text
+access.audit	8	reason	text
+access.console_enrolment	1	code_mac	bytea
+access.console_enrolment	2	owner_name	text
+access.console_enrolment	3	expires_at	timestamp with time zone
+access.console_enrolment	4	used_at	timestamp with time zone
+access.console_passkey	1	credential_id	bytea
+access.console_passkey	2	owner_name	text
+access.console_passkey	3	user_handle	bytea
+access.console_passkey	4	public_key	bytea
+access.console_passkey	5	sign_count	bigint
+access.console_passkey	6	flags	smallint
+access.console_passkey	7	created_at	timestamp with time zone
+access.console_passkey	8	last_used_at	timestamp with time zone
+access.plan	1	plan_name	text
+access.plan	2	use_class	text
+access.plan	3	tier	text
+access.plan	4	scopes	text[]
+access.plan	5	sources	text[]
+access.plan	6	changed_at	timestamp with time zone
+access.plan	7	rate_per_second	integer
+access.plan	8	burst	integer
+access.plan	9	quota_day	bigint
+access.plan	10	quota_month	bigint
+access.schema_version	1	version	integer
+access.schema_version	2	applied_at	timestamp with time zone
+access.terms_acceptance	1	key_id	text
+access.terms_acceptance	2	source_family	text
+access.terms_acceptance	3	terms_version	text
+access.terms_acceptance	4	accepted_at	timestamp with time zone
+access.usage	1	key_id	text
+access.usage	2	hour	timestamp with time zone
+access.usage	3	operation	text
+access.usage	4	requests	bigint
+access.usage	5	not_modified	bigint
+access.usage	6	rate_limited	bigint
+access.usage	7	quota_exceeded	bigint
+access.usage	8	overloaded	bigint
+access.usage	9	deadline_exhausted	bigint
+access.usage	10	storage_ms	bigint
+contract.address	1	address_id	text
+contract.address	2	street	text
+contract.address	3	street_fold	text
+contract.address	4	house_number	text
+contract.address	5	house_number_fold	text
+contract.address	6	postcode	text
+contract.address	7	place_name	text
+contract.address	8	place_fold	text
+contract.address	9	land_name	text
+contract.address	10	location	geometry(Point,4326)
+contract.address	11	data_as_of	date
+contract.address	12	source_ref	text
+contract.address	13	recorded_at	timestamp with time zone
+contract.address	14	display_class	text
+contract.address	15	audience	text
+contract.admin_region	1	region_code	text
+contract.admin_region	2	region_level	text
+contract.admin_region	3	name	text
+contract.admin_region	4	parent_code	text
+contract.admin_region	5	boundary	geometry(MultiPolygon,4326)
+contract.call_observation	1	journey_id	text
+contract.call_observation	2	call_order	integer
+contract.call_observation	3	observed_at	timestamp with time zone
+contract.call_observation	4	expected_arrival_at	timestamp with time zone
+contract.call_observation	5	expected_departure_at	timestamp with time zone
+contract.call_observation	6	call_status	text
+contract.call_observation	7	source_ref	text
+contract.charge_point	1	point_id	text
+contract.charge_point	2	site_id	text
+contract.charge_point	3	evse_code	text
+contract.charge_point	4	current_kind	text
+contract.charge_point	5	power_max_kw	numeric(7,2)
+contract.charge_point_state_observation	1	point_id	text
+contract.charge_point_state_observation	2	observed_at	timestamp with time zone
+contract.charge_point_state_observation	3	availability	text
+contract.charge_point_state_observation	4	source_ref	text
+contract.charging_site	1	site_id	text
+contract.charging_site	2	name	text
+contract.charging_site	3	operator_name	text
+contract.charging_site	4	access	text
+contract.charging_site	5	location	geometry(Point,4326)
+contract.charging_site	6	source_ref	text
+contract.charging_site	7	origin_key	text
+contract.charging_site	8	recorded_at	timestamp with time zone
+contract.charging_site	9	changed_at	timestamp with time zone
+contract.charging_site	10	withdrawn_at	timestamp with time zone
+contract.contract_info	1	contract_version	text
+contract.contract_info	2	published_at	timestamp with time zone
+contract.departure	1	stop_place_id	text
+contract.departure	2	stop_point_id	text
+contract.departure	3	journey_id	text
+contract.departure	4	call_order	integer
+contract.departure	5	line_id	text
+contract.departure	6	line_name	text
+contract.departure	7	transport_mode	text
+contract.departure	8	route_type	integer
+contract.departure	9	train_number	text
+contract.departure	10	train_category	text
+contract.departure	11	destination_label	text
+contract.departure	12	planned_arrival_at	timestamp with time zone
+contract.departure	13	planned_departure_at	timestamp with time zone
+contract.departure	14	planned_platform	text
+contract.departure	15	platform	text
+contract.departure	16	platform_changed	boolean
+contract.departure	17	boarding	boolean
+contract.departure	18	terminates	boolean
+contract.departure	19	realtime	boolean
+contract.departure	20	realtime_source	text
+contract.departure	21	cancelled	boolean
+contract.departure	22	delay_s	integer
+contract.departure	23	delay_min	integer
+contract.departure	24	expected_arrival_at	timestamp with time zone
+contract.departure	25	expected_departure_at	timestamp with time zone
+contract.departure	26	no_forecast	boolean
+contract.departure	27	observed_at	timestamp with time zone
+contract.fuel_price_observation	1	station_id	text
+contract.fuel_price_observation	2	product_code	text
+contract.fuel_price_observation	3	observed_at	timestamp with time zone
+contract.fuel_price_observation	4	price	numeric(6,3)
+contract.fuel_price_observation	5	currency	character(3)
+contract.fuel_price_observation	6	source_ref	text
+contract.fuel_product	1	product_code	text
+contract.fuel_product	2	label	text
+contract.fuel_product	3	price_unit	text
+contract.fuel_station	1	station_id	text
+contract.fuel_station	2	name	text
+contract.fuel_station	3	brand	text
+contract.fuel_station	4	region_code	text
+contract.fuel_station	5	location	geometry(Point,4326)
+contract.fuel_station	6	open_state	text
+contract.fuel_station	7	open_state_at	timestamp with time zone
+contract.fuel_station	8	source_ref	text
+contract.fuel_station	9	origin_key	text
+contract.fuel_station	10	recorded_at	timestamp with time zone
+contract.fuel_station	11	changed_at	timestamp with time zone
+contract.fuel_station	12	withdrawn_at	timestamp with time zone
+contract.hydrogen_station	1	station_id	text
+contract.hydrogen_station	2	name	text
+contract.hydrogen_station	3	operator_name	text
+contract.hydrogen_station	4	brand	text
+contract.hydrogen_station	5	location	geometry(Point,4326)
+contract.hydrogen_station	6	address	jsonb
+contract.hydrogen_station	7	refill	jsonb
+contract.hydrogen_station	8	opening	jsonb
+contract.hydrogen_station	9	provider_updated_at	timestamp with time zone
+contract.hydrogen_station	10	last_seen_at	timestamp with time zone
+contract.hydrogen_station	11	source_ref	text
+contract.hydrogen_station	12	recorded_at	timestamp with time zone
+contract.hydrogen_station	13	withdrawn_at	timestamp with time zone
+contract.hydrogen_station	14	display_class	text
+contract.hydrogen_station	15	audience	text
+contract.journey	1	journey_id	text
+contract.journey	2	line_id	text
+contract.journey	3	service_date	date
+contract.journey	4	destination_label	text
+contract.journey	5	extra	boolean
+contract.junction	1	junction_id	text
+contract.junction	2	road_ref	text
+contract.junction	3	number	text
+contract.junction	4	name	text
+contract.junction	5	junction_kind	text
+contract.junction	6	chainage_km	numeric(6,1)
+contract.junction	7	location	geometry(Point,4326)
+contract.junction	8	state_code	text
+contract.licence	1	licence_code	text
+contract.licence	2	licence_name	text
+contract.licence	3	licence_url	text
+contract.licence	4	licence_category	text
+contract.licence	5	share_alike	boolean
+contract.licence	6	attribution_required	boolean
+contract.lorry_rule	1	rule_id	text
+contract.lorry_rule	2	rule_layer	text
+contract.lorry_rule	3	restriction_kind	text
+contract.lorry_rule	4	sign	text
+contract.lorry_rule	5	value	numeric
+contract.lorry_rule	6	unit	text
+contract.lorry_rule	7	published_text	text
+contract.lorry_rule	8	road_ref	text
+contract.lorry_rule	9	street	text
+contract.lorry_rule	10	municipality	text
+contract.lorry_rule	11	direction	text
+contract.lorry_rule	12	exceptions	text[]
+contract.lorry_rule	13	times	text
+contract.lorry_rule	14	days	text
+contract.lorry_rule	15	category	text
+contract.lorry_rule	16	network_state	text
+contract.lorry_rule	17	version_date	date
+contract.lorry_rule	18	geometry	geometry
+contract.lorry_rule	19	recorded_at	timestamp with time zone
+contract.lorry_rule	20	source_ref	text
+contract.lorry_rule	21	display_class	text
+contract.lorry_rule	22	audience	text
+contract.low_emission_zone	1	zone_key	text
+contract.low_emission_zone	2	zone_id	text
+contract.low_emission_zone	3	zone_role	text
+contract.low_emission_zone	4	name	text
+contract.low_emission_zone	5	city	text
+contract.low_emission_zone	6	publisher_name	text
+contract.low_emission_zone	7	geometry	geometry(Geometry,4326)
+contract.low_emission_zone	8	geometry_m	geometry(Geometry,25832)
+contract.low_emission_zone	9	same_zone_keys	text[]
+contract.low_emission_zone	10	checked_at	timestamp with time zone
+contract.low_emission_zone	11	cadence_s	integer
+contract.low_emission_zone	12	paused	boolean
+contract.low_emission_zone	13	changed_at	timestamp with time zone
+contract.low_emission_zone	14	recorded_at	timestamp with time zone
+contract.low_emission_zone	15	source_scope	text
+contract.low_emission_zone	16	source_place_code	text
+contract.low_emission_zone	17	source_city	text
+contract.low_emission_zone	18	source_ref	text
+contract.low_emission_zone	19	display_class	text
+contract.low_emission_zone	20	audience	text
+contract.low_emission_zone_entry	1	entry_key	text
+contract.low_emission_zone_entry	2	name	text
+contract.low_emission_zone_entry	3	aliases	text[]
+contract.low_emission_zone_entry	4	place_codes	text[]
+contract.low_emission_zone_entry	5	plaque	text
+contract.low_emission_zone_entry	6	covered	boolean
+contract.low_emission_zone_entry	7	lifted_on	date
+contract.low_emission_zone_entry	8	reviewed_on	date
+contract.low_emission_zone_entry	9	source_url	text
+contract.low_emission_zone_entry	10	source_name	text
+contract.low_emission_zone_entry	11	source_ref	text
+contract.low_emission_zone_entry	12	display_class	text
+contract.low_emission_zone_entry	13	audience	text
+contract.message_coverage	1	state_code	text
+contract.message_coverage	2	source_ref	text
+contract.message_coverage	3	coverage_role	text
+contract.message_coverage	4	current_only	boolean
+contract.occupancy_observation	1	facility_id	text
+contract.occupancy_observation	2	observed_at	timestamp with time zone
+contract.occupancy_observation	3	free_spaces	integer
+contract.occupancy_observation	4	total_spaces	integer
+contract.occupancy_observation	5	occupancy_status	text
+contract.occupancy_observation	6	source_ref	text
+contract.parking_facility	1	facility_id	text
+contract.parking_facility	2	name	text
+contract.parking_facility	3	parking_kind	text
+contract.parking_facility	4	operator_name	text
+contract.parking_facility	5	road_ref	text
+contract.parking_facility	6	direction	text
+contract.parking_facility	7	location	geometry(Point,4326)
+contract.parking_facility	8	acceptance_required	boolean
+contract.parking_facility	9	source_ref	text
+contract.parking_facility	10	origin_key	text
+contract.parking_facility	11	recorded_at	timestamp with time zone
+contract.parking_facility	12	changed_at	timestamp with time zone
+contract.parking_facility	13	withdrawn_at	timestamp with time zone
+contract.place	1	place_id	text
+contract.place	2	place_kind	text
+contract.place	3	name	text
+contract.place	4	location	geometry(Point,4326)
+contract.place	5	region_code	text
+contract.place	6	official_key	text
+contract.place	7	prominence	integer
+contract.place	8	source_ref	text
+contract.place	9	origin_key	text
+contract.place	10	published_at	timestamp with time zone
+contract.place	11	recorded_at	timestamp with time zone
+contract.place	12	changed_at	timestamp with time zone
+contract.place	13	withdrawn_at	timestamp with time zone
+contract.place_alias	1	place_id	text
+contract.place_alias	2	label	text
+contract.place_alias	3	lang	text
+contract.place_alias	4	name_kind	text
+contract.place_alias	5	search_fold	text
+contract.poi	1	poi_id	text
+contract.poi	2	name	text
+contract.poi	3	name_fold	text
+contract.poi	4	category	text
+contract.poi	5	category_value	text
+contract.poi	6	brand	text
+contract.poi	7	operator_name	text
+contract.poi	8	street	text
+contract.poi	9	house_number	text
+contract.poi	10	postcode	text
+contract.poi	11	place_name	text
+contract.poi	12	place_fold	text
+contract.poi	13	land_name	text
+contract.poi	14	access	text
+contract.poi	15	location	geometry(Point,4326)
+contract.poi	16	data_as_of	date
+contract.poi	17	source_ref	text
+contract.poi	18	recorded_at	timestamp with time zone
+contract.poi	19	display_class	text
+contract.poi	20	audience	text
+contract.publisher	1	publisher_id	text
+contract.publisher	2	display_name	text
+contract.publisher	3	website	text
+contract.road	1	road_ref	text
+contract.road	2	road_class	text
+contract.road	3	name	text
+contract.road	4	length_km	numeric(6,1)
+contract.road	5	geometry	geometry(MultiLineString,4326)
+contract.road	6	states	text[]
+contract.rule_statement	1	statement_id	text
+contract.rule_statement	2	topic_code	text
+contract.rule_statement	3	position	integer
+contract.rule_statement	4	body	text
+contract.rule_statement	5	legal_basis	text
+contract.rule_topic	1	topic_code	text
+contract.rule_topic	2	title	text
+contract.rule_topic	3	reviewed_on	date
+contract.scheduled_call	1	journey_id	text
+contract.scheduled_call	2	call_order	integer
+contract.scheduled_call	3	stop_point_id	text
+contract.scheduled_call	4	planned_arrival_at	timestamp with time zone
+contract.scheduled_call	5	planned_departure_at	timestamp with time zone
+contract.scheduled_call	6	planned_platform	text
+contract.service_alert	1	alert_id	text
+contract.service_alert	2	header	text
+contract.service_alert	3	description	text
+contract.service_alert	4	cause	text
+contract.service_alert	5	effect	text
+contract.service_alert	6	url	text
+contract.service_alert	7	active_from	timestamp with time zone
+contract.service_alert	8	active_to	timestamp with time zone
+contract.service_alert	9	active_periods	jsonb
+contract.service_alert	10	route_ids	text[]
+contract.service_alert	11	line_names	text[]
+contract.service_alert	12	stop_ids	text[]
+contract.service_alert	13	district_codes	text[]
+contract.service_alert	14	state_codes	text[]
+contract.service_alert	15	placed_by	text
+contract.service_alert	16	dedupe_key	text
+contract.service_alert	17	source_ref	text
+contract.service_alert	18	recorded_at	timestamp with time zone
+contract.service_alert	19	changed_at	timestamp with time zone
+contract.service_alert	20	seen_at	timestamp with time zone
+contract.service_alert	21	message_ref	text
+contract.service_alert	22	primary_source	boolean
+contract.service_alert	23	checked_at	timestamp with time zone
+contract.service_alert	24	cadence_s	integer
+contract.service_alert	25	paused	boolean
+contract.service_alert	26	display_class	text
+contract.service_alert	27	audience	text
+contract.service_alert	28	confidentiality	text
+contract.sharing_station	1	station_id	text
+contract.sharing_station	2	system_id	text
+contract.sharing_station	3	system_name	text
+contract.sharing_station	4	name	text
+contract.sharing_station	5	capacity	integer
+contract.sharing_station	6	is_virtual	boolean
+contract.sharing_station	7	location	geometry(Point,4326)
+contract.sharing_station	8	status_seen_at	timestamp with time zone
+contract.sharing_station	9	source_ref	text
+contract.sharing_station	10	recorded_at	timestamp with time zone
+contract.sharing_station	11	display_class	text
+contract.sharing_station	12	audience	text
+contract.sharing_station_status	1	station_id	text
+contract.sharing_station_status	2	observed_at	timestamp with time zone
+contract.sharing_station_status	3	vehicles_available	smallint
+contract.sharing_station_status	4	electric_available	smallint
+contract.sharing_station_status	5	docks_available	smallint
+contract.sharing_station_status	6	is_renting	boolean
+contract.sharing_station_status	7	is_returning	boolean
+contract.sharing_station_status	8	reported_at	timestamp with time zone
+contract.sharing_station_status	9	source_ref	text
+contract.sharing_station_status	10	display_class	text
+contract.sharing_station_status	11	audience	text
+contract.sharing_vehicle	1	vehicle_id	text
+contract.sharing_vehicle	2	system_id	text
+contract.sharing_vehicle	3	system_name	text
+contract.sharing_vehicle	4	form_factor	text
+contract.sharing_vehicle	5	propulsion	text
+contract.sharing_vehicle	6	range_m	integer
+contract.sharing_vehicle	7	location	geometry(Point,4326)
+contract.sharing_vehicle	8	observed_at	timestamp with time zone
+contract.sharing_vehicle	9	vehicles_seen_at	timestamp with time zone
+contract.sharing_vehicle	10	source_ref	text
+contract.sharing_vehicle	11	display_class	text
+contract.sharing_vehicle	12	audience	text
+contract.source	1	source_ref	text
+contract.source	2	domain	text
+contract.source	3	publisher_id	text
+contract.source	4	licence_code	text
+contract.source	5	attribution_text	text
+contract.source	6	changes_statement	text
+contract.source	7	terms_url	text
+contract.source	8	share_alike_offer_url	text
+contract.source	9	acceptance_required	boolean
+contract.source	10	use_classes	text[]
+contract.source	11	freshness_target_s	integer
+contract.source	12	stale_after_s	integer
+contract.source	13	review_signed_on	date
+contract.source	14	register_version	date
+contract.source_freshness	1	source_ref	text
+contract.source_freshness	2	data_as_of	timestamp with time zone
+contract.source_freshness	3	freshness_version	text
+contract.source_freshness	4	confirmed_at	timestamp with time zone
+contract.source_freshness	5	confirm_interval_s	integer
+contract.source_freshness	6	updates_paused	boolean
+contract.source_note	1	source_ref	text
+contract.source_note	2	note_kind	text
+contract.source_note	3	lang	text
+contract.source_note	4	body	text
+contract.speed_camera	1	camera_id	text
+contract.speed_camera	2	camera_kind	text
+contract.speed_camera	3	enforces	text
+contract.speed_camera	4	location	geometry(Point,4326)
+contract.speed_camera	5	max_speed_kmh	integer
+contract.speed_camera	6	max_speed_hgv_kmh	integer
+contract.speed_camera	7	direction	text
+contract.speed_camera	8	name	text
+contract.speed_camera	9	street	text
+contract.speed_camera	10	location_text	text
+contract.speed_camera	11	admin_code	text
+contract.speed_camera	12	land_name	text
+contract.speed_camera	13	data_as_of	date
+contract.speed_camera	14	valid_from	date
+contract.speed_camera	15	valid_to	date
+contract.speed_camera	16	source_ref	text
+contract.speed_camera	17	recorded_at	timestamp with time zone
+contract.speed_camera	18	last_seen_at	timestamp with time zone
+contract.speed_camera	19	display_class	text
+contract.speed_camera	20	audience	text
+contract.speed_camera	21	origin_restriction	text
+contract.station_facility	1	facility_id	text
+contract.station_facility	2	stop_place_id	text
+contract.station_facility	3	facility_kind	text
+contract.station_facility	4	position_text	text
+contract.station_facility	5	facility_status	text
+contract.station_facility	6	status_observed_at	timestamp with time zone
+contract.station_facility	7	source_ref	text
+contract.stop_place	1	stop_place_id	text
+contract.stop_place	2	name	text
+contract.stop_place	3	location	geometry(Point,4326)
+contract.stop_place	4	national_stop_code	text
+contract.stop_place	5	region_code	text
+contract.stop_place	6	modes	text[]
+contract.stop_place	7	search_fold	text
+contract.stop_place	8	source_ref	text
+contract.stop_place	9	origin_key	text
+contract.stop_place	10	recorded_at	timestamp with time zone
+contract.stop_place	11	changed_at	timestamp with time zone
+contract.stop_place	12	withdrawn_at	timestamp with time zone
+contract.stop_point	1	stop_point_id	text
+contract.stop_point	2	stop_place_id	text
+contract.stop_point	3	platform_label	text
+contract.street_bay	1	bay_id	text
+contract.street_bay	2	bay_kind	text
+contract.street_bay	3	publisher_kind	text
+contract.street_bay	4	street	text
+contract.street_bay	5	house_number	text
+contract.street_bay	6	postcode	text
+contract.street_bay	7	city	text
+contract.street_bay	8	charge_point_operator	text
+contract.street_bay	9	spaces	integer
+contract.street_bay	10	reserved_when	text
+contract.street_bay	11	location	geometry(Point,4326)
+contract.street_bay	12	state	text
+contract.street_bay	13	state_at	timestamp with time zone
+contract.street_bay	14	last_message_at	timestamp with time zone
+contract.street_bay	15	source_ref	text
+contract.street_bay	16	recorded_at	timestamp with time zone
+contract.street_bay	17	display_class	text
+contract.street_bay	18	audience	text
+contract.terms	1	terms_gate	text
+contract.terms	2	terms_id	text
+contract.terms	3	terms_version	text
+contract.terms	4	effective_on	date
+contract.terms	5	lang	text
+contract.terms	6	binding	boolean
+contract.terms	7	heading	text
+contract.terms	8	body	text
+contract.terms	9	terms_url	text
+contract.terms	10	provider_terms_url	text
+contract.traffic_event	1	event_id	text
+contract.traffic_event	2	event_kind	text
+contract.traffic_event	3	severity	text
+contract.traffic_event	4	road_ref	text
+contract.traffic_event	5	road_class	text
+contract.traffic_event	6	direction	text
+contract.traffic_event	7	direction_label	text
+contract.traffic_event	8	location	geometry(Point,4326)
+contract.traffic_event	9	valid_from	timestamp with time zone
+contract.traffic_event	10	valid_to	timestamp with time zone
+contract.traffic_event	11	lanes_closed	integer
+contract.traffic_event	12	lanes_total	integer
+contract.traffic_event	13	delay_min	integer
+contract.traffic_event	14	affected_length_m	integer
+contract.traffic_event	15	headline	text
+contract.traffic_event	16	description	text
+contract.traffic_event	17	text_lang	text
+contract.traffic_event	18	source_ref	text
+contract.traffic_event	19	origin_key	text
+contract.traffic_event	20	published_at	timestamp with time zone
+contract.traffic_event	21	recorded_at	timestamp with time zone
+contract.traffic_event	22	changed_at	timestamp with time zone
+contract.traffic_event	23	withdrawn_at	timestamp with time zone
+contract.traffic_event	24	record_class	text
+contract.traffic_event	25	subtitle	text
+contract.traffic_event	26	place_text	text
+contract.traffic_event	27	is_blocked	boolean
+contract.traffic_event	28	traffic_type	text
+contract.traffic_event	29	delay_s	integer
+contract.traffic_event_observation	1	event_id	text
+contract.traffic_event_observation	2	observed_at	timestamp with time zone
+contract.traffic_event_observation	3	version_no	integer
+contract.train_board	1	station_eva	text
+contract.train_board	2	fetched_at	timestamp with time zone
+contract.train_board	3	planned_departure_at	timestamp with time zone
+contract.train_board	4	changed_departure_at	timestamp with time zone
+contract.train_board	5	platform	text
+contract.train_board	6	changed_platform	text
+contract.train_board	7	category	text
+contract.train_board	8	train_number	text
+contract.train_board	9	line	text
+contract.train_board	10	destination	text
+contract.train_board	11	cancelled	boolean
+contract.train_board	12	attribution	text
+contract.train_board	13	licence	text
+contract.train_board	14	source_ref	text
+contract.train_board	15	recorded_at	timestamp with time zone
+contract.train_board	16	display_class	text
+contract.train_board	17	audience	text
+contract.transit_line	1	line_id	text
+contract.transit_line	2	line_name	text
+contract.transit_line	3	transport_mode	text
+contract.transit_punctuality	1	area_level	text
+contract.transit_punctuality	2	area_code	text
+contract.transit_punctuality	3	area_name	text
+contract.transit_punctuality	4	trips_observed	integer
+contract.transit_punctuality	5	trips_late	integer
+contract.transit_punctuality	6	trips_skipped_stop	integer
+contract.transit_punctuality	7	trips_untimed	integer
+contract.transit_punctuality	8	median_worst_delay_s	integer
+contract.transit_punctuality	9	stops_seen	integer
+contract.transit_punctuality	10	observed_at	timestamp with time zone
+contract.transit_punctuality	11	source_ref	text
+contract.transit_punctuality	12	display_class	text
+contract.transit_punctuality	13	audience	text
+contract.transit_trip_delay	1	trip_ref	text
+contract.transit_trip_delay	2	area_code	text
+contract.transit_trip_delay	3	worst_delay_s	integer
+contract.transit_trip_delay	4	observed_at	timestamp with time zone
+contract.transit_trip_delay	5	source_ref	text
+contract.transit_trip_delay	6	display_class	text
+contract.transit_trip_delay	7	audience	text
+contract.station_disruption	1	station_ifopt	text
+contract.station_disruption	2	window_start	timestamp with time zone
+contract.station_disruption	3	aimed_minute	timestamp with time zone
+contract.station_disruption	4	line_key	text
+contract.station_disruption	5	departures	integer
+contract.station_disruption	6	cancelled	integer
+contract.station_disruption	7	late	integer
+contract.station_disruption	8	source_ref	text
+contract.station_disruption	9	display_class	text
+contract.station_disruption	10	audience	text
+contract.weather_warning	1	warning_id	text
+contract.weather_warning	2	hazard	text
+contract.weather_warning	3	warning_level	integer
+contract.weather_warning	4	level_label	text
+contract.weather_warning	5	message_status	text
+contract.weather_warning	6	issuer_name	text
+contract.weather_warning	7	headline	text
+contract.weather_warning	8	text_lang	text
+contract.weather_warning	9	valid_from	timestamp with time zone
+contract.weather_warning	10	valid_to	timestamp with time zone
+contract.weather_warning	11	published_at	timestamp with time zone
+contract.weather_warning	12	region_code	text
+contract.weather_warning	13	source_ref	text
+contract.weather_warning	14	recorded_at	timestamp with time zone
+contract.weather_warning	15	withdrawn_at	timestamp with time zone

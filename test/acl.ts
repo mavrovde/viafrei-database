@@ -50,7 +50,7 @@ x as (
 select coalesce(g.rolname, 'PUBLIC') as grantee, x.kind, x.object,
        string_agg(x.privilege_type || case when x.is_grantable then '*' else '' end, ',' order by x.privilege_type) as privileges
   from x left join pg_roles g on g.oid = x.grantee
- where x.grantee <> x.owner and (x.grantee = 0 or g.rolname like 'viafrei\\_%')
+ where x.grantee <> x.owner and (x.grantee = 0 or g.rolname like 'viafrei\\_%' or g.rolname in ('api_reader', 'api_access'))
  group by 1, 2, 3
  order by 1, 2, 3`;
 

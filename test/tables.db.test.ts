@@ -142,12 +142,18 @@ describe("every table, catalogue and table both ways", () => {
   it("every row of the shape table is held, and the table names every table of ours", () => {
     const have = new Set(held.map(shapeLine));
     expect(expectedShape().map(shapeLine).filter((k) => !have.has(k))).toEqual([]);
-    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(216);
+    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(238);
   });
 });
 
-// 216 tables: 1051 NOT NULL columns without a default, 201 primary keys, 61 unique constraints, 35 foreign keys.
+// 238 tables: 1166 NOT NULL columns without a default, 223 primary keys, 63 unique constraints, 44 foreign keys.
 describe("every table refuses a null, a duplicate key and a dangling reference by name", () => {
+  it("every table of schema access refuses each null, duplicate key and dangling reference by name", async () => {
+    const r = await unrefused("access");
+    expect(r.wrong).toEqual([]);
+    expect(r.counts).toEqual({ tables: 8, notnull: 47, p: 8, u: 0, f: 3 });
+  });
+
   it("every table of schema control refuses each null, duplicate key and dangling reference by name", async () => {
     const r = await unrefused("control");
     expect(r.wrong).toEqual([]);
@@ -157,7 +163,7 @@ describe("every table refuses a null, a duplicate key and a dangling reference b
   it("every table of schema domains refuses each null, duplicate key and dangling reference by name", { timeout: 300_000 }, async () => {
     const r = await unrefused("domains");
     expect(r.wrong).toEqual([]);
-    expect(r.counts).toEqual({ tables: 30, notnull: 116, p: 30, u: 30, f: 0 });
+    expect(r.counts).toEqual({ tables: 31, notnull: 119, p: 31, u: 30, f: 0 });
   });
 
   it("every table of schema ingestor refuses each null, duplicate key and dangling reference by name", async () => {
@@ -166,9 +172,15 @@ describe("every table refuses a null, a duplicate key and a dangling reference b
     expect(r.counts).toEqual({ tables: 6, notnull: 26, p: 6, u: 0, f: 5 });
   });
 
+  it("every table of schema live refuses each null, duplicate key and dangling reference by name", async () => {
+    const r = await unrefused("live");
+    expect(r.wrong).toEqual([]);
+    expect(r.counts).toEqual({ tables: 2, notnull: 7, p: 2, u: 0, f: 2 });
+  });
+
   it("every table of schema public refuses each null, duplicate key and dangling reference by name", { timeout: 900_000 }, async () => {
     const r = await unrefused("public");
     expect(r.wrong).toEqual([]);
-    expect(r.counts).toEqual({ tables: 170, notnull: 870, p: 155, u: 31, f: 26 });
+    expect(r.counts).toEqual({ tables: 181, notnull: 928, p: 166, u: 33, f: 30 });
   });
 });
