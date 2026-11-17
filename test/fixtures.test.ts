@@ -115,7 +115,7 @@ describe("seedFixtures", () => {
     const script = s.calls[0]?.script ?? "";
     const triggers = readFileSync(SEED_FILE, "utf8");
     expect(script.startsWith(triggers)).toBe(true);
-    expect(script.slice(triggers.length)).toBe(`\nselect vf_test.contract_seed_begin('it''s.sql');\n${readFileSync(rows, "utf8")}\n`);
+    expect(script.slice(triggers.length)).toBe(`\nselect vf_test.contract_seed_begin('it''s.sql');\n${readFileSync(rows, "utf8")}\nselect vf_test.contract_seed_end();\n`);
   });
 
   it("reports psql's exit code and the first line of its stderr", async () => {

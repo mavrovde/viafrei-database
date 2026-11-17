@@ -82,20 +82,63 @@ BEGIN
       (SELECT string_agg(file_name, ', ' ORDER BY run_id) FROM vf_test.contract_seed_runs) USING ERRCODE = '55000';
   END IF;
   INSERT INTO vf_test.contract_seed_runs (file_name) VALUES (p_file);
+  -- The rows given, read back once the seed's last row is in (contract_seed_end).
+  CREATE TEMP TABLE vf_seed_given (n bigint GENERATED ALWAYS AS IDENTITY, view_name text NOT NULL, want jsonb NOT NULL) ON COMMIT DROP;
 END $$;
 
 -- The read-back: a row of the view must carry every non-null value given.
--- When none does, the error names the cause: no row with the view's first
--- column (the view's own conditions leave the row out), else each column
--- whose value reads back otherwise, given against read.
--- A row given its first column is looked for among the view's rows with that
--- value only, compared in the column's own type so the view's conditions
--- reach the base tables' indexes: reading every row of the view back for
--- every row seeded made a seed quadratic in its size (the 44 k rows of the
--- API's ci set took longer than the API's 15-minute set-up).
+-- Within a seed (contract_seed_begin) the row is noted and read back with
+-- every other at the seed's end (contract_seed_end), one read of each view;
+-- outside one it is read back at once (seed_read_back). Reading the view
+-- back for each row as it was seeded made a seed quadratic in its size: a
+-- view keyed by an expression (scheduled_call's journey_id) is read whole
+-- for each row, and the API's ci set (44 k rows) took longer than the API's
+-- 15-minute set-up.
 CREATE OR REPLACE FUNCTION vf_test.seed_check(p_view text, p_row jsonb) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass('pg_temp.vf_seed_given') IS NULL THEN
+    PERFORM vf_test.seed_read_back(p_view, jsonb_strip_nulls(p_row));
+  ELSE
+    INSERT INTO vf_seed_given (view_name, want) VALUES (p_view, jsonb_strip_nulls(p_row));
+  END IF;
+END $$;
+
+-- The seed's last step: each view is read once, and each row given is
+-- looked for among the view's rows with the same first column (a hash join
+-- on it), then must be contained in one. The first row given that no view
+-- row carries is read back alone, which raises naming its cause.
+CREATE OR REPLACE FUNCTION vf_test.contract_seed_end() RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
-  want jsonb := jsonb_strip_nulls(p_row);
+  v text;
+  id_col text;
+  missing bigint;
+  first_missing bigint;
+BEGIN
+  FOR v IN SELECT view_name FROM vf_seed_given GROUP BY view_name ORDER BY min(n) LOOP
+    SELECT a.attname INTO id_col FROM pg_attribute a
+     WHERE a.attrelid = format('contract.%I', v)::regclass AND a.attnum = 1;
+    EXECUTE format('with r as materialized (select to_jsonb(x) as j from contract.%I x)
+                    select min(g.n) from vf_seed_given g
+                     where g.view_name = $1
+                       and not exists (select from r where r.j -> $2 = g.want -> $2 and r.j @> g.want)
+                       and (g.want ? $2 or not exists (select from r where r.j @> g.want))', v)
+      INTO missing USING v, id_col;
+    IF missing IS NOT NULL AND (first_missing IS NULL OR missing < first_missing) THEN
+      first_missing := missing;
+    END IF;
+  END LOOP;
+  IF first_missing IS NOT NULL THEN
+    PERFORM vf_test.seed_read_back(g.view_name, g.want) FROM vf_seed_given g WHERE g.n = first_missing;
+    RAISE EXCEPTION 'vf_test contract seed: row % given does not read back', first_missing USING ERRCODE = '22023';
+  END IF;
+END $$;
+
+-- One row read back: when no row of the view carries every non-null value
+-- given, the error names the cause: no row with the view's first column (the
+-- view's own conditions leave the row out), else each column whose value
+-- reads back otherwise, given against read.
+CREATE OR REPLACE FUNCTION vf_test.seed_read_back(p_view text, want jsonb) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE
   ok boolean;
   id_col text;
   near jsonb;
