@@ -815,6 +815,26 @@ domains.street_bays	index	street_bays_match	CREATE INDEX street_bays_match ON do
 domains.street_bays	index	street_bays_owner_key	CREATE UNIQUE INDEX street_bays_owner_key ON domains.street_bays USING btree (source_id, feed, external_id)
 domains.street_bays	index	street_bays_owner_open	CREATE INDEX street_bays_owner_open ON domains.street_bays USING btree (source_id, feed) WHERE (closed_at IS NULL)
 domains.street_bays	index	street_bays_pkey	CREATE UNIQUE INDEX street_bays_pkey ON domains.street_bays USING btree (id)
+domains.train_board_departures	column	id	bigint not null identity always
+domains.train_board_departures	column	eva	text not null
+domains.train_board_departures	column	observed_at	timestamp with time zone not null
+domains.train_board_departures	column	planned_at	timestamp with time zone not null
+domains.train_board_departures	column	changed_at	timestamp with time zone
+domains.train_board_departures	column	platform	text
+domains.train_board_departures	column	changed_platform	text
+domains.train_board_departures	column	category	text
+domains.train_board_departures	column	train_number	text
+domains.train_board_departures	column	line	text
+domains.train_board_departures	column	destination	text
+domains.train_board_departures	column	cancelled	boolean not null default false
+domains.train_board_departures	column	source_id	text not null default 'db_timetables'::text
+domains.train_board_departures	column	attribution	text not null default 'Fahrplandaten: Deutsche Bahn AG, DB API Marketplace, CC BY 4.0, bearbeitet'::text
+domains.train_board_departures	column	licence	text not null default 'CC BY 4.0'::text
+domains.train_board_departures	column	recorded_at	timestamp with time zone not null default clock_timestamp()
+domains.train_board_departures	constraint	train_board_departures_pkey	p PRIMARY KEY (id, observed_at)
+domains.train_board_departures	index	train_board_departures_brin	CREATE INDEX train_board_departures_brin ON ONLY domains.train_board_departures USING brin (observed_at)
+domains.train_board_departures	index	train_board_departures_eva_fetch	CREATE INDEX train_board_departures_eva_fetch ON ONLY domains.train_board_departures USING btree (eva, observed_at DESC)
+domains.train_board_departures	index	train_board_departures_pkey	CREATE UNIQUE INDEX train_board_departures_pkey ON ONLY domains.train_board_departures USING btree (id, observed_at)
 domains.transit_agencies_odbl	column	id	bigint not null identity always
 domains.transit_agencies_odbl	column	source_id	text not null
 domains.transit_agencies_odbl	column	feed	text not null default 'default'::text

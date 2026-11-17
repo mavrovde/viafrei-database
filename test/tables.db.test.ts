@@ -142,7 +142,7 @@ describe("every table, catalogue and table both ways", () => {
   it("every row of the shape table is held, and the table names every table of ours", () => {
     const have = new Set(held.map(shapeLine));
     expect(expectedShape().map(shapeLine).filter((k) => !have.has(k))).toEqual([]);
-    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(235);
+    expect(new Set(expectedShape().map((r) => r.relation)).size).toBe(236);
   });
 });
 
@@ -163,7 +163,7 @@ describe("every table refuses a null, a duplicate key and a dangling reference b
   it("every table of schema domains refuses each null, duplicate key and dangling reference by name", { timeout: 300_000 }, async () => {
     const r = await unrefused("domains");
     expect(r.wrong).toEqual([]);
-    expect(r.counts).toEqual({ tables: 30, notnull: 116, p: 30, u: 30, f: 0 });
+    expect(r.counts).toEqual({ tables: 31, notnull: 119, p: 31, u: 30, f: 0 });
   });
 
   it("every table of schema ingestor refuses each null, duplicate key and dangling reference by name", async () => {

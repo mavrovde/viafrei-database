@@ -524,6 +524,23 @@ contract.traffic_event	29	delay_s	integer
 contract.traffic_event_observation	1	event_id	text
 contract.traffic_event_observation	2	observed_at	timestamp with time zone
 contract.traffic_event_observation	3	version_no	integer
+contract.train_board	1	station_eva	text
+contract.train_board	2	fetched_at	timestamp with time zone
+contract.train_board	3	planned_departure_at	timestamp with time zone
+contract.train_board	4	changed_departure_at	timestamp with time zone
+contract.train_board	5	platform	text
+contract.train_board	6	changed_platform	text
+contract.train_board	7	category	text
+contract.train_board	8	train_number	text
+contract.train_board	9	line	text
+contract.train_board	10	destination	text
+contract.train_board	11	cancelled	boolean
+contract.train_board	12	attribution	text
+contract.train_board	13	licence	text
+contract.train_board	14	source_ref	text
+contract.train_board	15	recorded_at	timestamp with time zone
+contract.train_board	16	display_class	text
+contract.train_board	17	audience	text
 contract.transit_line	1	line_id	text
 contract.transit_line	2	line_name	text
 contract.transit_line	3	transport_mode	text

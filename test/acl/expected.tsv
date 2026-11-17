@@ -11,7 +11,9 @@ api_access	relation	access.plan	INSERT,SELECT,UPDATE
 api_access	relation	access.schema_version	SELECT
 api_access	relation	access.terms_acceptance	INSERT,SELECT
 api_access	relation	access.usage	INSERT,SELECT,UPDATE
+api_access	relation	domains.train_board_departures	INSERT
 api_access	schema	access	USAGE
+api_access	schema	domains	USAGE
 api_reader	relation	contract.address	SELECT
 api_reader	relation	contract.admin_region	SELECT
 api_reader	relation	contract.call_observation	SELECT
@@ -57,6 +59,7 @@ api_reader	relation	contract.street_bay	SELECT
 api_reader	relation	contract.terms	SELECT
 api_reader	relation	contract.traffic_event	SELECT
 api_reader	relation	contract.traffic_event_observation	SELECT
+api_reader	relation	contract.train_board	SELECT
 api_reader	relation	contract.transit_line	SELECT
 api_reader	relation	contract.transit_punctuality	SELECT
 api_reader	relation	contract.transit_trip_delay	SELECT

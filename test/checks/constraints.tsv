@@ -180,6 +180,18 @@ domains.street_bays	street_bays_kind	CHECK ((kind = ANY (ARRAY['disabled'::text,
 domains.street_bays	street_bays_postcode	CHECK (((postcode IS NULL) OR (postcode ~ '^[0-9]{5}$'::text)))	{"postcode":""}
 domains.street_bays	street_bays_source_id_check	CHECK ((source_id ~ '^[a-z][a-z0-9_-]{2,62}$'::text))	{"source_id":""}
 domains.street_bays	street_bays_spaces	CHECK (((spaces IS NULL) OR ((spaces >= 1) AND (spaces <= 99))))	{"spaces":"0"}
+domains.train_board_departures	train_board_departures_attribution	CHECK ((attribution = 'Fahrplandaten: Deutsche Bahn AG, DB API Marketplace, CC BY 4.0, bearbeitet'::text))	{"attribution":"x"}
+domains.train_board_departures	train_board_departures_category_check	CHECK (((category IS NULL) OR ((btrim(category) <> ''::text) AND (length(category) <= 16))))	{"category":" "}
+domains.train_board_departures	train_board_departures_changed_platform_check	CHECK (((changed_platform IS NULL) OR ((btrim(changed_platform) <> ''::text) AND (length(changed_platform) <= 16))))	{"changed_platform":" "}
+domains.train_board_departures	train_board_departures_destination_check	CHECK (((destination IS NULL) OR ((btrim(destination) <> ''::text) AND (length(destination) <= 120))))	{"destination":" "}
+domains.train_board_departures	train_board_departures_eva_check	CHECK ((eva ~ '^[0-9]{7}$'::text))	{"eva":"123"}
+domains.train_board_departures	train_board_departures_fetch_past	CHECK ((observed_at <= (recorded_at + '00:05:00'::interval)))	{"recorded_at":"2000-01-01 00:00:00+00"}
+domains.train_board_departures	train_board_departures_licence	CHECK ((licence = 'CC BY 4.0'::text))	{"licence":"CC BY-SA 4.0"}
+domains.train_board_departures	train_board_departures_line_check	CHECK (((line IS NULL) OR ((btrim(line) <> ''::text) AND (length(line) <= 32))))	{"line":" "}
+domains.train_board_departures	train_board_departures_planned_near	CHECK (((planned_at >= (observed_at - '1 day'::interval)) AND (planned_at <= (observed_at + '1 day'::interval))))	{"planned_at":"2000-01-01 00:00:00+00"}
+domains.train_board_departures	train_board_departures_platform_check	CHECK (((platform IS NULL) OR ((btrim(platform) <> ''::text) AND (length(platform) <= 16))))	{"platform":" "}
+domains.train_board_departures	train_board_departures_source	CHECK ((source_id = 'db_timetables'::text))	{"source_id":"other_source"}
+domains.train_board_departures	train_board_departures_train_number_check	CHECK (((train_number IS NULL) OR ((btrim(train_number) <> ''::text) AND (length(train_number) <= 16))))	{"train_number":" "}
 domains.transit_agencies_odbl	transit_agencies_odbl_agency_name_nonempty	CHECK ((agency_name <> ''::text))	{"agency_name":""}
 domains.transit_agencies_odbl	transit_agencies_odbl_agency_timezone_nonempty	CHECK ((agency_timezone <> ''::text))	{"agency_timezone":""}
 domains.transit_agencies_odbl	transit_agencies_odbl_external_id_check	CHECK ((external_id <> ''::text))	{"external_id":""}

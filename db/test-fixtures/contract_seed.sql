@@ -88,6 +88,11 @@ END $$;
 -- When none does, the error names the cause: no row with the view's first
 -- column (the view's own conditions leave the row out), else each column
 -- whose value reads back otherwise, given against read.
+-- A row given its first column is looked for among the view's rows with that
+-- value only, compared in the column's own type so the view's conditions
+-- reach the base tables' indexes: reading every row of the view back for
+-- every row seeded made a seed quadratic in its size (the 44 k rows of the
+-- API's ci set took longer than the API's 15-minute set-up).
 CREATE OR REPLACE FUNCTION vf_test.seed_check(p_view text, p_row jsonb) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
   want jsonb := jsonb_strip_nulls(p_row);
@@ -96,10 +101,15 @@ DECLARE
   near jsonb;
   diff text;
 BEGIN
-  EXECUTE format('select exists (select from contract.%I v where to_jsonb(v) @> $1)', p_view) INTO ok USING want;
-  IF ok THEN RETURN; END IF;
   SELECT a.attname INTO id_col FROM pg_attribute a
    WHERE a.attrelid = format('contract.%I', p_view)::regclass AND a.attnum = 1;
+  IF want ? id_col THEN
+    EXECUTE format('select exists (select from contract.%1$I v where v.%2$I = (jsonb_populate_record(null::contract.%1$I, $1)).%2$I and to_jsonb(v) @> $1)',
+                   p_view, id_col) INTO ok USING want;
+  ELSE
+    EXECUTE format('select exists (select from contract.%I v where to_jsonb(v) @> $1)', p_view) INTO ok USING want;
+  END IF;
+  IF ok THEN RETURN; END IF;
   EXECUTE format('select to_jsonb(v) from contract.%I v where to_jsonb(v) @> jsonb_build_object($1, $2) limit 1', p_view)
     INTO near USING id_col, want -> id_col;
   IF near IS NULL THEN
@@ -933,6 +943,18 @@ BEGIN
   INSERT INTO public.lez_list_entries (entry_key, name, aliases, place_codes, plaque, covered, lifted_on, reviewed_on, source_url, source_name)
   VALUES (NEW.entry_key, NEW.name, coalesce(NEW.aliases, '{}'), NEW.place_codes, NEW.plaque, coalesce(NEW.covered, true), NEW.lifted_on,
           coalesce(NEW.reviewed_on, current_date), coalesce(NEW.source_url, 'https://example.org/zones'), coalesce(NEW.source_name, 'Test'));
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- One departure of a fetched DB Timetables board, as viafrei-api appends it;
+-- the source, attribution and licence are the table's own defaults.
+CREATE OR REPLACE FUNCTION vf_test.seed_train_board() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO domains.train_board_departures (eva, observed_at, planned_at, changed_at, platform, changed_platform, category, train_number, line,
+                                              destination, cancelled, recorded_at)
+  VALUES (NEW.station_eva, NEW.fetched_at, NEW.planned_departure_at, NEW.changed_departure_at, NEW.platform, NEW.changed_platform, NEW.category,
+          NEW.train_number, NEW.line, NEW.destination, coalesce(NEW.cancelled, false), coalesce(NEW.recorded_at, greatest(clock_timestamp(), NEW.fetched_at)));
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
