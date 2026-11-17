@@ -176,7 +176,7 @@ jobs:
           (( head > 0 )) || { echo "::error::the tree carries no schema version"; exit 1; }
           echo "head=$head" >> "$GITHUB_OUTPUT"
 
-  # Every mutant of scripts/mutate.ts, the only run of the full set (no pull
+  # Every mutant of scripts/mutants.ts, the only run of the full set (no pull
   # request or push runs it). The one full run measured took about 40 minutes
   # for 212 mutants (each DB mutant migrates its own database), on a macOS
   # laptop with Postgres under Docker Desktop, never on ubuntu-24.04; 120
