@@ -132,12 +132,13 @@ describe("register views", () => {
 
   it("source: the register's static sources resolve with their domain, licence, use classes and review; a restricted source keeps the consumer class only; no cadence = never stale (owner 2026-11-16)", async () => {
     const r = await read(
-      "select source_ref, domain, licence_code, array_to_string(use_classes, ',') as uses, acceptance_required as acc, stale_after_s, review_signed_on::text as rev, display_class, audience from contract.source where source_ref in ('geonames', 'destatis_gv_laender', 'db_fasta', 'dwd', 'viafrei_rules', 'tankerkoenig', 'mobilithek_afir_eliso_stat', 'mobilithek_park_bosch_static') order by 1",
+      "select source_ref, domain, licence_code, array_to_string(use_classes, ',') as uses, acceptance_required as acc, stale_after_s, review_signed_on::text as rev, display_class, audience from contract.source where source_ref in ('geonames', 'delfi_static', 'destatis_gv_laender', 'db_fasta', 'dwd', 'viafrei_rules', 'tankerkoenig', 'mobilithek_afir_eliso_stat', 'mobilithek_park_bosch_static') order by 1",
     );
     const all = "consumer,non_commercial,commercial";
     const year3 = null;
     expect(r).toEqual([
       { source_ref: "db_fasta", domain: "accessibility", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-09-20", display_class: "open", audience: "public" },
+      { source_ref: "delfi_static", domain: "transit", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-08", display_class: "open", audience: "public" },
       { source_ref: "destatis_gv_laender", domain: "places", licence_code: "dl-de/by-2-0", uses: all, acc: false, stale_after_s: year3, rev: "2026-11-03", display_class: "open", audience: "public" },
       { source_ref: "dwd", domain: "weather", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-23", display_class: "open", audience: "public" },
       { source_ref: "geonames", domain: "places", licence_code: "CC BY 4.0", uses: all, acc: false, stale_after_s: year3, rev: "2026-10-08", display_class: "open", audience: "public" },
