@@ -110,6 +110,23 @@ describe("test-fixtures seed: a live departure", () => {
   });
 });
 
+describe("test-fixtures seed: the platform's own readers", () => {
+  it("each station's newest price per grade is the latest row the platform's fuel readers read, with the station's open state", async () => {
+    const r = await db.pool.query<{ missing: string; extra: string; n: string }>(
+      `with newest as (select distinct on (o.station_id, o.product_code) o.station_id, o.product_code, o.price, o.observed_at, o.source_ref
+                         from contract.fuel_price_observation o order by o.station_id, o.product_code, o.observed_at desc)
+       select (select count(*) from newest n where not exists (select 1 from public.fuel_price_latest l
+                 join public.fuel_stations s on s.id = l.station_id
+                where l.station_id = n.station_id and l.product = n.product_code and l.price = n.price and l.observed_at = n.observed_at
+                  and l.source_feed = coalesce(n.source_ref, 'tankerkoenig') and l.is_open is not distinct from (s.state = 'open')))::text as missing,
+              (select count(*) from public.fuel_price_latest l where not exists (select 1 from newest n where n.station_id = l.station_id and n.product_code = l.product))::text as extra,
+              (select count(*) from newest)::text as n`,
+    );
+    expect(r.rows[0]).toMatchObject({ missing: "0", extra: "0" });
+    expect(Number(r.rows[0]?.n)).toBeGreaterThan(0);
+  });
+});
+
 describe("test-fixtures seed: the refusals", () => {
   it("a row the contract cannot read back as given is refused, naming the column, and writes nothing", async () => {
     const c = await db.pool.connect();

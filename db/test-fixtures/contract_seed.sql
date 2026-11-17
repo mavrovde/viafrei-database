@@ -329,6 +329,14 @@ BEGIN
   PERFORM vf_test.ensure_day('public.fuel_prices', NEW.observed_at);
   INSERT INTO public.fuel_prices (observed_at, station_id, product, price, source)
   VALUES (NEW.observed_at, NEW.station_id, NEW.product_code, NEW.price, coalesce(NEW.source_ref, 'tankerkoenig'));
+  -- The newest price of a station and product, as the price ingest keeps it beside the ticks: the platform's
+  -- readers (the MCP fuel tools) read this table, the read contract the ticks.
+  INSERT INTO public.fuel_price_latest (station_id, product, price, is_open, observed_at, source_feed)
+  SELECT NEW.station_id, NEW.product_code, NEW.price, s.state = 'open', NEW.observed_at, coalesce(NEW.source_ref, 'tankerkoenig')
+    FROM public.fuel_stations s WHERE s.id = NEW.station_id
+  ON CONFLICT (station_id, product) DO UPDATE
+     SET price = excluded.price, is_open = excluded.is_open, observed_at = excluded.observed_at, source_feed = excluded.source_feed
+   WHERE excluded.observed_at > public.fuel_price_latest.observed_at;
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;
