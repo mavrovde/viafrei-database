@@ -2317,6 +2317,24 @@ public.landing_status_hourly	column	status	smallint not null
 public.landing_status_hourly	column	n	bigint not null
 public.landing_status_hourly	constraint	landing_status_hourly_pkey	p PRIMARY KEY (hour, route_class, agent_class, status)
 public.landing_status_hourly	index	landing_status_hourly_pkey	CREATE UNIQUE INDEX landing_status_hourly_pkey ON public.landing_status_hourly USING btree (hour, route_class, agent_class, status)
+public.lez_feed_places	column	feed_key	text not null
+public.lez_feed_places	column	scope	text not null
+public.lez_feed_places	column	place_code	text
+public.lez_feed_places	column	city	text
+public.lez_feed_places	constraint	lez_feed_places_pkey	p PRIMARY KEY (feed_key)
+public.lez_feed_places	index	lez_feed_places_pkey	CREATE UNIQUE INDEX lez_feed_places_pkey ON public.lez_feed_places USING btree (feed_key)
+public.lez_list_entries	column	entry_key	text not null
+public.lez_list_entries	column	name	text not null
+public.lez_list_entries	column	aliases	text[] not null
+public.lez_list_entries	column	place_codes	text[] not null
+public.lez_list_entries	column	plaque	text
+public.lez_list_entries	column	covered	boolean not null
+public.lez_list_entries	column	lifted_on	date
+public.lez_list_entries	column	reviewed_on	date not null
+public.lez_list_entries	column	source_url	text not null
+public.lez_list_entries	column	source_name	text not null
+public.lez_list_entries	constraint	lez_list_entries_pkey	p PRIMARY KEY (entry_key)
+public.lez_list_entries	index	lez_list_entries_pkey	CREATE UNIQUE INDEX lez_list_entries_pkey ON public.lez_list_entries USING btree (entry_key)
 public.lez_zone_overlaps	column	source_feed	text not null
 public.lez_zone_overlaps	column	zone_id	text not null
 public.lez_zone_overlaps	column	other_feed	text not null

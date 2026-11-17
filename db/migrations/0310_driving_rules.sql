@@ -1,12 +1,14 @@
 -- The curated German driving rules as data (#29): the topics and facts the
 -- MCP's get_driving_rules answers from, so contract.rule_topic and
--- contract.rule_statement publish them (0312). Our own words, each fact pinned
+-- contract.rule_statement publish them (0312), and the low-emission-zone list
+-- and zone feeds behind its plaque answer (contract.low_emission_zone_entry,
+-- contract.low_emission_zone). Our own words, each fact pinned
 -- to its official source and the date a human last read it (2026-09-19);
 -- informational, not legal advice; a fact whose amount could not be checked
 -- carries its to-verify note. Generated from the platform's rules content; a
 -- change is a new migration.
 --
--- rollback: drop table public.driving_rule_facts, public.driving_rule_topics;
+-- rollback: drop table public.lez_feed_places, public.lez_list_entries, public.driving_rule_facts, public.driving_rule_topics;
 --   delete from schema_migrations where version = 310;
 
 create table public.driving_rule_topics (
@@ -123,3 +125,107 @@ insert into public.driving_rule_facts (fact_key, topic_code, position, body_de, 
   ('ev.roaming', 'ev', 8, 'Mit der Ladekarte eines Anbieters lädt man über Roaming auch an fremden Säulen — dann gilt der Tarif der Karte, nicht der Aushang. Ad-hoc mit Karte ist oft teurer, aber immer möglich.', 'With one provider''s charging card you can roam onto other operators'' posts — then the card''s tariff applies, not the one on the post. Ad-hoc by bank card is often dearer but always available.', 'https://www.gesetze-im-internet.de/lsv_2016/', 'Ladesäulenverordnung (LSV)', null, null, null, null, '2026-09-19'::date, false),
   ('ev.etiquette', 'ev', 9, 'Ladeplätze sind mit Zeichen 314 und dem Sinnbild Elektrofahrzeug ausgewiesen: Dort darf nur ein ladendes E-Auto stehen. Nach dem Laden wegfahren, Kabel aufräumen, fremde Ladevorgänge nicht abbrechen.', 'Charging bays carry sign 314 with the electric-vehicle symbol: only a charging EV may stand there. Move on when you are done, tidy the cable, never stop someone else''s session.', 'https://www.gesetze-im-internet.de/stvo_2013/anlage_3.html', 'StVO Anlage 3, Zeichen 314 mit Sinnbild Elektrofahrzeug', null, null, null, null, '2026-09-19'::date, false),
   ('ev.emergency', 'ev', 10, 'Bei Panne oder Unfall gilt dasselbe wie sonst: 112, Warnweste, Warndreieck. Der Rettungsdienst sollte wissen, dass es ein Elektroauto ist; orangefarbene Hochvoltleitungen nicht berühren. Mit leerer Batterie auf der Autobahn liegen zu bleiben gilt als vermeidbar.', 'In a breakdown or crash the rules are the same: 112, vest, triangle. Tell the emergency services it is an electric car; never touch the orange high-voltage cables. Running the battery flat on the Autobahn counts as an avoidable stop.', 'https://www.gesetze-im-internet.de/stvo_2013/__15.html', '§ 15 StVO; Rettungskarte des Herstellers', null, null, null, null, '2026-09-19'::date, false);
+
+-- The low-emission-zone list behind get_driving_rules' plaque (#29): the
+-- platform's curated city → zone → plaque table, read against the
+-- Umweltbundesamt's list, each entry with the Gemeinden (eight-digit keys) it
+-- speaks for; plaque 'green' where the zone asks for the green plaque, null
+-- where we deliberately state none (a lifted zone, Hamburg, Düsseldorf);
+-- covered false where the zone's data is under a closed licence; lifted_on
+-- the day the list names the zone as lifted.
+create table public.lez_list_entries (
+    entry_key   text primary key check (entry_key ~ '^[a-z]+$'),
+    name        text not null check (name <> ''),
+    aliases     text[] not null,
+    place_codes text[] not null check (cardinality(place_codes) > 0),
+    plaque      text check (plaque = 'green'),
+    covered     boolean not null,
+    lifted_on   date,
+    reviewed_on date not null,
+    source_url  text not null check (source_url ~ '^https://'),
+    source_name text not null,
+    check (lifted_on is null or plaque is null)
+);
+comment on table public.lez_list_entries is 'The curated low-emission-zone list: one entry per zone, the Gemeinden it speaks for, its plaque and the day it was lifted (0310).';
+
+insert into public.lez_list_entries (entry_key, name, aliases, place_codes, plaque, covered, lifted_on, reviewed_on, source_url, source_name) values
+  ('berlin', 'Berlin', array['berlin']::text[], array['11000000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('muenchen', 'München', array['munich', 'muenchen', 'monacodibaviera']::text[], array['09162000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('stuttgart', 'Stuttgart', array['stuttgart']::text[], array['08111000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('koeln', 'Köln', array['koeln', 'cologne']::text[], array['05315000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('frankfurtammain', 'Frankfurt am Main', array['frankfurt', 'frankfurtammain', 'frankfurtmain']::text[], array['06412000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('leipzig', 'Leipzig', array['leipzig']::text[], array['14713000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('ruhrgebiet', 'Ruhrgebiet', array['ruhr', 'ruhrgebiet', 'essen', 'bochum', 'dortmund', 'duisburg', 'gelsenkirchen', 'muelheimanderruhr', 'muelheim', 'oberhausen', 'recklinghausen', 'bottrop', 'castroprauxel', 'gladbeck', 'herne', 'herten']::text[], array['05113000', '05911000', '05913000', '05112000', '05513000', '05117000', '05119000', '05562032', '05512000', '05562004', '05562014', '05916000', '05562020']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('augsburg', 'Augsburg', array['augsburg']::text[], array['09761000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('regensburg', 'Regensburg', array['regensburg']::text[], array['09362000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('bremen', 'Bremen', array['bremen']::text[], array['04011000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('ludwigsburgundumgebung', 'Ludwigsburg und Umgebung', array['ludwigsburg', 'asperg', 'bietigheimbissingen', 'freibergamneckar', 'ingersheim', 'kornwestheim', 'markgroeningen', 'moeglingen', 'pleidelsheim', 'remseckamneckar', 'tamm']::text[], array['08118048', '08118003', '08118079', '08118078', '08118077', '08118046', '08118050', '08118051', '08118063', '08118081', '08118071']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('pforzheim', 'Pforzheim', array['pforzheim']::text[], array['08231000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('darmstadt', 'Darmstadt', array['darmstadt']::text[], array['06411000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('limburganderlahn', 'Limburg an der Lahn', array['limburganderlahn', 'limburg', 'limburgadlahn']::text[], array['06533009']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('marburg', 'Marburg', array['marburg']::text[], array['06534014']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('offenbachammain', 'Offenbach am Main', array['offenbachammain', 'offenbach']::text[], array['06413000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('wiesbaden', 'Wiesbaden', array['wiesbaden']::text[], array['06414000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('osnabrueck', 'Osnabrück', array['osnabrueck']::text[], array['03404000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('aachen', 'Aachen', array['aachen', 'aixlachapelle']::text[], array['05334002']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('bonn', 'Bonn', array['bonn']::text[], array['05314000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('dinslaken', 'Dinslaken', array['dinslaken']::text[], array['05170008']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('eschweiler', 'Eschweiler', array['eschweiler']::text[], array['05334012']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('hagen', 'Hagen', array['hagen']::text[], array['05914000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('krefeld', 'Krefeld', array['krefeld']::text[], array['05114000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('langenfeldrheinland', 'Langenfeld (Rheinland)', array['langenfeldrheinland', 'langenfeld', 'langenfeldrhld']::text[], array['05158020']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('moenchengladbach', 'Mönchengladbach', array['moenchengladbach']::text[], array['05116000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('muenster', 'Münster', array['muenster']::text[], array['05515000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('neuss', 'Neuss', array['neuss']::text[], array['05162024']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('overath', 'Overath', array['overath']::text[], array['05378024']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('remscheid', 'Remscheid', array['remscheid']::text[], array['05120000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('siegen', 'Siegen', array['siegen']::text[], array['05970040']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('wuppertal', 'Wuppertal', array['wuppertal']::text[], array['05124000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('hallesaale', 'Halle (Saale)', array['hallesaale', 'halleandersaale']::text[], array['15002000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('magdeburg', 'Magdeburg', array['magdeburg']::text[], array['15003000']::text[], 'green', true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('hannover', 'Hannover', array['hannover', 'hanover']::text[], array['03241001']::text[], null, true, '2024-02-22'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('heidelberg', 'Heidelberg', array['heidelberg']::text[], array['08221000']::text[], null, true, '2023-03-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('freiburgimbreisgau', 'Freiburg im Breisgau', array['freiburgimbreisgau', 'freiburg']::text[], array['08311000']::text[], null, true, '2025-04-22'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('mainz', 'Mainz', array['mainz']::text[], array['07315000']::text[], null, true, '2025-10-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('balingen', 'Balingen', array['balingen']::text[], array['08417002']::text[], null, true, '2020-11-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('heidenheimanderbrenz', 'Heidenheim an der Brenz', array['heidenheimanderbrenz', 'heidenheim']::text[], array['08135019']::text[], null, true, '2024-01-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('heilbronn', 'Heilbronn', array['heilbronn']::text[], array['08121000']::text[], null, true, '2024-01-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('herrenberg', 'Herrenberg', array['herrenberg']::text[], array['08115021']::text[], null, true, '2024-01-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('ilsfeld', 'Ilsfeld', array['ilsfeld']::text[], array['08125046']::text[], null, true, '2023-05-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('karlsruhe', 'Karlsruhe', array['karlsruhe']::text[], array['08212000']::text[], null, true, '2023-03-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('leonberghemmingenundumgebung', 'Leonberg / Hemmingen und Umgebung', array['leonberg', 'hemmingen', 'ditzingen', 'gerlingen', 'korntalmuenchingen', 'schwieberdingen']::text[], array['08115028', '08118027', '08118011', '08118019', '08118080', '08118067']::text[], null, true, '2024-01-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('mannheim', 'Mannheim', array['mannheim']::text[], array['08222000']::text[], null, true, '2024-08-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('muehlacker', 'Mühlacker', array['muehlacker']::text[], array['08236040']::text[], null, true, '2024-08-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('pfinztal', 'Pfinztal', array['pfinztal']::text[], array['08215101']::text[], null, true, '2023-03-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('reutlingen', 'Reutlingen', array['reutlingen']::text[], array['08415061']::text[], null, true, '2024-06-04'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('schramberg', 'Schramberg', array['schramberg']::text[], array['08325053']::text[], null, true, '2023-03-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('schwaebischgmuend', 'Schwäbisch Gmünd', array['schwaebischgmuend']::text[], array['08136065']::text[], null, true, '2023-05-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('tuebingen', 'Tübingen', array['tuebingen']::text[], array['08416041']::text[], null, true, '2024-06-04'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('ulm', 'Ulm', array['ulm']::text[], array['08421000']::text[], null, true, '2024-06-04'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('urbach', 'Urbach', array['urbach']::text[], array['08119076']::text[], null, true, '2023-05-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('wendlingenamneckar', 'Wendlingen am Neckar', array['wendlingenamneckar', 'wendlingen']::text[], array['08116071']::text[], null, true, '2023-05-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('neuulm', 'Neu-Ulm', array['neuulm']::text[], array['09775135']::text[], null, true, '2024-06-04'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('erfurt', 'Erfurt', array['erfurt']::text[], array['16051000']::text[], null, true, '2021-05-01'::date, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('duesseldorf', 'Düsseldorf', array['duesseldorf', 'dusseldorf']::text[], array['05111000']::text[], null, false, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland'),
+  ('hamburg', 'Hamburg', array['hamburg']::text[], array['02000000']::text[], null, true, null, '2026-10-22'::date, 'https://gis.uba.de/website/umweltzonen/index.php#uwz', 'Umweltbundesamt, Liste der Umweltzonen in Deutschland');
+
+-- The zone feeds the platform polls (lez_zones.source_feed): a city's own
+-- document, with its Gemeinde and city, or the national register, which
+-- answers where no current city document does.
+create table public.lez_feed_places (
+    feed_key   text primary key check (feed_key ~ '^[a-z0-9_]+$'),
+    scope      text not null check (scope in ('city', 'national')),
+    place_code text check (place_code ~ '^[0-9]{8}$'),
+    city       text,
+    check ((scope = 'city') = (place_code is not null and city is not null))
+);
+comment on table public.lez_feed_places is 'Each low-emission-zone feed: a city document with its Gemeinde key and city, or the national register (0310).';
+
+insert into public.lez_feed_places (feed_key, scope, place_code, city) values
+  ('berlin_umweltzone', 'city', '11000000', 'Berlin'),
+  ('aachen_umweltzone', 'city', '05334002', 'Aachen'),
+  ('duisburg_umweltzone', 'city', '05112000', 'Duisburg'),
+  ('bochum_umweltzone', 'city', '05911000', 'Bochum'),
+  ('essen_umweltzone', 'city', '05113000', 'Essen'),
+  ('muenchen_umweltzone', 'city', '09162000', 'München'),
+  ('uba_umweltzonen', 'national', null, null);

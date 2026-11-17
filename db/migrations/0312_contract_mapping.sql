@@ -1869,14 +1869,41 @@ select z.source_feed || '/' || z.zone_id                    as zone_key,
        coalesce(c.paused, false)                            as paused,
        z.provider_updated_at                                as changed_at,
        z.last_seen_at                                       as recorded_at,
+       f.scope                                              as source_scope,
+       f.place_code                                         as source_place_code,
+       f.city                                               as source_city,
        z.source_feed                                        as source_ref,
        coalesce(k.display_class, 'open')                    as display_class,
        coalesce(k.audience, 'public')                       as audience
   from public.lez_zones_live z
   left join public.feed_checks c on c.feed_key = z.source_feed
+  left join public.lez_feed_places f on f.feed_key = z.source_feed
   left join lateral (select k.* from public.contract_source_rules k where z.source_feed ~ k.pattern order by k.priority limit 1) k on true
  where not coalesce(k.excluded, false);
 grant select on contract.low_emission_zone to api_reader;
+
+-- The curated low-emission-zone list (public.lez_list_entries, 0310): the
+-- entry whose place_codes hold the deciding city feed's source_place_code, else
+-- the Gemeinde the point lies in, names the plaque a zone answer states
+-- (plaque 'green', or null where none is stated), whether we may carry the
+-- zone's data (covered) and the day it was lifted. Curated content, credited
+-- like the driving rules.
+create view contract.low_emission_zone_entry as
+select e.entry_key                                          as entry_key,
+       e.name                                               as name,
+       e.aliases                                            as aliases,
+       e.place_codes                                        as place_codes,
+       e.plaque                                             as plaque,
+       e.covered                                            as covered,
+       e.lifted_on                                          as lifted_on,
+       e.reviewed_on                                        as reviewed_on,
+       e.source_url                                         as source_url,
+       e.source_name                                        as source_name,
+       'viafrei_rules'::text                                as source_ref,
+       'open'::text                                         as display_class,
+       'public'::text                                       as audience
+  from public.lez_list_entries e;
+grant select on contract.low_emission_zone_entry to api_reader;
 
 -- The lorry rows the platform's lorry answer reads (analysis/lorry-routes):
 -- the long-lorry positive network (lorry_long_network_live, rule_layer
@@ -1954,7 +1981,8 @@ BEGIN
     ('transit_punctuality', 'public.transit_punctuality_area_live: the last half hour of Trip Updates per Land, Kreis, city and Germany, computed at read time, an area with no trip seen left out; region-wide totals only.'),
     ('street_bay', 'public.street_bays we did not close, with the newest public.street_bay_state.'),
     ('lorry_rule', 'The long-lorry network and the lorry restrictions, priority routes and zones of public.lorry_*_live, one row per published feature.'),
-    ('low_emission_zone', 'public.lez_zones_live with its feed''s public.feed_checks row and the same-zone rows of public.lez_zone_overlaps.'),
+    ('low_emission_zone', 'public.lez_zones_live with its feed''s public.feed_checks row, the same-zone rows of public.lez_zone_overlaps and its public.lez_feed_places row (scope, Gemeinde key, city; NULL for a feed it does not name).'),
+    ('low_emission_zone_entry', 'public.lez_list_entries (0310): the curated low-emission-zone list, credited to the curated rules like the driving rules.'),
     ('publisher', 'One row per source of contract.source (public.contract_sources): publisher_id is the source key, display_name the feed title, or for a register-only source its attribution line. website: the page the register names for the source, else the catalogue''s offer page.'),
     ('licence', 'One row per licence label of a published contract source. licence_url: public.licence_texts (0309), else the canonical URL of a CC, ODbL, Datenlizenz Deutschland or GeoNutzV label, else the one source page that carries the label, else the register''s source page; category, share_alike and attribution_required are read off the label.'),
     ('source', 'One row per source of public.contract_sources (feeds, ingestor sources, the register''s static sources), with the envelope of public.contract_source_rules and the domain of public.contract_source_domains. Attribution, changes_statement, use_classes (empty = no use permitted: an unregistered source), review_signed_on and register_version from public.source_register (0309). stale_after_s is 3 x cadence (the catalogue''s, else control.data_status); a source with no cadence is never stale (owner decision 2026-11-16): freshness_target_s and stale_after_s are NULL and the caller shows its as-of time alone. share_alike_offer_url: the Impressum, where the share-alike offer is redeemed, on a share-alike source. A source whose licence was never read is not published.'),

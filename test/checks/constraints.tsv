@@ -467,6 +467,16 @@ public.landing_status_hourly	landing_status_hourly_hour_check	CHECK (((EXTRACT(m
 public.landing_status_hourly	landing_status_hourly_n_check	CHECK ((n >= 0))	{"n":"-1"}
 public.landing_status_hourly	landing_status_hourly_route_class_check	CHECK ((route_class = ANY (ARRAY['home'::text, 'page'::text, 'place'::text, 'station'::text, 'motorway'::text, 'fragment'::text, 'asset'::text, 'meta'::text, 'other'::text])))	{"route_class":""}
 public.landing_status_hourly	landing_status_hourly_status_check	CHECK (((status >= 100) AND (status <= 599)))	{"status":"99"}
+public.lez_feed_places	lez_feed_places_check	CHECK (((scope = 'city'::text) = ((place_code IS NOT NULL) AND (city IS NOT NULL))))	{"scope":"city","place_code":null}
+public.lez_feed_places	lez_feed_places_feed_key_check	CHECK ((feed_key ~ '^[a-z0-9_]+$'::text))	{"feed_key":""}
+public.lez_feed_places	lez_feed_places_place_code_check	CHECK ((place_code ~ '^[0-9]{8}$'::text))	{"place_code":""}
+public.lez_feed_places	lez_feed_places_scope_check	CHECK ((scope = ANY (ARRAY['city'::text, 'national'::text])))	{"scope":""}
+public.lez_list_entries	lez_list_entries_check	CHECK (((lifted_on IS NULL) OR (plaque IS NULL)))	{"lifted_on":"2024-02-22","plaque":"green"}
+public.lez_list_entries	lez_list_entries_entry_key_check	CHECK ((entry_key ~ '^[a-z]+$'::text))	{"entry_key":""}
+public.lez_list_entries	lez_list_entries_name_check	CHECK ((name <> ''::text))	{"name":""}
+public.lez_list_entries	lez_list_entries_place_codes_check	CHECK ((cardinality(place_codes) > 0))	{"place_codes":"{}"}
+public.lez_list_entries	lez_list_entries_plaque_check	CHECK ((plaque = 'green'::text))	{"plaque":""}
+public.lez_list_entries	lez_list_entries_source_url_check	CHECK ((source_url ~ '^https://'::text))	{"source_url":""}
 public.lez_zone_overlaps	lez_zone_overlaps_two_feeds	CHECK ((source_feed <> other_feed))	{"source_feed":"a","other_feed":"a"}
 public.lez_zones	lez_zones_area_is_area	CHECK (((role = 'exempt_road'::text) OR (public.geometrytype(geom) = ANY (ARRAY['POLYGON'::text, 'MULTIPOLYGON'::text]))))	{"role":"zone","geom":"SRID=4326;POINT(0 0)"}
 public.lez_zones	lez_zones_role_known	CHECK ((role = ANY (ARRAY['zone'::text, 'exempt_road'::text, 'transfer'::text])))	{"role":""}

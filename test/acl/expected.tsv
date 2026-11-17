@@ -29,6 +29,7 @@ api_reader	relation	contract.junction	SELECT
 api_reader	relation	contract.licence	SELECT
 api_reader	relation	contract.lorry_rule	SELECT
 api_reader	relation	contract.low_emission_zone	SELECT
+api_reader	relation	contract.low_emission_zone_entry	SELECT
 api_reader	relation	contract.message_coverage	SELECT
 api_reader	relation	contract.occupancy_observation	SELECT
 api_reader	relation	contract.parking_facility	SELECT

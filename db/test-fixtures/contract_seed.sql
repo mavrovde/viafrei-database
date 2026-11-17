@@ -915,6 +915,23 @@ BEGIN
                                 provider_updated_at, place_name)
   VALUES (feed, coalesce(NEW.publisher_name, 'Test'), coalesce(NEW.zone_id, substr(NEW.zone_key, length(feed) + 2)), coalesce(NEW.zone_role, 'zone'),
           NEW.name, '{}', NEW.geometry, md5(NEW.zone_key), coalesce(NEW.recorded_at, now()), coalesce(NEW.recorded_at, now()), NEW.changed_at, NEW.city);
+  -- A row that names its feed's scope plants the feed's public.lez_feed_places
+  -- row (a feed the migration names keeps its own).
+  IF NEW.source_scope IS NOT NULL THEN
+    INSERT INTO public.lez_feed_places (feed_key, scope, place_code, city)
+    VALUES (feed, NEW.source_scope, NEW.source_place_code, NEW.source_city) ON CONFLICT (feed_key) DO NOTHING;
+  END IF;
+  PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
+  RETURN NEW;
+END $$;
+
+-- One entry of the curated zone list: the migration's entries stay; a seeded
+-- entry is added beside them.
+CREATE OR REPLACE FUNCTION vf_test.seed_low_emission_zone_entry() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO public.lez_list_entries (entry_key, name, aliases, place_codes, plaque, covered, lifted_on, reviewed_on, source_url, source_name)
+  VALUES (NEW.entry_key, NEW.name, coalesce(NEW.aliases, '{}'), NEW.place_codes, NEW.plaque, coalesce(NEW.covered, true), NEW.lifted_on,
+          coalesce(NEW.reviewed_on, current_date), coalesce(NEW.source_url, 'https://example.org/zones'), coalesce(NEW.source_name, 'Test'));
   PERFORM vf_test.seed_check(TG_TABLE_NAME, to_jsonb(NEW));
   RETURN NEW;
 END $$;

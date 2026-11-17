@@ -236,3 +236,42 @@ describe("the region watch's trips, the station board's departures and the warn 
     expect(rows).toEqual([{ warn_cell_id: "808111000", area_name: "Stadt Stuttgart", event: "STURMBÖEN", identifier: "msg-1", holds: true }]);
   });
 });
+
+describe("the low-emission-zone plaque: each zone's feed and the curated zone list", () => {
+  beforeAll(async () => {
+    const zone = (feed: string, id: string, name: string, x: number): string =>
+      `('${feed}', 'Publisher', '${id}', 'zone', '${name}', '{}', st_setsrid(st_geomfromtext('POLYGON((${String(x)} 48, ${String(x + 0.1)} 48, ${String(x + 0.1)} 48.1, ${String(x)} 48.1, ${String(x)} 48))'), 4326), 'h-${id}', now(), '2026-11-16 08:00+00', null)`;
+    await db.pool.query(
+      `insert into public.lez_zones (source_feed, source_publisher, zone_id, role, name, props, geom, content_hash, first_seen_at, last_seen_at, provider_updated_at) values
+         ${zone("muenchen_umweltzone", "m1", "Umweltzone", 11.5)}, ${zone("uba_umweltzonen", "DE_BY_1", "DE_BY_1", 11.7)}, ${zone("lez_unknown", "u1", "Zone", 11.9)}`,
+    );
+    await db.pool.query(`update public.lez_zones set provider_updated_at = '2025-06-24 00:00+00' where zone_id = 'DE_BY_1'`);
+  });
+
+  it("low_emission_zone: a city document names its Gemeinde and city, the register its scope alone, a feed the list does not name nothing; the data's own date and the last read", async () => {
+    const rows = await read<Record<string, unknown>>(
+      "select zone_key, source_scope, source_place_code, source_city, changed_at is not null as dated, recorded_at from contract.low_emission_zone order by zone_key",
+    );
+    expect(rows).toEqual([
+      { zone_key: "lez_unknown/u1", source_scope: null, source_place_code: null, source_city: null, dated: false, recorded_at: new Date("2026-11-16T08:00:00Z") },
+      { zone_key: "muenchen_umweltzone/m1", source_scope: "city", source_place_code: "09162000", source_city: "München", dated: false, recorded_at: new Date("2026-11-16T08:00:00Z") },
+      { zone_key: "uba_umweltzonen/DE_BY_1", source_scope: "national", source_place_code: null, source_city: null, dated: true, recorded_at: new Date("2026-11-16T08:00:00Z") },
+    ]);
+  });
+
+  it("low_emission_zone_entry: the curated list as the platform's, a zone in force with its plaque, a lifted one with its day and no plaque, a closed-licence one not covered", async () => {
+    const rows = await read<Record<string, unknown>>(
+      `select entry_key, name, place_codes, plaque, covered, to_char(lifted_on, 'YYYY-MM-DD') as lifted_on, source_ref from contract.low_emission_zone_entry
+        where entry_key in ('berlin', 'hannover', 'duesseldorf', 'ruhrgebiet') order by entry_key`,
+    );
+    expect(rows.map((r) => [r["entry_key"], r["plaque"], r["covered"], r["lifted_on"], r["source_ref"]])).toEqual([
+      ["berlin", "green", true, null, "viafrei_rules"],
+      ["duesseldorf", null, false, null, "viafrei_rules"],
+      ["hannover", null, true, "2024-02-22", "viafrei_rules"],
+      ["ruhrgebiet", "green", true, null, "viafrei_rules"],
+    ]);
+    expect((rows.find((r) => r["entry_key"] === "ruhrgebiet")?.["place_codes"] as string[]).length).toBe(13);
+    const n = await read<{ n: number; lifted: number }>("select count(*)::int as n, count(lifted_on)::int as lifted from contract.low_emission_zone_entry");
+    expect(n).toEqual([{ n: 59, lifted: 23 }]);
+  });
+});

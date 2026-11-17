@@ -4,6 +4,7 @@
 # contract.terms is new in 0312 (the SID terms text, owner 2026-11-16): the API's DDL adds it with contract 0.3.
 # contract.departure is new in 0312 (the live departure board, #29): the API's DDL adds it with contract 0.3.
 # contract.low_emission_zone, lorry_rule, transit_trip_delay and station_disruption are new in 0312 (#29): the API's DDL adds them with contract 0.3.
+# contract.low_emission_zone_entry (the curated zone list) is new in 0312 (#29) too.
 access.api_key	1	key_id	text
 access.api_key	2	environment	text
 access.api_key	3	plan_name	text
@@ -230,9 +231,25 @@ contract.low_emission_zone	11	cadence_s	integer
 contract.low_emission_zone	12	paused	boolean
 contract.low_emission_zone	13	changed_at	timestamp with time zone
 contract.low_emission_zone	14	recorded_at	timestamp with time zone
-contract.low_emission_zone	15	source_ref	text
-contract.low_emission_zone	16	display_class	text
-contract.low_emission_zone	17	audience	text
+contract.low_emission_zone	15	source_scope	text
+contract.low_emission_zone	16	source_place_code	text
+contract.low_emission_zone	17	source_city	text
+contract.low_emission_zone	18	source_ref	text
+contract.low_emission_zone	19	display_class	text
+contract.low_emission_zone	20	audience	text
+contract.low_emission_zone_entry	1	entry_key	text
+contract.low_emission_zone_entry	2	name	text
+contract.low_emission_zone_entry	3	aliases	text[]
+contract.low_emission_zone_entry	4	place_codes	text[]
+contract.low_emission_zone_entry	5	plaque	text
+contract.low_emission_zone_entry	6	covered	boolean
+contract.low_emission_zone_entry	7	lifted_on	date
+contract.low_emission_zone_entry	8	reviewed_on	date
+contract.low_emission_zone_entry	9	source_url	text
+contract.low_emission_zone_entry	10	source_name	text
+contract.low_emission_zone_entry	11	source_ref	text
+contract.low_emission_zone_entry	12	display_class	text
+contract.low_emission_zone_entry	13	audience	text
 contract.message_coverage	1	state_code	text
 contract.message_coverage	2	source_ref	text
 contract.message_coverage	3	coverage_role	text
