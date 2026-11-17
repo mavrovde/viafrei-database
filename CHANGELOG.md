@@ -11,6 +11,31 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.3.0](https://github.com/mavrovde/viafrei-database/compare/v0.2.0...v0.3.0) (2026-11-17)
+
+
+### Added
+
+* every contract view reads the platform's tables and appends a licence envelope to each row (source_ref, source_refs, display_class, audience, confidentiality, terms gate, hold) (0312) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* schema live, the on-demand refresh requests the API records and the live ingestor claims and settles, with its own role viafrei_live_ingestor; public ids only, kept 30 days (0315) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* test-fixtures seed FILE writes contract.* inserts to the platform tables, so a consumer seeds its tests through this image ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* the indexes the API's reads of the contract views need, built concurrently (0313) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* the schema head moves from 0306 to 0315 (nine migrations, 0307 to 0315) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* the source register, the curated driving rules with the low-emission zones, and the message coverage as data (0309 to 0311) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* train board ticks, domains.train_board_departures, day-partitioned and kept 14 days, and contract.train_board, each station's newest fetch (0314) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* viafrei-api's access store, schema access, and its writer role api_access (0308) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+* viafrei-api's read contract, schema contract version 0.3, and its read-only role api_reader (0307) ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+
+
+### Fixed
+
+* an existing API role with other attributes or a membership stops the migration before anything of it is applied ([c5018a9](https://github.com/mavrovde/viafrei-database/commit/c5018a91df042dda004463b9ff3b5e07fdf7fb50))
+
+
+### Build and CI
+
+* Snyk runs weekly on main and once per release, before publish ([#37](https://github.com/mavrovde/viafrei-database/issues/37)) ([78b1f31](https://github.com/mavrovde/viafrei-database/commit/78b1f319a71d1d88674e471e6ccbfe833d781b51))
+
 ## [0.2.0](https://github.com/mavrovde/viafrei-database/compare/v0.1.1...v0.2.0) (2026-11-15)
 
 
