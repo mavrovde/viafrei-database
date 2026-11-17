@@ -20,8 +20,13 @@ export type ComplexCase = {
   readonly refresh?: readonly string[];
   readonly query: string;
   readonly expect: readonly Readonly<Record<string, unknown>>[];
-  /** [what it breaks, snippet once in the view's block, its replacement]. */
-  readonly mutants: readonly (readonly [string, string, string])[];
+  /**
+   * [what it breaks, snippet once in the view's block, its replacement]; with
+   * "every", the snippet is an expression the block repeats (its select list
+   * and its GROUP BY or ORDER BY) and each place is replaced, or the view
+   * would not build and the mutant would die of the error, not of the answer.
+   */
+  readonly mutants: readonly (readonly [string, string, string] | readonly [string, string, string, "every"])[];
 };
 
 const T = (min: number): string => `timestamptz '2026-11-15 12:00Z' + interval '${String(min)} minutes'`;
@@ -174,7 +179,7 @@ export const COMPLEX_CASES: readonly ComplexCase[] = [
       ["a stop that is not German", "(st.stop_id ~~ 'de:_____:%'::text)", "true"],
       ["a deleted trip", "WHERE ((t.deleted_at IS NULL) AND", "WHERE (true AND"],
       ["a Kreis that is not five digits", "(k.kreis ~ '^\\d{5}$'::text)", "true"],
-      ["the Kreis one character on", "SUBSTRING(st.stop_id FROM 4 FOR 5) AS kreis", "SUBSTRING(st.stop_id FROM 5 FOR 5) AS kreis"],
+      ["the Kreis one character on", "SUBSTRING(st.stop_id FROM 4 FOR 5)", "SUBSTRING(st.stop_id FROM 5 FOR 5)", "every"],
     ],
   },
   {
@@ -317,7 +322,7 @@ export const COMPLEX_CASES: readonly ComplexCase[] = [
     mutants: [
       ["a closed street", "WHERE ((closed_at IS NULL) AND", "WHERE (true AND"],
       ["the smallest class", "AND (cls >= 2))", "AND true)"],
-      ["tiles of ten kilometres", "/ (2000)::double precision)))::integer AS tx", "/ (20000)::double precision)))::integer AS tx"],
+      ["tiles of ten kilometres", "/ (2000)::double precision)))::integer", "/ (20000)::double precision)))::integer", "every"],
     ],
   },
   {
@@ -341,7 +346,7 @@ export const COMPLEX_CASES: readonly ComplexCase[] = [
       ["the smallest class", "((cls >= 2) AND", "(true AND"],
       ["the minor classes", "(cls <= 4))", "true)"],
       ["a street with no simplified line", "AND (geom_lo IS NOT NULL))", "AND true)"],
-      ["tiles of one kilometre", "/ (20000)::double precision)))::integer AS tx", "/ (2000)::double precision)))::integer AS tx"],
+      ["tiles of one kilometre", "/ (20000)::double precision)))::integer", "/ (2000)::double precision)))::integer", "every"],
     ],
   },
   {

@@ -306,9 +306,10 @@ const complex: SchemaMutant[] = (() => {
     const at = [`\nCREATE VIEW ${k.view} AS\n`, `\nCREATE MATERIALIZED VIEW ${k.view} AS\n`].map((h) => sql.indexOf(h)).find((i) => i >= 0);
     if (at === undefined) throw new Error(`no CREATE VIEW ${k.view} in the baseline`);
     const block = sql.slice(at + 1, sql.indexOf(";\n", at) + 1);
-    return k.mutants.map(([what, from, to]) => {
-      if (block.split(from).length !== 2) throw new Error(`${k.view}: ${from} is not once in its block`);
-      return { name: `views: ${k.view} shows ${what}`, from: block, to: block.replace(from, to) };
+    return k.mutants.map(([what, from, to, every]) => {
+      const n = block.split(from).length - 1;
+      if (every === undefined ? n !== 1 : n < 2) throw new Error(`${k.view}: ${from} is ${every === undefined ? "not once" : "not repeated"} in its block`);
+      return { name: `views: ${k.view} shows ${what}`, from: block, to: block.split(from).join(to) };
     });
   });
 })().map((m) => ({ ...m, file: BASELINE, tests: COMPLEX }));
