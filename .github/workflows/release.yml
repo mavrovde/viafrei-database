@@ -34,8 +34,9 @@
 # Then, in this order, so a failure at any step leaves no tag behind:
 #   0. mutants: the full mutation check (npm run mutate) on the gate's commit,
 #      against an empty PostGIS; one surviving mutant, a mutant whose pattern
-#      no longer matches, or a unit or database run that fails before any
-#      mutant is planted (its control) fails the release before anything is
+#      no longer matches or matches more than one place, or a unit or
+#      database run that fails before any mutant is planted (its control)
+#      fails the release before anything is
 #      built. This is the only run of the full set: no pull request, push or
 #      schedule runs it;
 #      snyk: Snyk over the dependencies of the same commit (snyk.yml, called);
@@ -212,8 +213,8 @@ jobs:
       - name: An empty database
         run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
       - run: npm ci --ignore-scripts
-      # Exits 1 on a surviving mutant or a pattern that matches nothing, and 2
-      # when a unit or database run fails unmutated (each distinct run is made
+      # Exits 1 on a surviving mutant or a pattern that matches nothing or more
+      # than one place, and 2 when a unit or database run fails unmutated (each distinct run is made
       # once, before any mutant is planted), so none of them reads as a pass.
       - name: Every mutant
         env:

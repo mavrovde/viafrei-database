@@ -1,7 +1,8 @@
 /**
  * The mutant set of scripts/mutate.ts: each mutant is one small, plausible bug
  * and the tests that must fail on it. Apart from the runner so a unit test can
- * read the whole set.
+ * read the whole set (test/mutants.test.ts): every pattern is found exactly
+ * once in its file, so the bug lands where its name says.
  */
 import { join } from "node:path";
 import { SCHEMA_BEHAVIOUR_MUTANTS } from "./mutants-schema-behaviour.js";
