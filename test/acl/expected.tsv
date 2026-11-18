@@ -16,6 +16,7 @@ api_access	relation	live.refresh_askers	INSERT,SELECT
 api_access	relation	live.refresh_requests	INSERT,SELECT
 api_access	schema	access	USAGE
 api_access	schema	live	USAGE
+api_reader	function	public.contract_stop_place_of(ref text)	EXECUTE
 api_reader	relation	contract.address	SELECT
 api_reader	relation	contract.admin_region	SELECT
 api_reader	relation	contract.call_observation	SELECT

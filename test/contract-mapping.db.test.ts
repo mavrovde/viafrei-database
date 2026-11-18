@@ -712,6 +712,47 @@ describe("search_fold and the stop place lookups (#29)", () => {
       c.release();
     }
   });
+
+  it("station_facility: the stop place lookup reads the stops under the DHID through the id-prefix index, not every stop (#49)", async () => {
+    const c = await db.pool.connect();
+    const tuples = "select s.seq_tup_read + coalesce(s.idx_tup_fetch, 0) as n from pg_stat_xact_user_tables s where s.relid = 'public.stops'::regclass";
+    try {
+      await c.query("begin");
+      await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type)
+        select 1, 'de:08111:' || (8000 + g) || ':1:1', 'Andere', ${PT(9.2, 48.8)}, 0 from generate_series(1, 1000) g`);
+      await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type) values (1, 'de:08111:7777:1:1', 'Nord', ${PT(9.2, 48.8)}, 0)`);
+      // Either end of the range [DHID':', DHID';'): a longer number sharing the DHID's digits (below ':'), and an id
+      // past the colon (';' and above) are no stop of the DHID.
+      await c.query(`insert into public.stops (gtfs_feed_key, id, name, geom, location_type) values
+        (1, 'de:08111:77771:1:1', 'Nachbar', ${PT(9.2, 48.8)}, 0), (1, 'de:08111:77791:1:1', 'Nachbar', ${PT(9.2, 48.8)}, 0),
+        (1, 'de:08111:7778;1', 'Daneben', ${PT(9.2, 48.8)}, 0)`);
+      // With its statistics (rolled back with the rest), the planner costs a full read of stops as what it is.
+      await c.query("analyze public.stops");
+      const before = Number((await c.query<{ n: string }>(tuples)).rows[0]?.n ?? 0);
+      const r = await c.query("select public.contract_stop_place_of('dhid:de:08111:7777:EdB') as id");
+      const after = Number((await c.query<{ n: string }>(tuples)).rows[0]?.n ?? 0);
+      expect(r.rows).toEqual([{ id: "1:de:08111:7777:1:1" }]);
+      expect(after - before).toBeLessThan(5);
+      const ends = await c.query("select public.contract_stop_place_of('de:08111:7779') as below, public.contract_stop_place_of('de:08111:7778') as above");
+      expect(ends.rows).toEqual([{ below: null, above: null }]);
+      // A security definer: only the contract's reader runs it, not PUBLIC.
+      const may = await c.query(
+        "select has_function_privilege('api_reader', 'public.contract_stop_place_of(text)', 'execute') as reader, has_function_privilege('viafrei_mcp', 'public.contract_stop_place_of(text)', 'execute') as other",
+      );
+      expect(may.rows).toEqual([{ reader: true, other: false }]);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
+  it("road: a read of no shape column draws no shape, and a read of one road draws that road's alone (#49)", async () => {
+    const plan = async (sql: string): Promise<string> => (await read<{ "QUERY PLAN": string }>(`explain (costs off) ${sql}`)).map((x) => x["QUERY PLAN"]).join("\n");
+    expect(await plan("select road_ref, road_class, name, source_ref, display_class, audience from contract.road")).not.toContain("contract_road_shape");
+    const one = await plan("select geometry from contract.road where road_ref = 'A8'");
+    expect(one).toContain("Function Scan on contract_road_shape");
+    expect(one).toMatch(/on autobahn_roads s\n.*\(road = 'A8'::text\)/);
+  });
 });
 
 describe("departure (#29): the platform's live departure, one figure from one feed", () => {
