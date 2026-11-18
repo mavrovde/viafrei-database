@@ -77,12 +77,19 @@ describe("the mutant set", () => {
 
   it("no schema mutant changes a view or function a later migration defines again, where no migrated database would carry it", () => {
     const bad: string[] = [];
+    // Many mutants sit in the same definition: scan the later migrations once per definition, not once per mutant.
+    const seen = new Map<string, string[]>();
     for (const m of MUTANTS) {
       const f = m.file ?? FILE;
       if (!/[/\\]db[/\\](baseline|migrations)[/\\]\d{4}_[^/\\]+\.sql$/.test(f)) continue;
       const def = definedAt(text(f), text(f).indexOf(m.from) + changeAt(m.from, m.to));
       if (def === null) continue;
-      const by = later.filter((x) => x.v > version(f) && redefines(x.sql, def.name, def.block)).map((x) => String(x.v));
+      const key = `${f}\0${def.name}\0${def.block}`;
+      let by = seen.get(key);
+      if (by === undefined) {
+        by = later.filter((x) => x.v > version(f) && redefines(x.sql, def.name, def.block)).map((x) => String(x.v));
+        seen.set(key, by);
+      }
       if (by.length > 0) bad.push(`${m.name}: ${def.name} is defined again by ${by.join(", ")}`);
     }
     expect(bad).toEqual([]);
