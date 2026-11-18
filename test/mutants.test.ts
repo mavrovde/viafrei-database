@@ -16,7 +16,7 @@ const later = readdirSync(MIGRATIONS)
  * view up to its first `;` at a line end, a function up to the end of its
  * dollar-quoted body) reaches that far.
  */
-function definedAt(sql: string, at: number): string | null {
+function definedAt(sql: string, at: number): { name: string; block: string } | null {
   let hit: { name: string; start: number; fn: boolean } | null = null;
   for (const m of sql.slice(0, at).matchAll(/^create (?:or replace )?(?:materialized )?(view|function) ([\w.]+)/gim)) {
     hit = { name: (m[2] ?? "").toLowerCase(), start: m.index, fn: (m[1] ?? "").toLowerCase() === "function" };
@@ -29,7 +29,26 @@ function definedAt(sql: string, at: number): string | null {
     const body = open === null ? -1 : sql.indexOf(tag, hit.start + open.index + tag.length);
     end = body < 0 ? end : body + tag.length;
   }
-  return end < 0 || at <= end ? hit.name : null;
+  return end < 0 || at <= end ? { name: hit.name, block: sql.slice(hit.start, end < 0 ? sql.length : end) } : null;
+}
+
+const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Whether a later migration's `sql` defines the view or function `name`
+ * (whose definition is `block`) again, so that no migrated database carries
+ * the earlier definition: it replaces, alters or drops it (a view, a
+ * materialized view or a function), or drops with cascade an object the
+ * definition reads.
+ */
+function redefines(sql: string, name: string, block: string): boolean {
+  const kind = "(?:materialized )?(?:view|function)";
+  if (new RegExp(`^(?:create or replace|alter) ${kind} ${esc(name)}\\b`, "im").test(sql)) return true;
+  if (new RegExp(`^drop ${kind}(?: if exists)? ${esc(name)}\\b`, "im").test(sql)) return true;
+  for (const m of sql.matchAll(/^drop (?:table|view|materialized view|function|type|schema)(?: if exists)? ([\w.]+)[^;]*\bcascade\b/gim)) {
+    if (new RegExp(`\\b${esc(m[1] ?? "")}\\b`, "i").test(block)) return true;
+  }
+  return false;
 }
 
 /** Where `to` first differs from `from`. */
@@ -60,22 +79,39 @@ describe("the mutant set", () => {
     for (const m of MUTANTS) {
       const f = m.file ?? FILE;
       if (!/[/\\]db[/\\](baseline|migrations)[/\\]\d{4}_[^/\\]+\.sql$/.test(f)) continue;
-      const name = definedAt(text(f), text(f).indexOf(m.from) + changeAt(m.from, m.to));
-      if (name === null) continue;
-      const again = new RegExp(`^(?:create or replace (?:view|function)|drop (?:view|function)(?: if exists)?) ${name.replace(/\./g, "\\.")}\\b`, "im");
-      const by = later.filter((x) => x.v > version(f) && again.test(x.sql)).map((x) => String(x.v));
-      if (by.length > 0) bad.push(`${m.name}: ${name} is defined again by ${by.join(", ")}`);
+      const def = definedAt(text(f), text(f).indexOf(m.from) + changeAt(m.from, m.to));
+      if (def === null) continue;
+      const by = later.filter((x) => x.v > version(f) && redefines(x.sql, def.name, def.block)).map((x) => String(x.v));
+      if (by.length > 0) bad.push(`${m.name}: ${def.name} is defined again by ${by.join(", ")}`);
     }
     expect(bad).toEqual([]);
   });
 
   it("the replacement check sees a view a later migration replaces", () => {
     const sql = "create view contract.road as\nselect null::numeric(6,1) as length_km;\ngrant select on contract.road to api_reader;\ncreate function f() returns int language sql as $$ select 1; $$;\n";
-    expect(definedAt(sql, sql.indexOf("numeric"))).toBe("contract.road");
+    expect(definedAt(sql, sql.indexOf("numeric"))?.name).toBe("contract.road");
     expect(definedAt(sql, sql.indexOf("grant"))).toBeNull();
-    expect(definedAt(sql, sql.indexOf("1;"))).toBe("f");
+    expect(definedAt(sql, sql.indexOf("1;"))?.name).toBe("f");
     expect(changeAt("a b c", "a x c")).toBe(2);
-    const by = later.filter((x) => x.v > 307 && /^create or replace view contract\.road\b/im.test(x.sql)).map((x) => x.v);
+    const road = definedAt(sql, sql.indexOf("numeric"));
+    const by = later.filter((x) => x.v > 307 && road !== null && redefines(x.sql, road.name, road.block)).map((x) => x.v);
     expect(by).toEqual([312]);
+  });
+
+  it("a definition counts as made again when a later migration replaces, alters or drops it, or drops with cascade what it reads", () => {
+    const block = "create view public.v as\n select x from public.t";
+    const again = (sql: string): boolean => redefines(sql, "public.v", block);
+    expect(again("create or replace view public.v as select 1;")).toBe(true);
+    expect(again("create or replace function public.v() returns int language sql as $$ select 1 $$;")).toBe(true);
+    expect(again("drop view if exists public.v;")).toBe(true);
+    expect(again("drop materialized view public.v;")).toBe(true);
+    expect(again("drop function public.v(int);")).toBe(true);
+    expect(again("alter view public.v rename to w;")).toBe(true);
+    expect(again("alter materialized view public.v rename to w;")).toBe(true);
+    expect(again("alter function public.v(int) rename to w;")).toBe(true);
+    expect(again("drop table public.t cascade;")).toBe(true);
+    expect(again("drop table public.t;")).toBe(false);
+    expect(again("drop table public.t2 cascade;")).toBe(false);
+    expect(again("create or replace view public.vv as select 1;")).toBe(false);
   });
 });
