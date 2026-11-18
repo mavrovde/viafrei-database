@@ -55,10 +55,20 @@ export function runMutants(mutants: readonly Mutant[], defaults: { readonly file
       const file = m.file ?? defaults.file;
       const original = originals.get(file) ?? io.read(file);
       originals.set(file, original);
+      // A pattern found more than once would plant its bug at the first match,
+      // which need not be the place its name says (0309's GeoNames mutant
+      // changed DELFI static's row): it is judged as a survivor, like one found
+      // nowhere, and nothing is planted.
+      const found = original.split(m.from).length - 1;
+      if (found !== 1) {
+        io.log(`  ? ${m.name}: the pattern ${found === 0 ? "no longer matches" : `matches ${String(found)} places of`} ${file} — fix the mutant`);
+        survived += 1;
+        continue;
+      }
       // A function, so a `$$` in the replacement is two dollars and not a replacement pattern.
       const mutated = original.replace(m.from, () => m.to);
       if (mutated === original) {
-        io.log(`  ? ${m.name}: the pattern no longer matches ${file} — fix the mutant`);
+        io.log(`  ? ${m.name}: the mutant changes nothing in ${file} — fix the mutant`);
         survived += 1;
         continue;
       }

@@ -111,8 +111,8 @@ replaced by a newer pending one, so start one release at a time.
 
 **The mutation tally.** The release workflow's Mutation check job runs every
 mutant of `npm run mutate` on the tagged commit, after the gate and before
-anything is built, and a survivor, a mutant whose pattern no longer matches,
-or a unit or database run that fails before any mutant is planted (each
+anything is built, and a survivor, a mutant whose pattern no longer matches
+or matches more than one place (test/mutants.test.ts refuses both first), or a unit or database run that fails before any mutant is planted (each
 distinct run is made once, unmutated, first) stops the release. That run is
 the tally: there is no separate local run of the full set before a release,
 and no pull request or push runs it. A pull request that adds or changes a

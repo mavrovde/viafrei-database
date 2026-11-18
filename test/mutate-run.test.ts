@@ -75,4 +75,15 @@ describe("the mutation runner", () => {
     expect(f.lines).toContain("  ? gone: the pattern no longer matches plan.ts — fix the mutant");
     expect(f.files.get("cli.ts")).toBe("b");
   });
+
+  it("a pattern found in two places plants nothing and is exit 1, and so is a mutant that changes nothing", () => {
+    const f = fake([]);
+    f.files.set("plan.ts", "a c a");
+    const twice = MUTANTS.filter((m) => m.name === "unit a");
+    expect(runMutants([...twice, { name: "same", from: "c", to: "c" }], DEFAULTS, f.io)).toEqual({ code: 1, killed: 0, survived: 2 });
+    expect(f.lines).toContain("  ? unit a: the pattern matches 2 places of plan.ts — fix the mutant");
+    expect(f.lines).toContain("  ? same: the mutant changes nothing in plan.ts — fix the mutant");
+    expect(f.runs).toEqual(["unit: test/plan.test.ts"]);
+    expect(f.files.get("plan.ts")).toBe("a c a");
+  });
 });
