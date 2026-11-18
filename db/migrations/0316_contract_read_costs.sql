@@ -16,6 +16,9 @@
 --    view calls a function with its reader's rights, so a plain function
 --    would refuse it; and a scalar SQL function whose body is a subquery is
 --    never inlined, so a plain function would not plan any better either.
+--    PUBLIC no longer executes it: a function a view calls is checked
+--    against the view's reader, and api_reader is the one role that reads
+--    contract.station_facility (0307), so EXECUTE goes to api_reader alone.
 --
 -- 2. contract.road joined contract_road_shape(road) (about 13 ms a road) with
 --    cross join lateral, which PostgreSQL evaluates for every road whether or
@@ -31,7 +34,8 @@
 --    0312's.
 --
 -- rollback: re-run 0312's create function public.contract_stop_place_of as
--- create or replace function, and its create or replace view contract.road;
+-- create or replace function, grant execute on it to public and revoke it
+-- from api_reader, and re-run 0312's create or replace view contract.road;
 --   delete from schema_migrations where version = 316;
 
 -- create or replace view takes an ACCESS EXCLUSIVE lock on the view.
@@ -47,6 +51,8 @@ create or replace function public.contract_stop_place_of(ref text) returns text
              and (s.location_type = 1 or (s.location_type = 0 and s.parent_id is null))
            order by s.id = substring(ref from '^(?:dhid:)?([a-z]{2}:[0-9]{5}:[0-9]+)') desc, s.id
            limit 1);
+revoke all on function public.contract_stop_place_of(text) from public;
+grant execute on function public.contract_stop_place_of(text) to api_reader;
 
 create or replace view contract.road as
 select r.road                                  as road_ref,
