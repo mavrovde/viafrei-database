@@ -13,7 +13,7 @@ edited by hand.
 
 ## [0.3.2](https://github.com/mavrovde/viafrei-database/compare/v0.3.1...v0.3.2) (2026-11-18)
 
-0.3.1 was tagged but never published: its mutation check ran out of its 120 minutes twice on slow runners (765 of 813 mutants killed, none surviving, when it stopped), so no 0.3.1 image exists. 0.3.2 is the first published release of everything listed under 0.3.1 and 0.3.0 below, and its mutation check runs in 4 parallel shards.
+0.3.1 was tagged but never published: its mutation check ran out of its 120 minutes on both attempts on slow runners (765 and then 790 of its 812 mutants killed, none surviving, when it stopped), so no 0.3.1 image exists. 0.3.2 is the first published release of everything listed under 0.3.1 and 0.3.0 below, and its mutation check runs in 4 parallel shards over 817 mutants (#45).
 
 ### Build and CI
 
