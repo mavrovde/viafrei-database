@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.3.3](https://github.com/mavrovde/viafrei-database/compare/v0.3.2...v0.3.3) (2026-11-18)
+
+
+### Changed
+
+* **contract:** station_facility looks a stop place up by an index range, road computes no shape a read does not ask for ([#49](https://github.com/mavrovde/viafrei-database/issues/49)) ([#50](https://github.com/mavrovde/viafrei-database/issues/50)) ([3315bee](https://github.com/mavrovde/viafrei-database/commit/3315bee39ace24b137ee1eb5981e177041a24824))
+
 ## [0.3.2](https://github.com/mavrovde/viafrei-database/compare/v0.3.1...v0.3.2) (2026-11-18)
 
 0.3.1 was tagged but never published: its mutation check ran out of its 120 minutes on both attempts on slow runners (765 and then 790 of its 812 mutants killed, none surviving, when it stopped), so no 0.3.1 image exists. 0.3.2 is the first published release of everything listed under 0.3.1 and 0.3.0 below, and its mutation check runs in 4 parallel shards over 817 mutants (#45).
