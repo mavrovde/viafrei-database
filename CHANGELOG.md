@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.3.2](https://github.com/mavrovde/viafrei-database/compare/v0.3.1...v0.3.2) (2026-11-18)
+
+
+### Build and CI
+
+* the mutation check runs in 4 parallel shards ([#46](https://github.com/mavrovde/viafrei-database/issues/46)) ([165f800](https://github.com/mavrovde/viafrei-database/commit/165f800b85aca9164c90a80c43d86d57dd977e36))
+
 ## [0.3.1](https://github.com/mavrovde/viafrei-database/compare/v0.3.0...v0.3.1) (2026-11-17)
 
 0.3.0 was tagged but never published: its release job stopped on two surviving mutants, so no 0.3.0 image exists. 0.3.1 is the first published release of everything listed under 0.3.0 below, including the 0315 checks on the refresh requests (#41: anchor ids, the source list, and requested_by site, mcp or dev).
