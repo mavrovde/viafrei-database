@@ -109,9 +109,13 @@ nothing, and `release-please.yml` is the only workflow granted
 running release is never cancelled, but a release still pending behind it is
 replaced by a newer pending one, so start one release at a time.
 
-**The mutation tally.** The release workflow's Mutation check job runs every
-mutant of `npm run mutate` on the tagged commit, after the gate and before
-anything is built, and a survivor, a mutant whose pattern no longer matches
+**The mutation tally.** The release workflow runs every mutant of
+`npm run mutate` on the tagged commit, after the gate and before anything is
+built, in four parallel Mutation shard jobs (`--shard k/4` takes the mutants at
+the positions p with p mod 4 = k - 1, so the four are disjoint and together the
+whole set; test/mutants.test.ts proves it), each with its own controls and a
+120-minute limit, gathered by the Mutation check job that the build waits for.
+A survivor in any shard, a shard that does not finish, a mutant whose pattern no longer matches
 or matches more than one place (test/mutants.test.ts refuses both first), or a unit or database run that fails before any mutant is planted (each
 distinct run is made once, unmutated, first) stops the release. That run is
 the tally: there is no separate local run of the full set before a release,
@@ -127,9 +131,10 @@ which recovery applies depends on how far the release got:
   failed for a reason outside the tagged commit, such as a registry or runner
   outage): start the release again on its tag,
   `gh workflow run release.yml --ref vX.Y.Z`. The gate runs again in full. A
-  run on the same tag repeats the same time limit, so a mutation check that
-  times out again on that commit needs a new patch release with a higher
-  `timeout-minutes`; a tag is never reused.
+  run on the same tag repeats the same time limit and the same four shards, so
+  a mutation shard that times out again on that commit needs a new patch
+  release with more shards or a higher `timeout-minutes`; a tag is never
+  reused.
 - **The image is tagged but the release page is not published** (the
   `release-page` job failed): re-run only the failed job of that run,
   `gh run rerun <run-id> --failed`. A new run would be refused, because

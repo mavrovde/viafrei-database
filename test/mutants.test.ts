@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { shardOf } from "../scripts/mutate-run.js";
 import { FILE, MUTANTS } from "../scripts/mutants.js";
 import { REPO } from "./helpers.js";
 
@@ -113,5 +114,17 @@ describe("the mutant set", () => {
     expect(again("drop table public.t;")).toBe(false);
     expect(again("drop table public.t2 cascade;")).toBe(false);
     expect(again("create or replace view public.vv as select 1;")).toBe(false);
+  });
+});
+
+describe("the release's shards of the set", () => {
+  // The count release.yml's mutant-shards matrix runs (test/workflows.test.ts holds the workflow to it).
+  const COUNT = 4;
+  it("are disjoint, together the whole list, and none is empty", () => {
+    const shards = Array.from({ length: COUNT }, (_, k) => shardOf(MUTANTS, { index: k + 1, count: COUNT }));
+    const names = shards.flatMap((s) => s.map((m) => m.name));
+    expect(new Set(names).size).toBe(names.length);
+    expect(names.sort()).toEqual(MUTANTS.map((m) => m.name).sort());
+    for (const s of shards) expect(s.length).toBeGreaterThan(0);
   });
 });

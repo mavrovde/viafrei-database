@@ -21,6 +21,28 @@ export type MutateIo = {
 
 export type MutateResult = { readonly code: 0 | 1 | 2; readonly killed: number; readonly survived: number };
 
+/**
+ * One slice of the set, for a release that runs it in parallel jobs: shard
+ * `index` of `count` (1-based) takes the mutants at the positions p of the
+ * list with p mod count = index - 1. The slices of 1..count are disjoint and
+ * together the whole list, whatever its length, and a mutant's slice is fixed
+ * by its place in scripts/mutants.ts alone.
+ */
+export type Shard = { readonly index: number; readonly count: number };
+
+/** `k/n` with integers 1 <= k <= n, or null. */
+export function parseShard(raw: string): Shard | null {
+  const m = /^([1-9]\d*)\/([1-9]\d*)$/.exec(raw);
+  if (m === null) return null;
+  const index = Number(m[1]);
+  const count = Number(m[2]);
+  return index <= count ? { index, count } : null;
+}
+
+export function shardOf<T>(items: readonly T[], shard: Shard): T[] {
+  return items.filter((_, p) => p % shard.count === shard.index - 1);
+}
+
 /** The distinct (config, tests) runs of the selected mutants, in first-seen order. */
 export function controlRuns(mutants: readonly Mutant[], defaults: { readonly tests: readonly string[] }): Array<readonly [string | undefined, readonly string[]]> {
   const seen = new Map<string, readonly [string | undefined, readonly string[]]>();

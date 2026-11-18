@@ -33,10 +33,12 @@
 #
 # Then, in this order, so a failure at any step leaves no tag behind:
 #   0. mutants: the full mutation check (npm run mutate) on the gate's commit,
-#      against an empty PostGIS; one surviving mutant, a mutant whose pattern
-#      no longer matches or matches more than one place, or a unit or
-#      database run that fails before any mutant is planted (its control)
-#      fails the release before anything is
+#      in four parallel shards (mutant-shards, npm run mutate -- --shard k/4),
+#      each against an empty PostGIS of its own and with its own controls;
+#      one surviving mutant, a mutant whose pattern no longer matches or
+#      matches more than one place, a unit or database run that fails before
+#      any mutant is planted (its control), or a shard that does not finish
+#      fails the fan-in job (mutants) and the release before anything is
 #      built. This is the only run of the full set: no pull request, push or
 #      schedule runs it;
 #      snyk: Snyk over the dependencies of the same commit (snyk.yml, called);
@@ -178,19 +180,27 @@ jobs:
           echo "head=$head" >> "$GITHUB_OUTPUT"
 
   # Every mutant of scripts/mutants.ts, the only run of the full set (no pull
-  # request or push runs it). The one full run measured took about 40 minutes
-  # for 212 mutants (each DB mutant migrates its own database), on a macOS
-  # laptop with Postgres under Docker Desktop, never on ubuntu-24.04; 120
-  # leaves room for a slower runner without letting a hung run hold the
-  # release group for the six-hour default.
-  mutants:
-    name: Mutation check
+  # request or push runs it), cut into four shards that run in parallel
+  # (npm run mutate -- --shard k/4: the mutants at the positions p with
+  # p mod 4 = k - 1, scripts/mutate-run.ts shardOf). Each shard migrates its
+  # own databases and makes its own unmutated control runs first. One job ran
+  # the whole set until v0.3.1, whose run reached the 120-minute limit at 765
+  # of 813 mutants (about 6.6 a minute; v0.3.0's runner managed about 11):
+  # runner speed varies, so a single job was a deadline risk. 120 per shard
+  # still keeps a hung run from holding the release group for the six-hour
+  # default. fail-fast is off, so one release reports every survivor.
+  mutant-shards:
+    name: Mutation shard
     needs: gate
     if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgis:
         image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
@@ -214,12 +224,34 @@ jobs:
         run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
       - run: npm ci --ignore-scripts
       # Exits 1 on a surviving mutant or a pattern that matches nothing or more
-      # than one place, and 2 when a unit or database run fails unmutated (each distinct run is made
-      # once, before any mutant is planted), so none of them reads as a pass.
-      - name: Every mutant
+      # than one place, and 2 when a unit or database run fails unmutated (each
+      # distinct run of the shard is made once, before any of its mutants is
+      # planted) or the shard selects no mutant, so none of them reads as a pass.
+      - name: Every mutant of the shard
         env:
           TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
-        run: npm run mutate
+          SHARD: ${{ matrix.shard }}
+        run: npm run mutate -- --shard "$SHARD/4"
+
+  # The fan-in publish waits for: green only when every shard finished green.
+  # It runs unless the release was cancelled, so a shard that failed, timed
+  # out or never started (its result is then failure, cancelled or skipped,
+  # never success) fails this job, and publish, which needs it, is skipped.
+  mutants:
+    name: Mutation check
+    needs: [gate, mutant-shards]
+    if: ${{ !cancelled() && needs.gate.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Every shard finished with no survivor
+        env:
+          SHARDS: ${{ needs.mutant-shards.result }}
+        run: |
+          [[ $SHARDS == success ]] || { echo "::error::the mutation shards ended '$SHARDS', not success: a survivor, a refused control or a shard that did not finish (see the Mutation shard jobs)"; exit 1; }
+          echo "every mutation shard finished with no survivor"
 
   # Snyk once per release, on the commit about to be published (snyk.yml; it
   # also runs weekly on main). A high or critical advisory stops the release
