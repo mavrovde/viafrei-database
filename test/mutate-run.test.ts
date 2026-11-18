@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controlRuns, type Mutant, type MutateIo, runMutants } from "../scripts/mutate-run.js";
+import { controlRuns, type Mutant, type MutateIo, parseShard, runMutants, shardOf } from "../scripts/mutate-run.js";
 
 const DEFAULTS = { file: "plan.ts", tests: ["test/plan.test.ts"] };
 const MUTANTS: readonly Mutant[] = [
@@ -85,5 +85,36 @@ describe("the mutation runner", () => {
     expect(f.lines).toContain("  ? same: the mutant changes nothing in plan.ts — fix the mutant");
     expect(f.runs).toEqual(["unit: test/plan.test.ts"]);
     expect(f.files.get("plan.ts")).toBe("a c a");
+  });
+});
+
+describe("the shards of the set", () => {
+  it("takes k/n with 1 <= k <= n and nothing else", () => {
+    expect(parseShard("1/4")).toEqual({ index: 1, count: 4 });
+    expect(parseShard("4/4")).toEqual({ index: 4, count: 4 });
+    expect(parseShard("1/1")).toEqual({ index: 1, count: 1 });
+    for (const bad of ["0/4", "5/4", "1/0", "-1/4", "1/4/2", "1.5/4", "01/4", "a/4", "1", "", " 1/4"]) expect(parseShard(bad), bad).toBeNull();
+  });
+
+  it("cuts position p into shard p mod n + 1, so the shards are disjoint and together the whole list, for any length", () => {
+    expect(shardOf([0, 1, 2, 3, 4, 5, 6, 7, 8], { index: 2, count: 4 })).toEqual([1, 5]);
+    for (const length of [0, 1, 3, 4, 5, 9, 817]) {
+      const list = Array.from({ length }, (_, i) => i);
+      for (const count of [1, 2, 4, 7]) {
+        const shards = Array.from({ length: count }, (_, k) => shardOf(list, { index: k + 1, count }));
+        expect(shards.flat().sort((a, b) => a - b), `${String(length)}/${String(count)}`).toEqual(list);
+        expect(shards.map((s) => s.length).reduce((a, b) => a + b, 0)).toBe(length);
+        // even: no two shards differ by more than one mutant
+        expect(Math.max(...shards.map((s) => s.length)) - Math.min(...shards.map((s) => s.length))).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("each shard runs the controls of its own mutants before any is planted", () => {
+    const f = fake([]);
+    const shard = shardOf(MUTANTS, { index: 2, count: 2 });
+    expect(shard.map((m) => m.name)).toEqual(["unit b", "db d"]);
+    expect(runMutants(shard, DEFAULTS, f.io)).toEqual({ code: 0, killed: 2, survived: 0 });
+    expect(f.runs.slice(0, 2)).toEqual(["unit: test/cli.test.ts", "vitest.db.config.ts: test/x.db.test.ts"]);
   });
 });

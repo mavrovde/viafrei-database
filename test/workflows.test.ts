@@ -88,10 +88,20 @@ describe("an image only for a confirmed release", () => {
   it("runs every mutant on the gate's commit before anything is built, and only here", () => {
     expect(mutantsFaults(release)).toEqual([]);
     expect(mutantsFaults(release.replace("    needs: [gate, mutants, snyk]\n", "    needs: [gate, snyk]\n"))).toEqual(["publish does not wait for the mutation check"]);
-    expect(mutantsFaults(release.replace("        run: npm run mutate\n", "        run: npm run mutate -- --only lint\n"))).toEqual(["the mutation check does not run every mutant"]);
-    expect(mutantsFaults(release.replace(/(\n {2}mutants:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
+    const run = '        run: npm run mutate -- --shard "$SHARD/4"\n';
+    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/4" --only lint\n'))).toEqual(["a shard does not run its whole slice"]);
+    expect(mutantsFaults(release.replace(run, "        run: npm run mutate\n"))).toEqual(["a shard does not run its whole slice"]);
+    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/5"\n'))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 4, 4]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace(/(\n {2}mutant-shards:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
+    expect(mutantsFaults(release.replace("    if: ${{ !cancelled() && needs.gate.outputs.publish == 'true' }}\n", "    if: needs.gate.outputs.publish == 'true'\n"))).toEqual(["the fan-in does not run when a shard failed"]);
+    expect(mutantsFaults(release.replace("    needs: [gate, mutant-shards]\n", "    needs: gate\n"))).toEqual(["the fan-in does not wait for the shards"]);
+    expect(mutantsFaults(release.replace("[[ $SHARDS == success ]] ||", "[[ $SHARDS != failure ]] ||"))).toEqual(["the fan-in passes a shard that did not succeed"]);
     expect(mutantsFaults(release.replace("    timeout-minutes: 120\n", "    timeout-minutes: 120\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
-    expect(job(release, "mutants")).toContain("\n    timeout-minutes: 120\n");
+    expect(mutantsFaults(release.replace("    timeout-minutes: 5\n", "    timeout-minutes: 5\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
+    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3, 4]\n        include:\n          - shard: 5\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(job(release, "mutant-shards")).toContain("\n    timeout-minutes: 120\n");
     // The full set runs in this file alone: no pull request, push or schedule runs it.
     for (const n of workflows.filter((w) => w !== "release.yml")) expect(readFileSync(join(WF, n), "utf8"), n).not.toContain("npm run mutate");
   });
@@ -191,6 +201,7 @@ describe("permissions", () => {
   it("are read-only for the workflow and every job but publish, tag and release-page", () => {
     expect(release).toMatch(/\npermissions:\n {2}contents: read\n\n/);
     expect(permissions(job(release, "gate"))).toEqual(["contents: read", "actions: read"]);
+    expect(permissions(job(release, "mutant-shards"))).toEqual(["contents: read"]);
     expect(permissions(job(release, "mutants"))).toEqual(["contents: read"]);
     // snyk.yml uploads its SARIF to code scanning, the one write a scan needs
     expect(permissions(job(release, "snyk"))).toEqual(["contents: read", "security-events: write"]);
@@ -280,12 +291,22 @@ describe("pins", () => {
 
 /** The mutation check: every mutant, on the gate's say-so, gating publish, never optional (its checkout: checkoutFaults). */
 export function mutantsFaults(release: string): string[] {
-  const m = job(release, "mutants");
+  const shards = job(release, "mutant-shards");
+  const fanIn = job(release, "mutants");
   const faults: string[] = [];
   if (!/\n {4}needs: \[gate, mutants(, snyk)?\]\n/.test(job(release, "publish"))) faults.push("publish does not wait for the mutation check");
-  if (!/\n {6}- name: Every mutant\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {8}run: npm run mutate\n/.test(m)) faults.push("the mutation check does not run every mutant");
-  if (!m.includes("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n")) faults.push("the mutation check does not run on the gate's say-so");
-  if (m.includes("continue-on-error")) faults.push("the mutation check may fail without failing the release");
+  // Each shard runs its whole slice, k of n; the matrix is exactly 1..n, so the slices are the whole set (test/mutants.test.ts).
+  const run = /\n {6}- name: Every mutant of the shard\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {10}SHARD: \$\{\{ matrix\.shard \}\}\n {8}run: npm run mutate -- --shard "\$SHARD\/(\d+)"\n/.exec(shards);
+  if (run === null) faults.push("a shard does not run its whole slice");
+  const matrix = /\n {4}strategy:\n {6}fail-fast: false\n {6}matrix:\n {8}shard: \[([\d, ]+)\]\n(?! {8})/.exec(shards);
+  const count = Number(run?.[1] ?? "0");
+  const want = Array.from({ length: count }, (_, k) => String(k + 1)).join(", ");
+  if (run !== null && (matrix === null || count < 2 || matrix[1] !== want)) faults.push("the matrix is not shards 1 to the count each shard is cut by");
+  if (!shards.includes("\n    needs: gate\n    if: needs.gate.outputs.publish == 'true'\n")) faults.push("the mutation check does not run on the gate's say-so");
+  if (!fanIn.includes("\n    needs: [gate, mutant-shards]\n")) faults.push("the fan-in does not wait for the shards");
+  if (!fanIn.includes("\n    if: ${{ !cancelled() && needs.gate.outputs.publish == 'true' }}\n")) faults.push("the fan-in does not run when a shard failed");
+  if (!fanIn.includes("\n          SHARDS: ${{ needs.mutant-shards.result }}\n        run: |\n          [[ $SHARDS == success ]] || {")) faults.push("the fan-in passes a shard that did not succeed");
+  if (shards.includes("continue-on-error") || fanIn.includes("continue-on-error")) faults.push("the mutation check may fail without failing the release");
   return faults;
 }
 
@@ -342,7 +363,7 @@ export function thresholdFaults(config: string): string[] {
  */
 export function checkoutFaults(release: string): string[] {
   const faults: string[] = [];
-  for (const id of ["mutants", "publish", "verify", "tag"]) {
+  for (const id of ["mutant-shards", "publish", "verify", "tag"]) {
     const j = job(release, id);
     if (!j.includes("\n        with:\n          ref: ${{ needs.gate.outputs.commit }}\n")) faults.push(`${id} does not check out the gate's commit`);
     if (j.includes("ref: refs/tags/")) faults.push(`${id} checks out the tag ref`);
@@ -513,12 +534,12 @@ export function triggerFaults(security: string, wf: (name: string) => string): s
 
 describe("the release's checkouts and concurrency", () => {
   const release = readFileSync(join(WF, "release.yml"), "utf8");
-  it("mutants, publish, verify and tag build from the gate's commit; the gate pins the tag to github.sha", () => {
+  it("mutant-shards, publish, verify and tag build from the gate's commit; the gate pins the tag to github.sha", () => {
     expect(checkoutFaults(release)).toEqual([]);
   });
   it("a checkout of the tag ref, a missing sha check or a per-tag group goes red", () => {
     const tagRef = release.replace("          ref: ${{ needs.gate.outputs.commit }}\n          persist-credentials: false\n", "          ref: refs/tags/${{ env.TAG }}\n          persist-credentials: false\n");
-    expect(checkoutFaults(tagRef)).toEqual(["mutants does not check out the gate's commit", "mutants checks out the tag ref"]);
+    expect(checkoutFaults(tagRef)).toEqual(["mutant-shards does not check out the gate's commit", "mutant-shards checks out the tag ref"]);
     expect(checkoutFaults(release.replace(/ {10}\[\[ \$commit == "\$GITHUB_SHA" \]\][^\n]*\n/, ""))).toEqual(["the gate does not refuse a tag that has moved off github.sha"]);
     expect(checkoutFaults(release.replace("  group: release\n", "  group: release-${{ github.ref_name }}\n"))).toEqual(["releases are not serialised in one group"]);
   });
@@ -664,6 +685,7 @@ describe("the checks the README names", () => {
     ...jobNames(read("scorecard.yml")).map((j) => `Scorecard | ${j}`),
     ...jobNames(read("snyk.yml")).map((j) => `Snyk | ${j}`),
     "Release | Release gate",
+    "Release | Mutation shard",
     "Release | Mutation check",
     "Release | Snyk (dependencies)",
   ];
@@ -682,10 +704,11 @@ describe("the checks the README names", () => {
       "Scorecard | Scorecard analysis",
       "Snyk | Snyk (dependencies)",
       "Release | Release gate",
+      "Release | Mutation shard",
       "Release | Mutation check",
       "Release | Snyk (dependencies)",
     ]);
-    expect(jobNames(release).slice(0, 3)).toEqual(["Release gate", "Mutation check", "Snyk (dependencies)"]);
+    expect(jobNames(release).slice(0, 4)).toEqual(["Release gate", "Mutation shard", "Mutation check", "Snyk (dependencies)"]);
   });
 
   it("the README's Checks table lists exactly those jobs, in that order", () => {

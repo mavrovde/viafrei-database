@@ -9,6 +9,9 @@
  *
  *   npm run mutate                       every mutant
  *   npm run mutate -- --only <text>      the mutants whose name contains <text>
+ *   npm run mutate -- --shard <k>/<n>    shard k of n (scripts/mutate-run.ts shardOf),
+ *                                        each shard with its own controls; the release
+ *                                        runs the n shards as parallel jobs
  *
  * A mutant with `config: DB` (every schema behaviour mutant has it) runs its
  * tests with vitest.db.config.ts and VF_REQUIRE_DB=1, so it needs
@@ -21,7 +24,7 @@ import { spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { FILE, MUTANTS, TESTS } from "./mutants.js";
-import { runMutants } from "./mutate-run.js";
+import { parseShard, runMutants, shardOf } from "./mutate-run.js";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -49,6 +52,12 @@ const vitest = (args: readonly string[], env: NodeJS.ProcessEnv) =>
   spawnSync(process.execPath, [VITEST, "run", ...args], { cwd: ROOT, encoding: "utf8", env: { ...env, PATH: FIXED_PATH, ...(psqlBin === null ? {} : { VF_DB_PSQL: psqlBin }) } });
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
+const shardArg = process.argv.includes("--shard") ? process.argv[process.argv.indexOf("--shard") + 1] ?? "" : null;
+const shard = shardArg === null ? null : parseShard(shardArg);
+if (shardArg !== null && shard === null) {
+  console.log(`✗ refused: --shard takes <k>/<n> with 1 <= k <= n, not '${shardArg}'`);
+  process.exit(2);
+}
 
 const originals = new Map<string, string>();
 process.on("SIGINT", () => {
@@ -59,7 +68,17 @@ process.on("SIGINT", () => {
 // A database mutant runs under its own config and VF_REQUIRE_DB=1, so it cannot
 // pass by being skipped; a unit mutant runs the unit config. Each distinct run
 // is first made UNMUTATED (scripts/mutate-run.ts): a red control is exit 2.
-const selected = MUTANTS.filter((m) => only === null || m.name.includes(only));
+// A shard is cut from the whole list, so a mutant's shard does not depend on
+// --only; an empty shard is a refusal, never a green job that judged nothing.
+const pool = shard === null ? MUTANTS : shardOf(MUTANTS, shard);
+const selected = pool.filter((m) => only === null || m.name.includes(only));
+if (shard !== null) {
+  console.log(`  shard ${String(shard.index)}/${String(shard.count)}: ${String(selected.length)} of ${String(MUTANTS.length)} mutants`);
+  if (selected.length === 0) {
+    console.log("✗ refused: this shard selects no mutant");
+    process.exit(2);
+  }
+}
 const result = runMutants(selected, { file: FILE, tests: TESTS }, {
   run: (config, tests) => vitest([...(config === undefined ? [] : ["--config", config]), ...tests], config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" }).status,
   read: (f) => readFileSync(f, "utf8"),

@@ -228,7 +228,8 @@ merge of the release pull request into main
   -> a draft GitHub release, then the annotated tag vX.Y.Z on that commit
      (CI and Security checked again first; an existing tag is refused)
   -> the release workflow, started on that tag:
-     gate, every mutant (npm run mutate), build, push by digest, sign,
+     gate, every mutant (npm run mutate, in four parallel shards), build,
+     push by digest, sign,
      attest, verify, tag the image
   -> the draft release is published with the image digest and how to verify it
 ```
@@ -247,8 +248,9 @@ A release is published only from an annotated `vX.Y.Z` tag (no pre-release
 suffix: an `rc` tag publishes nothing) whose version equals `package.json`,
 whose commit is on `main` and whose CI and Security workflows concluded
 successfully on that commit (the newest run of each, a push to `main`).
-Every mutant of `npm run mutate` must then be killed on that commit (the
-Mutation check job); a survivor stops the release before anything is built.
+Every mutant of `npm run mutate` must then be killed on that commit (four
+Mutation shard jobs in parallel, gathered by the Mutation check job); a
+survivor stops the release before anything is built.
 Each image is built for `linux/amd64` and `linux/arm64`, carries the OCI
 `version`, `revision` and `source` labels, and is signed with cosign (keyless)
 with a build-provenance attestation and an SPDX SBOM. Before it is pushed, the
@@ -305,7 +307,8 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository; the exception to the sentence above, it runs weekly and on a branch-protection change only |
 | Snyk | Snyk (dependencies) | Snyk Open Source over the npm dependencies (high or critical fails); another exception, it runs weekly on `main` only, never on a pull request or a push |
 | Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
-| Release | Mutation check | every mutant of `npm run mutate` on that commit, against an empty PostGIS, before anything is built: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, or a unit or database run that fails before any mutant is planted stops the release. This is the only run of the full set; no pull request or push runs it |
+| Release | Mutation shard | one of four parallel jobs (`npm run mutate -- --shard k/4`, the mutants at the positions p of `scripts/mutants.ts` with p mod 4 = k - 1), each against an empty PostGIS of its own, with its own unmutated control runs first and a 120-minute limit: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, a unit or database run that fails before any mutant is planted, or a shard that selects no mutant fails the shard. Together the four are the only run of the full set; no pull request or push runs it |
+| Release | Mutation check | the fan-in the build waits for: green only when every Mutation shard finished green, so a survivor in any shard, or a shard that failed, timed out or never started, stops the release before anything is built |
 | Release | Snyk (dependencies) | the same Snyk scan, called on that commit before anything is built: a high or critical advisory stops the release |
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
@@ -376,13 +379,15 @@ TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
 TEST_DATABASE_URL=postgresql://… npm run mutate -- --only <text>   # the mutants whose name contains <text>; the full set is run by the release (below)
+TEST_DATABASE_URL=postgresql://… npm run mutate -- --shard 2/4     # one shard of the set, as one release job runs it
 TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
 npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
 
-The mutation tally is proved by the release workflow: its Mutation check job
-runs every mutant on the tagged commit before the image is built, and the
-release stops on a survivor. There is no separate local run of the full set to
+The mutation tally is proved by the release workflow: its four Mutation shard
+jobs run every mutant on the tagged commit in parallel before the image is
+built, the Mutation check job gathers them, and the release stops on a
+survivor in any shard. There is no separate local run of the full set to
 record; `--only` is for working on one mutant.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) has the migration rules.
