@@ -103,7 +103,7 @@ describe("the mutant set", () => {
     expect(changeAt("a b c", "a x c")).toBe(2);
     const road = definedAt(sql, sql.indexOf("numeric"));
     const by = later.filter((x) => x.v > 307 && road !== null && redefines(x.sql, road.name, road.block)).map((x) => x.v);
-    expect(by).toEqual([312]);
+    expect(by).toEqual([312, 316]);
   });
 
   it("a definition counts as made again when a later migration replaces, alters or drops it, or drops with cascade what it reads", () => {
