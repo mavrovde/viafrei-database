@@ -22,6 +22,8 @@
  *       five pre-rule files are grandfathered by name and the list only shrinks
  *   6. the file ends in a newline (the migrate step appends the ledger insert)
  *   7. a file that RUNS something `concurrently` carries a `-- no-transaction:` marker line
+ *      (`refresh materialized view concurrently` is not such a statement: PostgreSQL
+ *      runs it inside a transaction block and inside a function)
  *   8. a marker line is within the first 20 lines
  *   9. a marker on a file that needs nothing is refused
  *  10. a marked file is idempotent
@@ -253,7 +255,7 @@ export function lint(io: LintIo): LintResult {
       );
     if (bytes.length > 0 && bytes[bytes.length - 1] !== 0x0a) fail(`${name}: does not end in a newline — the migrate step appends the ledger insert after these bytes, and a trailing '--' comment would swallow it`);
     const marked = /^-- no-transaction:/m.test(text);
-    if (!marked && /concurrently/i.test(stripComments(text))) {
+    if (!marked && /concurrently/i.test(stripComments(text).replace(/\brefresh\s+materialized\s+view\s+concurrently\b/gi, ""))) {
       fail(`${name}: runs something 'concurrently', which PostgreSQL refuses inside a transaction, but carries no '-- no-transaction:' line of its own — the migrate step would wrap it in begin/commit and the statement would fail on the host, mid-deploy`);
     }
     if (marked) {

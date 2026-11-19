@@ -318,6 +318,8 @@ check	domains.webcams.webcams_source_id_check	test/road-context-webcams.db.test.
 check	domains.webcams.webcams_source_id_check	test/road-context-webcams.db.test.ts > refuses what the old tables refused
 function	domains.jsonb_texts(a jsonb)	test/parking.db.test.ts > splits a JSON array into its strings for the checks, and anything else into nothing
 function	domains.road_events_note_suspended()	test/road-events.db.test.ts > derives suspended from the payload: a writer's own value is overwritten, on insert and on any update
+function	public.analyze_after_load(VARIADIC p_tables text[])	test/db-owned-maintenance.db.test.ts > analyze_after_load analyses the named loaded tables, in the caller's transaction, and refuses the whole call over any other name
+function	public.analyze_after_load(VARIADIC p_tables text[])	test/db-owned-maintenance.db.test.ts > viafrei_ingestor runs them as the owner; a reader role is refused
 function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > records the twin's retention for the domains tick table, and the helper refuses a domains tick table without one
 function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > the partition helper keeps both schemas: a second run makes nothing, a missing day of a domain tick table is made again
 function	public.ensure_daily_partitions(days_ahead integer)	test/charging-status-hydrogen.db.test.ts > the partition helper refuses a range-partitioned domain table that is not keyed on observed_at, naming its schema
@@ -594,6 +596,12 @@ function	public.feed_versions_bump()	test/feed-state.db.test.ts > an ok or degra
 function	public.feed_versions_bump()	test/feed-state.db.test.ts > an update bumps only when the finish, the status or the count moved
 function	public.feed_versions_bump()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
 function	public.feed_versions_forget()	test/feed-state.db.test.ts > the extent is the largest count of the 48 hours before the newest run, with the version beside it; a delete forgets the deleted run and bumps the version
+function	public.gtfs_derived_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > both refresh functions refuse any other view, and NULL, before anything runs
+function	public.gtfs_derived_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > gtfs_derived_refresh rebuilds one view per call from the timetable, each under its own work_mem, and leaves the caller's session as it was
+function	public.gtfs_derived_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > viafrei_ingestor runs them as the owner; a reader role is refused
+function	public.osm_street_tiles_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > both refresh functions refuse any other view, and NULL, before anything runs
+function	public.osm_street_tiles_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > osm_street_tiles_refresh rebuilds each street view from osm_streets, one per call
+function	public.osm_street_tiles_refresh(p_view text)	test/db-owned-maintenance.db.test.ts > viafrei_ingestor runs them as the owner; a reader role is refused
 function	public.runtime_config_source_bounds()	test/feed-state.db.test.ts > a source key names a declared source; an interval is within its floor and four times its declared cadence; other keys pass untouched
 function	public.runtime_config_source_bounds()	test/replays.db.test.ts > source.<k>.*: an unknown source refused; an interval at the floor (catalogue, schedule or 60 s) admitted, below refused; four times the declared admitted, above refused
 trigger	public.feed_runs.feed_runs_feed_state_delete	test/feed-state.db.test.ts > feed_state is a function of the ledger: deleting the success moves the held time back; deleting every run removes the row; a delete of a run it does not hold recomputes nothing

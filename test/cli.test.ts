@@ -35,7 +35,11 @@ describe("the CLI", () => {
 
   it.each([
     [["migrate", "--force"], "migrate takes only --dry-run"],
-    [["partitions"], "partitions takes one sub-verb: ensure"],
+    [["partitions"], "partitions takes one sub-verb: ensure or retain"],
+    [["partitions", "drop"], "partitions takes one sub-verb: ensure or retain"],
+    [["partitions", "retain", "--force"], "partitions retain takes only --apply"],
+    [["partitions", "retain", "--apply", "--apply"], "partitions retain takes only --apply"],
+    [["reclaim", "--now"], "reclaim takes only --dry-run"],
     [["partitions", "ensure", "--days"], "partitions ensure takes --days N, and one of --days-back B or --from YYYY-MM-DD"],
     [["partitions", "ensure", "--days", "1", "--days", "2"], "partitions ensure takes --days N"],
     [["partitions", "ensure", "--back", "2"], "partitions ensure takes --days N"],
@@ -60,7 +64,7 @@ describe("the CLI", () => {
     expect(err.join("")).toContain(msg);
   });
 
-  it.each([[["check"]], [["partitions", "ensure", "--days", "0"]], [["migrate", "--dry-run"]]])("passes %j's usage check and then refuses it without DATABASE_URL, exit 2", async (argv) => {
+  it.each([[["check"]], [["partitions", "ensure", "--days", "0"]], [["partitions", "retain", "--apply"]], [["reclaim", "--dry-run"]], [["migrate", "--dry-run"]]])("passes %j's usage check and then refuses it without DATABASE_URL, exit 2", async (argv) => {
     expect(await main(argv)).toBe(2);
     expect(err.join("")).toContain("DATABASE_URL");
     expect(err.join("")).not.toContain("usage:");

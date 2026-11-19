@@ -36,6 +36,8 @@ const cases: [string, Record<string, string>, readonly string[]][] = [
   ["no trailing newline", { "0001_a.sql": OK1.trimEnd() }, ["0001_a.sql: does not end in a newline"]],
   ["concurrently without the marker", { "0001_a.sql": ok(1, "create index concurrently if not exists i on a(id);\n") }, ["0001_a.sql: runs something 'concurrently'"]],
   ["concurrently with the marker", { "0001_a.sql": ok(1, "-- no-transaction: concurrently\ncreate index concurrently if not exists i on a(id);\n") }, []],
+  ["a refresh concurrently, which runs inside a transaction, needs no marker", { "0001_a.sql": ok(1, "create function f() returns void language sql as $$ refresh materialized view concurrently v $$;\n") }, []],
+  ["a refresh concurrently does not hide another concurrently", { "0001_a.sql": ok(1, "refresh materialized view concurrently v;\ncreate index concurrently if not exists i on a(id);\n") }, ["0001_a.sql: runs something 'concurrently'"]],
   ["concurrently in a comment only", { "0001_a.sql": ok(1, "-- this is not run concurrently\n") }, []],
   ["a marker past line 20", { "0001_a.sql": ok(1, `${"-- x\n".repeat(20)}-- no-transaction: late\ncreate index concurrently if not exists i on a(id);\n`) }, ["0001_a.sql: has a '-- no-transaction:' note, but not as a line of its own within the first 20 lines"]],
   ["an indented marker", { "0001_a.sql": ok(1, " -- no-transaction: indented\ncreate index concurrently if not exists i on a(id);\n") }, ["0001_a.sql: runs something 'concurrently'"]],

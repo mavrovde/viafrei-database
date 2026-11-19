@@ -7,6 +7,9 @@
  *   migrate [--dry-run]        apply pending migrations under the advisory lock
  *   partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD]
  *                              ensure_daily_partitions(N[, B]) (default 7, three days back)
+ *   partitions retain [--apply]
+ *                              drop the tick days past partition_retention's window (dry run without --apply)
+ *   reclaim [--dry-run]        VACUUM (FULL, ANALYZE) of stop_times and trips once the GTFS prune is done
  *   roles settings             the role settings (ALTER ROLE ... IN DATABASE) for this database
  *   roles passwords            the role passwords from VF_DB_ROLE_DIR, outside serve
  *   analyze <table>            ANALYZE one table
@@ -39,7 +42,7 @@ import { fsIo, lint } from "./lint/check-migrations.js";
 import { AllowListError, createAccessPolicy } from "./server/access.js";
 import { interfaceHandler, readinessHandler } from "./server/http.js";
 
-export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD] | roles settings | roles passwords | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|-> | test-fixtures install | test-fixtures seed FILE]`;
+export const USAGE = `usage: viafrei-db [serve | migrate [--dry-run] | partitions ensure [--days N] [--days-back B | --from YYYY-MM-DD] | partitions retain [--apply] | reclaim [--dry-run] | roles settings | roles passwords | analyze <table> | check | status | head | lint [--root DIR] | export-migrations | version | ledger-compare <file|-> | test-fixtures install | test-fixtures seed FILE]`;
 
 const print = (l: string): void => void process.stdout.write(`${l}\n`);
 const printErr = (l: string): void => void process.stderr.write(`${l}\n`);
@@ -122,6 +125,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       case "check":
       case "status":
       case "head":
+      case "reclaim":
         return await oneShot(verb, rest);
       default:
         return usage(`unknown verb '${verb}'`);
@@ -144,13 +148,16 @@ function usage(why: string): number {
 async function oneShot(verb: string, rest: readonly string[]): Promise<number> {
   // Checked before the config is read, so a usage error never needs a database.
   if (verb === "migrate" && rest.some((a) => a !== "--dry-run")) return usage(`migrate takes only --dry-run`);
-  if (verb === "partitions" && rest[0] !== "ensure") return usage("partitions takes one sub-verb: ensure");
+  if (verb === "partitions" && rest[0] !== "ensure" && rest[0] !== "retain") return usage("partitions takes one sub-verb: ensure or retain");
+  const retainApply = rest.length === 2 && rest[1] === "--apply";
+  if (verb === "partitions" && rest[0] === "retain" && rest.length > 1 && !retainApply) return usage("partitions retain takes only --apply");
+  if (verb === "reclaim" && rest.some((a) => a !== "--dry-run")) return usage("reclaim takes only --dry-run");
   if (verb === "analyze" && rest.length !== 1) return usage("analyze takes exactly one table name");
   if ((verb === "check" || verb === "status" || verb === "head") && rest.length > 0) return usage(`${verb} takes no argument`);
   if (verb === "roles" && (rest.length !== 1 || (rest[0] !== "settings" && rest[0] !== "passwords"))) return usage("roles takes one sub-verb: settings or passwords");
   let days = DEFAULT_CLI_DAYS;
   let back: Back = null;
-  if (verb === "partitions") {
+  if (verb === "partitions" && rest[0] === "ensure") {
     const tail = rest.slice(1);
     const seen = new Map<string, string>();
     for (let i = 0; i < tail.length; i += 2) {
@@ -191,7 +198,11 @@ async function oneShot(verb: string, rest: readonly string[]): Promise<number> {
       verb === "migrate"
         ? await svc.migrate("cli", rest.includes("--dry-run"))
         : verb === "partitions"
-          ? await svc.ensurePartitions("cli", days, back)
+          ? rest[0] === "retain"
+            ? await svc.retainPartitions("cli", retainApply)
+            : await svc.ensurePartitions("cli", days, back)
+          : verb === "reclaim"
+            ? await svc.reclaim("cli", rest.includes("--dry-run"))
           : verb === "roles"
             ? rest[0] === "settings"
               ? await svc.applySettings("cli")

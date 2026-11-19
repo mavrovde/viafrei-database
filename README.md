@@ -92,6 +92,8 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | `serve` (default) | Runs migrate, then partitions ensure (30 days ahead), then the role passwords. Then it serves `/healthz` and `/ready` on 8080, and the interface on 8090 when `DB_HOST` is set. A failed step is retried with backoff while the process stays up and not ready |
 | `migrate [--dry-run]` | Applies the pending migrations in order, each in its own transaction (except files marked `-- no-transaction:`), and reads the ledger back after each: a file psql reports as run but whose version is not in `schema_migrations` (it quit psql with `\q`, or switched `ON_ERROR_STOP` off before an error) fails the run with exit 1, naming the file. After every successful run (not a dry run) it applies the role settings of `db/roles/settings.sql` to this database, so a database copied from a template (`CREATE DATABASE … TEMPLATE`, which copies no role setting) gets them even when nothing is pending |
 | `partitions ensure [--days N] [--days-back B \| --from YYYY-MM-DD]` | Creates the daily partitions of every tick table from 3 days back (or B days back, or from the given date; at most 400) through today + N, so a test or a restore that needs a dated past row gets its partition without writing `partition of` |
+| `partitions retain [--apply]` | The database's half of the tick retention, driven by `partition_retention` (schema `public`): a no-archive day past `keep_days` on the Berlin calendar is detached concurrently (a pending detach of the parent finalized first) and dropped, an empty one inside the partition maker's three days back left alone, a detached leftover dropped too; an archived day past `keep_days` UTC days is dropped (detach, drop, `dropped_at` in one transaction) only once the cold store has recorded its dump as a `partition_archives` row with `dropped_at` NULL. A day the ledger says was dropped, with no restore since, is held (exit 4). Without `--apply` it prints the plan and changes nothing. The dump, its verification and the restore read and write files and stay with the cold store; all they write here is a `partition_archives` row |
+| `reclaim [--dry-run]` | `VACUUM (FULL, ANALYZE)` of `stop_times` and `trips`, the space the GTFS prune freed returned to the disk. Refused (exit 2, nothing rewritten) while the prune is not done, a GTFS load runs, another session holds the GTFS write lock, or it is 22:00–23:30 UTC; the session takes the write lock, `lock_timeout` 5s, no statement timeout. The free disk the rewrite needs is a fact of the host and is judged by the caller first |
 | `roles settings` | Applies the role settings (`ALTER ROLE … IN DATABASE`: timeouts, memory, `jit`, read-only) and the one database-wide setting production holds (PostGIS's `search_path`) to this database alone |
 | `roles passwords` | Applies the role passwords from `VF_DB_ROLE_DIR` outside `serve`, the same step `serve` runs at boot; without `VF_DB_ROLE_DIR` it is a usage error (exit 2) |
 | `check` | A verdict: schema at head, and today and tomorrow covered on every tick table (the tick tables have no default partition on purpose: a tick outside the window is refused, so a default partition is reported as a warning) |
@@ -104,6 +106,22 @@ To run it as a service instead (migrate, ensure partitions, then serve), see
 | `export-migrations` | Writes the baseline and the migrations this image carries to stdout as a tar, so another project's tests can build a throwaway database from the exact same files |
 | `version` | Prints `viafrei-database <version> schema-head <N>` |
 | `ledger-compare <file\|->` | Read-only, needs no database: compares an exported ledger (`version`, `name`, `checksum`, tab- or `\|`-separated, e.g. `psql -At -c "select version, name, checksum from schema_migrations order by version"`) with the baseline's `ledger.tsv` and names every version that differs. Exit 0 when all are equal |
+
+### Maintenance functions
+
+The maintenance the applications ran after their bulk loads is part of the schema
+(migration 0322). Each is `SECURITY DEFINER`, executable by the owner and
+`viafrei_ingestor`, not by PUBLIC or a reader:
+
+| Call | What it does |
+|---|---|
+| `select gtfs_derived_refresh('gtfs_untimed_trips' \| 'gtfs_route_kreise' \| 'transit_stop_modes')` | `REFRESH MATERIALIZED VIEW CONCURRENTLY` of one view under its build session (serial, `hash_mem_multiplier` 1, `jit` off, `temp_file_limit` 6GB, `work_mem` 82/27/16 MB), restored when it returns; returns the statement and its settings. One call per view, each its own transaction, in this order, after a committed GTFS load; the caller sets `statement_timeout` (600s) |
+| `select osm_street_tiles_refresh('osm_street_tiles' \| 'osm_street_tiles_lo')` | The same for the street maps' cells, in this order after a streets load; the caller sets `statement_timeout` (300s) |
+| `select analyze_after_load('trips', 'stop_times', …)` | `ANALYZE` of the named tables in one statement, only from `gtfs_service_dates`, `routes`, `stops`, `trips`, `stop_times`, `osm_addresses`, `osm_pois`, `osm_streets`, `osm_speed_cameras`; any other name refuses the whole call. Usable inside the caller's transaction |
+
+`energy_page_keys` is vacuumed and analysed by autovacuum after every refresh of a
+kind (fixed thresholds of 5 000 changed or inserted rows, no scale factor, no cost
+delay), so its writer runs no `VACUUM` of its own.
 
 ### Partition index names
 
