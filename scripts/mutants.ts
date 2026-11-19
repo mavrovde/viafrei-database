@@ -20,6 +20,7 @@ const API_TESTS = ["test/api-schemas.db.test.ts"];
 const MAP_TESTS = ["test/contract-mapping.db.test.ts"];
 const HOT_TESTS = ["test/hot-path-indexes.db.test.ts"];
 const FEEDTS_TESTS = ["test/vrn-transit-delays-feed-ts.db.test.ts"];
+const HAND_TESTS = ["test/hand-changes-1119.db.test.ts"];
 export const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -102,10 +103,10 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: a partition index is not resolved to its key", config: DB, file: at("test", "tables.db.test.ts"), tests: ["test/tables.db.test.ts"], from: "return r.rows[0]?.p ?? name;", to: "return name;" },
   { name: "db: a self-referencing key plants no row of its own", config: DB, file: at("test", "tables.db.test.ts"), tests: ["test/tables.db.test.ts"], from: "k.type === \"f\" && k.self ?", to: "false ?" },
   // #31 item 7: the memory bound.
-  { name: "the readers' bound gives MCP a third node", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "viafrei_mcp connections=18 work_mem_mb=16 hash_mem_multiplier=1 nodes=2", to: "viafrei_mcp connections=18 work_mem_mb=16 hash_mem_multiplier=1 nodes=3" },
-  { name: "MCP's work_mem moves without its bound", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "ALTER ROLE viafrei_mcp IN DATABASE %I SET work_mem TO ''16MB''", to: "ALTER ROLE viafrei_mcp IN DATABASE %I SET work_mem TO ''32MB''" },
-  { name: "the owner's maintenance_work_mem moves without its bound", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "SET maintenance_work_mem TO ''64MB''", to: "SET maintenance_work_mem TO ''256MB''" },
-  { name: "the build budget is raised past the cap", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "bound: build budget_mb=82", to: "bound: build budget_mb=120" },
+  { name: "the readers' bound gives MCP a third node", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "viafrei_mcp connections=18 work_mem_mb=64 hash_mem_multiplier=2 nodes=2", to: "viafrei_mcp connections=18 work_mem_mb=64 hash_mem_multiplier=2 nodes=3" },
+  { name: "MCP's work_mem moves without its bound", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "ALTER ROLE viafrei_mcp IN DATABASE %I SET work_mem TO ''64MB''", to: "ALTER ROLE viafrei_mcp IN DATABASE %I SET work_mem TO ''128MB''" },
+  { name: "the owner's maintenance_work_mem moves without its bound", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "SET maintenance_work_mem TO ''256MB''", to: "SET maintenance_work_mem TO ''512MB''" },
+  { name: "the build budget is raised past the cap", file: at("db", "roles", "settings.sql"), tests: ["test/memory-bound.test.ts"], from: "bound: build budget_mb=9586", to: "bound: build budget_mb=9999" },
   // #31 item 8: partition index names.
   { name: "db: the name cut shortens the partition's part first", config: DB, file: at("test", "index-names.ts"), tests: ["test/partitioned.db.test.ts"], from: "if (n1 > n2) n1 -= 1;", to: "if (n1 > 0) n1 -= 1;" },
   { name: "db: a clash numbers with an underscore", config: DB, file: at("test", "index-names.ts"), tests: ["test/partitioned.db.test.ts"], from: "const label = `${kind}${String(n)}`;", to: "const label = `${kind}_${String(n)}`;" },
@@ -255,5 +256,13 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0318 builds each partition's index by observed_at", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "%I.%I (feed_ts)'", to: "%I.%I (observed_at)'" },
   { name: "db: 0318 never attaches the partitions' indexes", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "\\gexec\nreset lock_timeout;", to: ";\nreset lock_timeout;" },
   { name: "db: 0318 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  // 0319-0321 (production's hand changes of 2026-11-19): built on an empty database, adopted over production's state.
+  { name: "db: 0319 indexes the geography, not the geometry the box reads test", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "on only public.autobahn_events using gist ((geom::geometry));", to: "on only public.autobahn_events using gist (geom);" },
+  { name: "db: 0319 builds a second index where a matching one waits to be adopted", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "x.indisvalid\n            and not x.indisunique and x.indpred is null\n            and split_part(pg_get_indexdef(x.indexrelid), ' USING ', 2) = 'gist (((geom)::geometry))')\n order by p.relname", to: "false)\n order by p.relname" },
+  { name: "db: 0319 never attaches the partitions' indexes", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "\\gexec\nreset lock_timeout;", to: ";\nreset lock_timeout;" },
+  { name: "db: 0319 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  { name: "db: 0320 leaves road_events.payload on pglz", config: DB, file: at("db", "migrations", "0320_road_events_payload_lz4.sql"), tests: HAND_TESTS, from: "set compression lz4;", to: "set compression pglz;" },
+  { name: "0321 and settings.sql disagree on the digest's work_mem", file: at("db", "migrations", "0321_role_memory_k3s.sql"), tests: ["test/roles.test.ts"], from: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''64MB''", to: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''16MB''" },
+  { name: "settings.sql leaves out 0321's owner work_mem, so a re-run keeps the baseline's", file: at("db", "roles", "settings.sql"), tests: ["test/roles.test.ts", "test/memory-bound.test.ts"], from: "DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET work_mem TO ''64MB''', current_database()); END $$;\n", to: "" },
   { name: "roles: api_reader's password is fatal", file: at("src", "roles.ts"), tests: ["test/roles.test.ts"], from: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false }', to: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: true }' },
 ];

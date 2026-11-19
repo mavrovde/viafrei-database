@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPO } from "./helpers.js";
-import { parseSettings } from "./role-settings.js";
+import { inForce, parseSettings } from "./role-settings.js";
 
 const SQL = readFileSync(join(REPO, "db", "roles", "settings.sql"), "utf8");
 
@@ -52,39 +52,39 @@ const cap = (): number => (get("", "cap_pct") / 100) * get("", "headroom_mb");
 const autovacuum = (): number => get("autovacuum", "workers") * get("autovacuum", "work_mem_mb");
 const buildWorkMem = (build: string): number => Math.max(get("build", "floor_mb"), Math.floor(get("build", "budget_mb") / get("build_nodes", build)));
 
-const settings = parseSettings(SQL);
+const settings = inForce(parseSettings(SQL));
 const setting = (role: string, name: string): string | undefined => settings.find((s) => s.role === role && s.name === name)?.value;
 
 describe("the memory bound: the arithmetic of its lines", () => {
   it("settings.sql carries every bound line: both readers, the owner's five and the headroom", () => {
     expect([...b.keys()].sort()).toEqual(["", "autovacuum", "build", "build_nodes", "owner_other", "owner_role", "viafrei_digest", "viafrei_mcp"]);
-    expect(get("", "headroom_mb")).toBe(1152);
+    expect(get("", "headroom_mb")).toBe(18432);
     expect(get("", "cap_pct")).toBe(90);
     expect(BUILDS).toEqual(["gtfs_route_kreise", "gtfs_untimed_trips", "transit_stop_modes"]);
   });
 
   it("each reader's worst case, their sum the owner's readers_mb, and inside 80 % of the headroom", () => {
-    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 224, viafrei_mcp: 576 });
+    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 1792, viafrei_mcp: 4608 });
     const readers = READERS.reduce((s, r) => s + worst(r), 0);
     expect(readers).toBe(get("", "readers_mb"));
     expect(readers).toBeLessThanOrEqual(0.8 * get("", "headroom_mb"));
   });
 
   it("the build budget is what is left under the cap after readers, the other owner statements and autovacuum", () => {
-    expect(worst("owner_other")).toBe(64);
+    expect(worst("owner_other")).toBe(512);
     expect(autovacuum()).toBe(90);
     expect(get("build", "budget_mb")).toBe(Math.floor(cap() - get("", "readers_mb") - worst("owner_other") - autovacuum()));
-    expect(get("build", "budget_mb")).toBe(82);
+    expect(get("build", "budget_mb")).toBe(9586);
   });
 
   it("each build's work_mem is its share of the budget per node, never under the floor, and its nodes fit the budget", () => {
-    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 82, gtfs_route_kreise: 27, transit_stop_modes: 16 });
+    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 9586, gtfs_route_kreise: 3195, transit_stop_modes: 1917 });
     for (const x of BUILDS) expect(buildWorkMem(x) * get("build_nodes", x), x).toBeLessThanOrEqual(get("build", "budget_mb"));
   });
 
   it("readers, the build, the other owner statements and autovacuum fit under the cap", () => {
     const total = get("", "readers_mb") + get("build", "budget_mb") + worst("owner_other") + autovacuum();
-    expect(total).toBe(1036);
+    expect(total).toBe(16588);
     expect(total).toBeLessThanOrEqual(cap());
   });
 
