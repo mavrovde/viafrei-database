@@ -19,6 +19,7 @@ const GATE_TESTS = ["test/coverage-schema.test.ts"];
 const API_TESTS = ["test/api-schemas.db.test.ts"];
 const MAP_TESTS = ["test/contract-mapping.db.test.ts"];
 const HOT_TESTS = ["test/hot-path-indexes.db.test.ts"];
+const FEEDTS_TESTS = ["test/vrn-transit-delays-feed-ts.db.test.ts"];
 export const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -249,5 +250,10 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0317 indexes the deleted events too", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "  where closed_at is null and deleted_at is null;", to: "  where closed_at is null;" },
   { name: "db: 0317 indexes a facility's planar point, not its geography", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "using gist ((st_point(lon, lat)::geography))", to: "using gist ((st_point(lon, lat)))" },
   { name: "db: 0317 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  // 0318 (feed_ts on vrn transit delays): the key, each partition's build, the attach and the rebuild of an INVALID leftover.
+  { name: "db: 0318 indexes vrn's parent by observed_at, not feed_ts", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "on only public.vrn_transit_delays (feed_ts);", to: "on only public.vrn_transit_delays (observed_at);" },
+  { name: "db: 0318 builds each partition's index by observed_at", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "%I.%I (feed_ts)'", to: "%I.%I (observed_at)'" },
+  { name: "db: 0318 never attaches the partitions' indexes", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "\\gexec\nreset lock_timeout;", to: ";\nreset lock_timeout;" },
+  { name: "db: 0318 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
   { name: "roles: api_reader's password is fatal", file: at("src", "roles.ts"), tests: ["test/roles.test.ts"], from: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false }', to: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: true }' },
 ];

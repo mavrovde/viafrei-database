@@ -33,7 +33,7 @@ current by the loaders and stamped with when it was first and last seen.
 |---|---|
 | Motorway events and traffic | append-only real-time ticks (day-partitioned): events, traffic counts and level of service, over a reference of motorways and junctions |
 | Roadworks and closures | current records with their version history, plus append-only road-event ticks (day-partitioned); the open events of a feed are read by index (0317) |
-| Public transport (GTFS, real time) | reference: stops, routes, trips and stop times from GTFS; append-only real-time ticks (day-partitioned): delays and estimated calls |
+| Public transport (GTFS, real time) | reference: stops, routes, trips and stop times from GTFS; append-only real-time ticks (day-partitioned): delays and estimated calls; the newest feed time of the VBN and VRN delay feeds is read by a backward walk of a `feed_ts` index (0243, 0318) |
 | Fuel prices | append-only real-time ticks (day-partitioned), over a reference of stations and products |
 | Charging | append-only real-time ticks (day-partitioned): point status, over a reference of sites and points |
 | Parking | append-only real-time ticks (day-partitioned): occupancy, over a reference of facilities |
