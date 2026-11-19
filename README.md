@@ -32,12 +32,13 @@ current by the loaders and stamped with when it was first and last seen.
 | Domain | Kind |
 |---|---|
 | Motorway events and traffic | append-only real-time ticks (day-partitioned): events, traffic counts and level of service, over a reference of motorways and junctions |
-| Roadworks and closures | current records with their version history, plus append-only road-event ticks (day-partitioned) |
+| Roadworks and closures | current records with their version history, plus append-only road-event ticks (day-partitioned); the open events of a feed are read by index (0317) |
 | Public transport (GTFS, real time) | reference: stops, routes, trips and stop times from GTFS; append-only real-time ticks (day-partitioned): delays and estimated calls |
 | Fuel prices | append-only real-time ticks (day-partitioned), over a reference of stations and products |
 | Charging | append-only real-time ticks (day-partitioned): point status, over a reference of sites and points |
 | Parking | append-only real-time ticks (day-partitioned): occupancy, over a reference of facilities |
 | Weather warnings | current records with their version history |
+| Station lifts and escalators | current records of the DB facilities, plus append-only state-change ticks (day-partitioned); the facilities within a distance of a point are read by a GiST index on their position (0317) |
 | Places, the gazetteer and addresses | reference data |
 | The attribution and licence register | reference data: every source with its licence, attribution and limits |
 | The API's read contract (`contract`) | views in the shape viafrei-api reads, contract version 0.3 (`contract_info` states it), read by `api_reader` alone. Every view reads the tables above (0312; `departure` is the live board, each scheduled call with the newest DELFI SIRI ET or Trip Updates figure, as the platform's departure tools read it) and appends a licence envelope to each row (`source_ref`, `source_refs`, `display_class`, `audience`, confidentiality, terms gate, hold) from `public.contract_source_rules`, which the API enforces per key. The source register (0309), the curated driving rules and low-emission zones (0310) and the message coverage (0311) are tables of their own, so `source_note`, `rule_topic`, `rule_statement` and `message_coverage` publish rows too; 0313 adds the indexes the API's reads need to stay index scans, and 0316 makes the stop place lookup of `station_facility` an index range and spares a read of `road` that asks for no shape the shape's cost |

@@ -1589,6 +1589,7 @@ public.db_facilities	column	updated_at	timestamp with time zone not null default
 public.db_facilities	constraint	db_facilities_pkey	p PRIMARY KEY (equipment_no)
 public.db_facilities	index	db_facilities_not_active	CREATE INDEX db_facilities_not_active ON public.db_facilities USING btree (state, kind) WHERE (state <> 'active'::text)
 public.db_facilities	index	db_facilities_pkey	CREATE UNIQUE INDEX db_facilities_pkey ON public.db_facilities USING btree (equipment_no)
+public.db_facilities	index	db_facilities_point_geog	CREATE INDEX db_facilities_point_geog ON public.db_facilities USING gist (((public.st_point(lon, lat))::public.geography)) WHERE ((lon IS NOT NULL) AND (lat IS NOT NULL))
 public.db_facilities	index	db_facilities_station	CREATE INDEX db_facilities_station ON public.db_facilities USING btree (station_no)
 public.db_facility_ticks	column	observed_at	timestamp with time zone not null
 public.db_facility_ticks	column	equipment_no	text not null
@@ -3535,6 +3536,7 @@ public.road_events	index	road_events_contract_location	CREATE INDEX road_events_
 public.road_events	index	road_events_deleted	CREATE INDEX road_events_deleted ON public.road_events USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)
+public.road_events	index	road_events_open_feed	CREATE INDEX road_events_open_feed ON public.road_events USING btree (feed_key) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_pkey	CREATE UNIQUE INDEX road_events_pkey ON public.road_events USING btree (id)
 public.road_events	index	road_events_ref_key	CREATE INDEX road_events_ref_key ON public.road_events USING btree (public.road_ref_key(road_number), feed_key) WHERE (road_number IS NOT NULL)
 public.road_events	index	road_events_source_id_publication_id_key	CREATE UNIQUE INDEX road_events_source_id_publication_id_key ON public.road_events USING btree (source_id, publication_id)
