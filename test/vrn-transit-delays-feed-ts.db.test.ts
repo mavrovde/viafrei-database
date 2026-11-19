@@ -14,10 +14,8 @@
  * Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
 import type pg from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadConfig } from "../src/config.js";
-import { DatabaseService } from "../src/service.js";
-import { DomainDb, endPool } from "./domain-db.js";
+import { describe, expect, it } from "vitest";
+import { migratedSuite, reapply } from "./no-transaction-index.js";
 
 const url = process.env["TEST_DATABASE_URL"];
 const required = process.env["VF_REQUIRE_DB"] === "1";
@@ -34,20 +32,7 @@ const TABLES = ["vrn_transit_delays"] as const;
 const def = (t: string): string => `CREATE INDEX ${t}_feed_ts ON ONLY public.${t} USING btree (feed_ts)`;
 
 describe.skipIf(url === undefined)("0318 vrn transit delays feed_ts", () => {
-  const t = new DomainDb(url ?? "postgresql://x@127.0.0.1/x", "feedts");
-  let svc: DatabaseService | undefined;
-
-  beforeAll(async () => {
-    await t.make([]);
-    const log = { info: () => undefined, warn: () => undefined, error: () => undefined };
-    svc = new DatabaseService({ config: loadConfig({ DATABASE_URL: t.url, DB_MIGRATE_LOCK_PAUSE_S: "1" }, "serve"), log });
-  }, 900_000);
-
-  afterAll(async () => {
-    const s = svc;
-    if (s !== undefined) await endPool(s.pool, () => s.close());
-    await t.drop();
-  });
+  const { t, service } = migratedSuite(url ?? "postgresql://x@127.0.0.1/x", "feedts");
 
   type Parent = { name: string; def: string; valid: boolean; oid: number };
   const parents = async (q: pg.Pool | pg.PoolClient = t.pool): Promise<Parent[]> =>
@@ -145,15 +130,10 @@ describe.skipIf(url === undefined)("0318 vrn transit delays feed_ts", () => {
   });
 
   it("is a no-op over the indexes production already holds, and finishes a half-built state with an INVALID leftover", async () => {
-    const s = svc;
-    if (s === undefined) throw new Error("no service");
+    const s = service();
     const before = { parents: await parents(), parts: await partitions() };
     // Production's case: the indexes made by hand with this file's statements, the ledger without 318.
-    await t.pool.query("delete from schema_migrations where version = 318");
-    const again = await s.migrate("cli");
-    expect(again.ok, again.lines.join("\n")).toBe(true);
-    expect(again.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual(["0318_vrn_transit_delays_feed_ts.sql"]);
-    expect(again.lines.find((l) => l.startsWith("applying 0318_"))).toMatch(/\(no transaction — see the file's -- no-transaction: note\)$/);
+    await reapply(t, s, "0318_vrn_transit_delays_feed_ts.sql");
     expect({ parents: await parents(), parts: await partitions() }).toEqual(before);
 
     // A hand build interrupted: the parent's index ON ONLY, a few partitions built, one of them a failed (INVALID) build.
@@ -167,9 +147,7 @@ describe.skipIf(url === undefined)("0318 vrn transit delays feed_ts", () => {
     const failedOid = (await t.pool.query<{ oid: number }>(`select 'public.${failed}_feed_ts_idx'::regclass::oid::int as oid`)).rows[0]?.oid;
     expect((await parents()).find((p) => p.name === "vrn_transit_delays_feed_ts")?.valid).toBe(false);
 
-    await t.pool.query("delete from schema_migrations where version = 318");
-    const redo = await s.migrate("cli");
-    expect(redo.ok, redo.lines.join("\n")).toBe(true);
+    await reapply(t, s, "0318_vrn_transit_delays_feed_ts.sql");
     expect((await parents()).map(({ name, def: d, valid }) => ({ name, def: d, valid }))).toEqual(before.parents.map(({ name, def: d, valid }) => ({ name, def: d, valid })));
     const after = await partitions();
     expect(after.map(({ part, ix, ixdef, valid }) => ({ part, ix, ixdef, valid }))).toEqual(before.parts.map(({ part, ix, ixdef, valid }) => ({ part, ix, ixdef, valid })));

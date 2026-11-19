@@ -9,10 +9,8 @@
  * Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
 import type pg from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadConfig } from "../src/config.js";
-import { DatabaseService } from "../src/service.js";
-import { DomainDb, endPool } from "./domain-db.js";
+import { describe, expect, it } from "vitest";
+import { migratedSuite, reapply } from "./no-transaction-index.js";
 
 const url = process.env["TEST_DATABASE_URL"];
 const required = process.env["VF_REQUIRE_DB"] === "1";
@@ -33,20 +31,7 @@ const DEFS = {
 const NAMES = Object.keys(DEFS);
 
 describe.skipIf(url === undefined)("0317 hot path indexes", () => {
-  const t = new DomainDb(url ?? "postgresql://x@127.0.0.1/x", "hot");
-  let svc: DatabaseService | undefined;
-
-  beforeAll(async () => {
-    await t.make([]);
-    const log = { info: () => undefined, warn: () => undefined, error: () => undefined };
-    svc = new DatabaseService({ config: loadConfig({ DATABASE_URL: t.url, DB_MIGRATE_LOCK_PAUSE_S: "1" }, "serve"), log });
-  }, 900_000);
-
-  afterAll(async () => {
-    const s = svc;
-    if (s !== undefined) await endPool(s.pool, () => s.close());
-    await t.drop();
-  });
+  const { t, service } = migratedSuite(url ?? "postgresql://x@127.0.0.1/x", "hot");
 
   type Ix = { name: string; def: string; valid: boolean; ready: boolean; oid: number };
   const indexes = async (): Promise<Ix[]> =>
@@ -106,21 +91,14 @@ describe.skipIf(url === undefined)("0317 hot path indexes", () => {
   });
 
   it("is a no-op over the indexes production already holds, and rebuilds an INVALID leftover", async () => {
-    const s = svc;
-    if (s === undefined) throw new Error("no service");
+    const s = service();
     const before = await indexes();
     // Production's case: the indexes made by hand, the ledger without 317.
-    await t.pool.query("delete from schema_migrations where version = 317");
-    const again = await s.migrate("cli");
-    expect(again.ok, again.lines.join("\n")).toBe(true);
-    expect(again.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual(["0317_hot_path_indexes.sql"]);
-    expect(again.lines.find((l) => l.startsWith("applying 0317_"))).toMatch(/\(no transaction — see the file's -- no-transaction: note\)$/);
+    await reapply(t, s, "0317_hot_path_indexes.sql");
     expect(await indexes()).toEqual(before);
     // A failed concurrent build leaves an INVALID index: the file drops it and builds it again.
     await t.pool.query("update pg_index set indisvalid = false where indexrelid = 'public.db_facilities_point_geog'::regclass");
-    await t.pool.query("delete from schema_migrations where version = 317");
-    const redo = await s.migrate("cli");
-    expect(redo.ok, redo.lines.join("\n")).toBe(true);
+    await reapply(t, s, "0317_hot_path_indexes.sql");
     const after = await indexes();
     expect(after.map(({ name, def, valid }) => ({ name, def, valid }))).toEqual(before.map(({ name, def, valid }) => ({ name, def, valid })));
     expect(after.find((x) => x.name === "db_facilities_point_geog")?.oid).not.toBe(before.find((x) => x.name === "db_facilities_point_geog")?.oid);
