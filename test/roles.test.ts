@@ -184,7 +184,11 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     const ours = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
     const theirs = prod.filter((p) => p.database === "viafrei" && p.role !== "(all roles)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
     expect(prod.filter((p) => p.database === "(all dbs)")).toEqual([]);
-    expect(ours).toEqual(theirs);
+    // One deliberate difference: the owner's work_mem, 64MB by hand on production, is 32MB here (owner, 2026-11-19 night),
+    // so that the memory bound fits; production takes it with the release that carries 0321.
+    const differs = ["viafrei|work_mem=64mb"];
+    expect(theirs.filter((x) => differs.includes(x))).toEqual(differs);
+    expect(ours).toEqual([...theirs.filter((x) => !differs.includes(x)), "viafrei|work_mem=32mb"].sort());
     expect(ours.filter((x) => /\|(work_mem|hash_mem_multiplier|maintenance_work_mem|effective_cache_size)=/.test(x))).toEqual([
       "viafrei_digest|effective_cache_size=40gb",
       "viafrei_digest|hash_mem_multiplier=2",
@@ -195,7 +199,7 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
       "viafrei|effective_cache_size=40gb",
       "viafrei|hash_mem_multiplier=2",
       "viafrei|maintenance_work_mem=256mb",
-      "viafrei|work_mem=64mb",
+      "viafrei|work_mem=32mb",
     ]);
     expect(databaseSettings(settingsFile())).toEqual(prod.filter((p) => p.role === "(all roles)" && p.database === "viafrei").map((p) => p.setting));
     expect(databaseSettings(settingsFile())).toEqual(['search_path="$user", public, topology, tiger']);
@@ -219,7 +223,7 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     expect(m.get("viafrei_mcp")).toContain("jit=off");
     expect(m.get("viafrei_digest")).toEqual(expect.arrayContaining(["jit=off", "work_mem=64MB", "hash_mem_multiplier=2", "max_parallel_workers_per_gather=0", "default_transaction_read_only=on"]));
     expect(m.get("viafrei_digest")).not.toContain("work_mem=16MB");
-    expect(m.get("owner")).toEqual(["effective_cache_size=40GB", "hash_mem_multiplier=2", "jit=off", "maintenance_work_mem=256MB", "max_parallel_maintenance_workers=0", "max_parallel_workers_per_gather=0", "work_mem=64MB"]);
+    expect(m.get("owner")).toEqual(["effective_cache_size=40GB", "hash_mem_multiplier=2", "jit=off", "maintenance_work_mem=256MB", "max_parallel_maintenance_workers=0", "max_parallel_workers_per_gather=0", "work_mem=32MB"]);
     expect([...m.keys()].sort()).toEqual(["api_access", "api_reader", "owner", "viafrei_digest", "viafrei_ingestor", "viafrei_live_ingestor", "viafrei_mcp", "viafrei_ops", "viafrei_status", "viafrei_translate"]);
     expect(() => parseSettings("DO $$ BEGIN EXECUTE 'ALTER ROLE x IN DATABASE y SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
   });

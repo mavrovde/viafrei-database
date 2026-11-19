@@ -178,7 +178,7 @@ describe.skipIf(url === undefined)("0319-0321 hand changes of 2026-11-19", () =>
 
     it("holds the owner's and both readers' new memory settings in this database", async () => {
       expect(memory(await roleSettings(t.pool))).toEqual({
-        owner: ["effective_cache_size=40GB", "hash_mem_multiplier=2", "maintenance_work_mem=256MB", "work_mem=64MB"],
+        owner: ["effective_cache_size=40GB", "hash_mem_multiplier=2", "maintenance_work_mem=256MB", "work_mem=32MB"],
         viafrei_digest: ["effective_cache_size=40GB", "hash_mem_multiplier=2", "work_mem=64MB"],
         viafrei_mcp: ["effective_cache_size=40GB", "hash_mem_multiplier=2", "work_mem=64MB"],
       });

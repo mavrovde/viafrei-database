@@ -64,9 +64,9 @@ describe("the memory bound: the arithmetic of its lines", () => {
 
   it("settings.sql carries every bound line: the peaks, both readers, the owner's, the others, maintenance, autovacuum and the pod", () => {
     expect([...b.keys()].sort()).toEqual(["", "autovacuum", "build", "build_nodes", "maintenance", "others", "owner_other", "owner_role", "peaks", "viafrei_digest", "viafrei_mcp"]);
-    expect({ pod: get("", "pod_mb"), sb: get("", "shared_buffers_mb"), cap: get("", "cap_pct") }).toEqual({ pod: 40960, sb: 7168, cap: 90 });
+    expect({ pod: get("", "pod_mb"), sb: get("", "shared_buffers_mb"), cap: get("", "cap_pct") }).toEqual({ pod: 40960, sb: 10240, cap: 90 });
     expect(get("", "headroom_mb")).toBe(headroom(get("", "shared_buffers_mb")));
-    expect(get("", "headroom_mb")).toBe(33792);
+    expect(get("", "headroom_mb")).toBe(30720);
     expect(BUILDS).toEqual(["gtfs_route_kreise", "gtfs_untimed_trips", "transit_stop_modes"]);
   });
 
@@ -92,21 +92,19 @@ describe("the memory bound: the arithmetic of its lines", () => {
 
   it("readers, the other owner sessions, the other roles, maintenance, autovacuum and the build budget fit under the cap", () => {
     expect({ owner_other: worst("owner_other"), others: worst("others"), maintenance: maintenance(), autovacuum: autovacuum(), build: get("build", "budget_mb") }).toEqual({
-      owner_other: 8192,
+      owner_other: 4096,
       others: 640,
       maintenance: 256,
       autovacuum: 90,
       build: 9586,
     });
-    expect(total()).toBe(30284);
-    expect(cap()).toBeCloseTo(30412.8, 6);
-    expect(total()).toBeLessThanOrEqual(cap());
+    expect(total()).toBe(26188);
+    expect(cap()).toBe(27648);
+    expect(cap() - total()).toBe(1460);
   });
 
-  it("shared_buffers is the largest whole GB under which the total fits", () => {
-    const capAt = (sbMb: number): number => (get("", "cap_pct") / 100) * headroom(sbMb);
-    expect(total()).toBeLessThanOrEqual(capAt(get("", "shared_buffers_mb")));
-    expect(total()).toBeGreaterThan(capAt(get("", "shared_buffers_mb") + 1024));
+  it("shared_buffers is a quarter of the pod", () => {
+    expect(get("", "shared_buffers_mb") * 4).toBe(get("", "pod_mb"));
   });
 
   it("each build's work_mem is its share of the budget per node, never under the floor, and its nodes fit the budget", () => {
