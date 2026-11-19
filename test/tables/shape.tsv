@@ -4224,6 +4224,7 @@ public.vrn_transit_delays	column	source	text not null default 'vrn_rt'::text
 public.vrn_transit_delays	column	raw	jsonb
 public.vrn_transit_delays	column	source_run_id	bigint
 public.vrn_transit_delays	index	vrn_transit_delays_brin	CREATE INDEX vrn_transit_delays_brin ON ONLY public.vrn_transit_delays USING brin (observed_at)
+public.vrn_transit_delays	index	vrn_transit_delays_feed_ts	CREATE INDEX vrn_transit_delays_feed_ts ON ONLY public.vrn_transit_delays USING btree (feed_ts)
 public.vrn_transit_delays	index	vrn_transit_delays_kreis	CREATE INDEX vrn_transit_delays_kreis ON ONLY public.vrn_transit_delays USING btree ("left"(\nCASE\n    WHEN ((stop_id ~* '^de:[0-9]+(:|$)'::text) AND (length(split_part(stop_id, ':'::text, 2)) = ANY (ARRAY[2, 3, 5, 8]))) THEN split_part(stop_id, ':'::text, 2)\n    ELSE NULL::text\nEND, 5), observed_at DESC)
 public.vrn_transit_delays	index	vrn_transit_delays_region	CREATE INDEX vrn_transit_delays_region ON ONLY public.vrn_transit_delays USING btree ("left"(\nCASE\n    WHEN ((stop_id ~* '^de:[0-9]+(:|$)'::text) AND (length(split_part(stop_id, ':'::text, 2)) = ANY (ARRAY[2, 3, 5, 8]))) THEN split_part(stop_id, ':'::text, 2)\n    ELSE NULL::text\nEND, 2), observed_at DESC)
 public.vrn_transit_delays	index	vrn_transit_delays_stop	CREATE INDEX vrn_transit_delays_stop ON ONLY public.vrn_transit_delays USING btree (stop_id, observed_at DESC)
