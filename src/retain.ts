@@ -16,21 +16,33 @@
  *     partition_archives row (one from before the policy) stamped dropped_at.
  *     A day inside the partition maker's three days back is dropped only when
  *     it holds a row: the maker re-creates it empty, and an empty one is left.
- *     A standalone `<no-archive table>_YYYYMMDD` past its window with no
- *     archive row (a detach whose drop failed) is dropped too.
+ *     A standalone `<no-archive table>_YYYYMMDD` past its window (a detach
+ *     whose drop failed) is dropped too, its archive row, if any, stamped.
  *   archive = true: a day is past its window when it is keep_days or more UTC
  *     days old. It is dropped only once the cold store has recorded its dump:
  *     a partition_archives row with dropped_at NULL ("the file exists and the
- *     partition does too"). Then, in one transaction: detach, drop, stamp.
+ *     partition does too"). Then, in one transaction: the day locked against
+ *     writers (SHARE), its rows counted and held equal to the row count the
+ *     dump recorded, detach, drop, stamp. A count that differs (a row written
+ *     after the dump, or a dump of fewer rows) rolls the transaction back and
+ *     HOLDS the day by name. The same path finishes a day whose earlier drop
+ *     never happened (a crash between the cold store's row and the drop): the
+ *     count stands in for the re-hash of the file, which this image cannot read.
+ *     The count runs before the detach so the parent's ACCESS EXCLUSIVE lasts
+ *     for the detach and the drop alone, never for a count; the SHARE lock on
+ *     the day holds until commit, so no row can arrive between count and drop.
  *     No row: it waits for its dump. A row stamped dropped and restored since:
  *     it waits for a fresh dump (the cold store writes the row again with
  *     dropped_at NULL). A row stamped dropped with no restore since: HELD, by
  *     name, until somebody has looked.
  *
- * The dump, its verification and the restore read and write files, so they
- * stay with the cold store; everything they do to the database is a
- * partition_archives row. Without --apply nothing changes and the plan is
- * printed.
+ * From viafrei-database 0.3.5 on this command is the ONLY dropper of a tick
+ * partition: the cold store (the main repository's partition-archive pass)
+ * keeps the dump, its file check and the partition_archives row with
+ * dropped_at NULL, and detaches and drops nothing. The dump, its verification
+ * and the restore read and write files, so they stay with the cold store;
+ * everything they do to the database is a partition_archives row. Without
+ * --apply nothing changes and the plan is printed.
  *
  * Exit: 0 done, 1 a step failed (the others still ran), 4 a day is held.
  */
@@ -158,9 +170,6 @@ export const LEFTOVER_SQL = `select r.table_name as table, c.relname as relation
  where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and not c.relispartition
    and c.relname ~ '_[0-9]{8}$'
    and not exists (select 1 from pg_inherits h where h.inhrelid = c.oid or h.inhparent = c.oid)
-   and not exists (select 1 from public.partition_archives a
-                    where a.table_name = r.table_name
-                      and a.day = case when c.relname ~ '_[0-9]{8}$' then to_date(right(c.relname, 8), 'YYYYMMDD') end)
  order by c.relname`;
 
 /** A catalogue name, quoted: names reach SQL only from pg_class, and are quoted all the same. */
@@ -177,12 +186,31 @@ export async function scan(c: pg.ClientBase): Promise<{ parts: Retained[]; lefto
 const STAMP = `update public.partition_archives set dropped_at = now()
   where table_name = $1 and day = $2::date and (dropped_at is null or restored_at >= dropped_at)`;
 
-async function dropStamped(pool: pg.Pool, relation: string, table: string, day: string, detachFirst: boolean): Promise<void> {
+/** An archived day whose rows are not the rows its recorded dump holds: not dropped, held by name. */
+export class RetainHeld extends Error {}
+
+/** The archived day's own rows against the row count its recorded dump holds; the caller holds the day against writers. */
+export const DUMP_ROWS_SQL = `select rows::bigint::text as rows from public.partition_archives
+  where table_name = $1 and day = $2::date and dropped_at is null for update`;
+
+async function dropStamped(pool: pg.Pool, relation: string, table: string, day: string, archived: boolean): Promise<void> {
   const c = await pool.connect();
   try {
     await c.query("begin");
     await c.query(`set local lock_timeout = '${DROP_LOCK_TIMEOUT}'`);
-    if (detachFirst) await c.query(`alter table ${ident(table)} detach partition ${ident(relation)}`);
+    if (archived) {
+      await c.query(`lock table ${ident(relation)} in share mode`);
+      const n = (await c.query<{ n: string }>(`select count(*)::text as n from ${ident(relation)}`)).rows[0]?.n ?? "0";
+      const rec = (await c.query<{ rows: string }>(DUMP_ROWS_SQL, [table, day])).rows[0]?.rows;
+      if (rec !== n) {
+        throw new RetainHeld(
+          rec === undefined
+            ? `HELD — partition_archives no longer records a dump of it (changed since the scan); not dropped until somebody has looked`
+            : `HELD — it holds ${n} row(s), its recorded dump ${rec}; not dropped until somebody has looked`,
+        );
+      }
+      await c.query(`alter table ${ident(table)} detach partition ${ident(relation)}`);
+    }
     await c.query(`drop table ${ident(relation)}`);
     await c.query(STAMP, [table, day]);
     await c.query("commit");
@@ -229,6 +257,7 @@ export async function retain(pool: pg.Pool, opts: { readonly apply: boolean; rea
   const plan = planRetain(found.parts, found.leftovers, now);
   const lines = [...plan.lines];
   let failed = 0;
+  let held = plan.held;
   for (const s of plan.steps) {
     const name = s.kind === "drop-leftover" ? s.l.relation : s.r.partition;
     const what = s.kind === "drop-unarchived" ? "no archive" : s.kind === "drop-archived" ? "dump recorded" : "detached leftover";
@@ -244,12 +273,17 @@ export async function retain(pool: pg.Pool, opts: { readonly apply: boolean; rea
       else await dropStamped(pool, s.l.relation, s.l.table, s.day, false);
       lines.push(`✓ dropped ${name} (${what})`);
     } catch (e) {
+      if (e instanceof RetainHeld) {
+        held++;
+        lines.push(`⚠ ${name}: ${e.message}`);
+        continue;
+      }
       failed++;
       lines.push(`✗ ${name}: ${(e as Error).message.slice(0, 300)}`);
     }
   }
   const verb = opts.apply ? "dropped" : "to drop";
-  lines.push(`${failed > 0 ? "✗" : "✓"} partitions retain: ${String(plan.steps.length - failed)} ${verb}, ${String(failed)} failed, ${String(plan.kept)} kept, ${String(plan.held)} held${opts.apply ? "" : " (dry run: nothing changed; --apply to act)"}`);
-  const exitCode = failed > 0 ? 1 : plan.held > 0 ? 4 : 0;
+  lines.push(`${failed > 0 ? "✗" : "✓"} partitions retain: ${String(plan.steps.length - failed - (held - plan.held))} ${verb}, ${String(failed)} failed, ${String(plan.kept)} kept, ${String(held)} held${opts.apply ? "" : " (dry run: nothing changed; --apply to act)"}`);
+  const exitCode = failed > 0 ? 1 : held > 0 ? 4 : 0;
   return { ok: exitCode === 0, lines, exitCode };
 }

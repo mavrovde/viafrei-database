@@ -225,13 +225,16 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
       await t.pool.query(`create table public.${rel(table, n)} partition of public.${table} for values from ('${d(n)}') to ('${d(n - 1)}')`);
       if (row) await t.pool.query(`insert into public.transit_delays (observed_at, feed_ts, trip_id) values ('${d(n)} 12:00+00', '${d(n)} 12:00+00', 'x')`);
     };
-    const archive = (n: number, dropped: string | null, restored: string | null): Promise<unknown> =>
-      t.pool.query("insert into partition_archives (table_name, day, path, bytes, rows, sha256, dropped_at, restored_at) values ($1, $2::date, 'pg/x.dump', 1, 0, repeat('a', 64), $3, $4)", [
+    const archive = (n: number, dropped: string | null, restored: string | null, rowCount = 0): Promise<unknown> =>
+      t.pool.query("insert into partition_archives (table_name, day, path, bytes, rows, sha256, dropped_at, restored_at) values ($1, $2::date, 'pg/x.dump', 1, $5, repeat('a', 64), $3, $4)", [
         n < 30 ? "transit_delays" : "fuel_prices",
         d(n),
         dropped,
         restored,
+        rowCount,
       ]);
+    const fuelRow = (n: number, station: string): Promise<unknown> =>
+      t.pool.query(`insert into public.fuel_prices (observed_at, station_id, product, price) values ('${d(n)} 12:00+00', $1, 'e5', 1.799)`, [station]);
     const service = (): DatabaseService => new DatabaseService({ config: loadConfig({ DATABASE_URL: t.url }, "cli"), log: quiet });
 
     beforeAll(async () => {
@@ -241,8 +244,17 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
       await plant("transit_delays", 9, true);
       await t.pool.query(`create table public.${rel("transit_delays", 7)} (like public.transit_delays)`);
       await t.pool.query(`create table public.transit_delays_misc partition of public.transit_delays for values from ('${d(60)}') to ('${d(50)}')`);
-      for (const n of [40, 41, 42, 43]) await plant("fuel_prices", n, false);
+      // The detached leftover has a ledger row from before the policy: it is dropped all the same, and the row stamped.
+      await archive(7, null, null);
+      for (const n of [40, 41, 42, 43, 44, 45]) await plant("fuel_prices", n, false);
       await archive(41, null, null);
+      // 44: the dump recorded one row, and a second was written after it: held, never dropped.
+      await fuelRow(44, "st-1");
+      await archive(44, null, null, 1);
+      await fuelRow(44, "st-2");
+      // 45: a crash between the cold store's row and its drop (the drop-only day): its one row is the one recorded, so it goes.
+      await fuelRow(45, "st-1");
+      await archive(45, null, null, 1);
       await archive(42, "2026-01-02", null);
       await archive(43, "2026-01-02", "2026-01-03");
       // A detach left pending: a reader's open snapshot outlives the statement's timeout.
@@ -271,13 +283,15 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
           `⚠ ${rel("fuel_prices", 42)}: HELD — partition_archives says it was dropped and no restore since explains why it exists; not dropped until somebody has looked`,
           `– ${rel("fuel_prices", 40)}: past its 28 days, waiting for the cold store to record its dump`,
           "– transit_delays_misc: not a <table>_YYYYMMDD partition of exactly that UTC day; not touched",
+          `· would drop ${rel("fuel_prices", 45)} (dump recorded)`,
+          `· would drop ${rel("fuel_prices", 44)} (dump recorded)`,
           `· would drop ${rel("fuel_prices", 41)} (dump recorded)`,
           `· would drop ${rel("transit_delays", 9)} (no archive)`,
           `· would drop ${rel("transit_delays", 8)} (no archive)`,
           `· would drop ${rel("transit_delays", 6)} (no archive)`,
           `· would drop ${rel("transit_delays", 7)} (detached leftover)`,
         ]);
-        expect(r.lines.at(-1)).toMatch(/^✓ partitions retain: 5 to drop, 0 failed, \d+ kept, 1 held \(dry run: nothing changed; --apply to act\)$/);
+        expect(r.lines.at(-1)).toMatch(/^✓ partitions retain: 7 to drop, 0 failed, \d+ kept, 1 held \(dry run: nothing changed; --apply to act\)$/);
       } finally {
         await endPool(s.pool, () => s.close());
       }
@@ -291,14 +305,17 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
         await blocker.query(`lock table public.${rel("fuel_prices", 41)} in access share mode`);
         const r = await retain(t.pool, { apply: true, detachWaitMs: 2_000 });
         expect(r.exitCode).toBe(1);
-        expect(r.lines.filter((l) => /^[✓✗] (dropped|fuel)/.test(l) || l.startsWith(`✗ ${rel("fuel_prices", 41)}`))).toEqual([
+        expect(r.lines.filter((l) => /^[✓✗⚠] (dropped|fuel)/.test(l) || l.startsWith(`✗ ${rel("fuel_prices", 41)}`))).toEqual([
+          `⚠ ${rel("fuel_prices", 42)}: HELD — partition_archives says it was dropped and no restore since explains why it exists; not dropped until somebody has looked`,
+          `✓ dropped ${rel("fuel_prices", 45)} (dump recorded)`,
+          `⚠ ${rel("fuel_prices", 44)}: HELD — it holds 2 row(s), its recorded dump 1; not dropped until somebody has looked`,
           expect.stringMatching(new RegExp(`^✗ ${rel("fuel_prices", 41)}: canceling statement due to lock timeout`)) as unknown,
           `✓ dropped ${rel("transit_delays", 9)} (no archive)`,
           `✓ dropped ${rel("transit_delays", 8)} (no archive)`,
           `✓ dropped ${rel("transit_delays", 6)} (no archive)`,
           `✓ dropped ${rel("transit_delays", 7)} (detached leftover)`,
         ]);
-        expect(r.lines.at(-1)).toMatch(/^✗ partitions retain: 4 dropped, 1 failed, \d+ kept, 1 held$/);
+        expect(r.lines.at(-1)).toMatch(/^✗ partitions retain: 5 dropped, 1 failed, \d+ kept, 2 held$/);
       } finally {
         await blocker.query("rollback");
         blocker.release();
@@ -308,14 +325,21 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
       expect(again.exitCode).toBe(4);
       expect(again.lines.filter((l) => l.startsWith("✓ dropped"))).toEqual([`✓ dropped ${rel("fuel_prices", 41)} (dump recorded)`]);
       for (const [tb, n] of [["fuel_prices", 41], ["transit_delays", 6], ["transit_delays", 7], ["transit_delays", 8], ["transit_delays", 9]] as const) expect(await exists(rel(tb, n))).toBe(false);
-      for (const [tb, n] of [["fuel_prices", 40], ["fuel_prices", 42], ["fuel_prices", 43], ["transit_delays", 2], ["transit_delays", 3]] as const) expect(await exists(rel(tb, n)), rel(tb, n)).toBe(true);
+      for (const [tb, n] of [["fuel_prices", 40], ["fuel_prices", 42], ["fuel_prices", 43], ["fuel_prices", 44], ["transit_delays", 2], ["transit_delays", 3]] as const) expect(await exists(rel(tb, n)), rel(tb, n)).toBe(true);
+      expect(await exists(rel("fuel_prices", 45))).toBe(false);
+      // The held day is still a partition of its table, both rows in place, and held again by the second apply.
+      expect(await one(t.pool, `select count(*)::int as n from public.fuel_prices where observed_at >= '${d(44)}' and observed_at < '${d(43)}'`)).toEqual({ n: 2 });
+      expect(again.lines).toContain(`⚠ ${rel("fuel_prices", 44)}: HELD — it holds 2 row(s), its recorded dump 1; not dropped until somebody has looked`);
       expect(await exists("transit_delays_misc")).toBe(true);
       const stamped = await rows<{ day: string; dropped: boolean }>(t.pool, "select to_char(day, 'YYYY-MM-DD') as day, dropped_at > now() - interval '1 hour' as dropped from partition_archives order by day desc");
       expect(stamped).toEqual([
         { day: d(6), dropped: true },
+        { day: d(7), dropped: true },
         { day: d(40 + 1), dropped: true },
         { day: d(42), dropped: false },
         { day: d(43), dropped: false },
+        { day: d(44), dropped: null },
+        { day: d(45), dropped: true },
       ]);
       // A day partition the maker keeps three days back, empty, is left; with a row it would go.
       expect(await one(t.pool, `select count(*)::int as n from public.${rel("transit_delays", 2)}`)).toEqual({ n: 0 });

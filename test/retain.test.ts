@@ -5,7 +5,7 @@
  * The statements themselves run against a database in db-owned-maintenance.db.test.ts.
  */
 import { describe, expect, it } from "vitest";
-import { addDays, archiveCutoff, berlinDay, dayOf, noArchiveCutoff, planRetain, type Retained } from "../src/retain.js";
+import { addDays, archiveCutoff, berlinDay, dayOf, LEFTOVER_SQL, noArchiveCutoff, planRetain, type Retained } from "../src/retain.js";
 import { refusals } from "../src/reclaim.js";
 
 const at = (iso: string): Date => new Date(iso);
@@ -106,6 +106,11 @@ describe("planRetain", () => {
       now,
     );
     expect(p.steps).toEqual([{ kind: "drop-leftover", l: { table: "transit_delays", relation: "transit_delays_20261110", keepDays: 1 }, day: "2026-11-10" }]);
+  });
+
+  it("finds a no-archive leftover whatever partition_archives says of its day: the drop stamps a row it has, it never waits on one", () => {
+    expect(LEFTOVER_SQL).not.toMatch(/partition_archives/);
+    expect(LEFTOVER_SQL).toMatch(/not r\.archive/);
   });
 });
 
