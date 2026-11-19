@@ -35,7 +35,9 @@
 --
 --   THE MODEL: every session of a role at once, each with `nodes` sort or hash
 --   nodes at their full size: worst case = connections × work_mem ×
---   hash_mem_multiplier × nodes. `connections` is NOT the pools' maximum but
+--   hash_mem_multiplier × nodes × processes, where processes = 1 +
+--   max_parallel_workers_per_gather (a parallel worker holds its own nodes).
+--   `connections` is NOT the pools' maximum but
 --   the measured peak of the role's sessions plus 30 %, rounded up (owner
 --   2026-11-19). Measured read-only on production, pg_stat_activity every
 --   10 s for 10 minutes, 2026-11-19 21:36-21:46 UTC (60 samples), with a
@@ -44,13 +46,13 @@
 --   login role
 --   bound: peaks viafrei=25 viafrei_digest=25 viafrei_mcp=9 viafrei_ingestor=2 viafrei_translate=1 margin_pct=30
 --   (no other login role held a session).
---   bound: viafrei_digest connections=33 work_mem_mb=64 hash_mem_multiplier=2 nodes=2
---   bound: viafrei_mcp connections=12 work_mem_mb=64 hash_mem_multiplier=2 nodes=2
+--   bound: viafrei_digest connections=33 work_mem_mb=64 hash_mem_multiplier=2 nodes=2 processes=1
+--   bound: viafrei_mcp connections=12 work_mem_mb=64 hash_mem_multiplier=2 nodes=2 processes=2
 --   readers ≤ 80 % of the headroom; everything ≤ cap_pct of it:
 --   bound: owner_role work_mem_mb=32 hash_mem_multiplier=2 parallel_per_gather=0 maintenance_work_mem_mb=256 parallel_maintenance=0
 --   the build runs on one of the owner's sessions, so owner_other = the owner's
 --   connections less that one:
---   bound: build budget_mb=9586 floor_mb=32 hash_mem_multiplier=1 temp_file_limit_mb=6144
+--   bound: build budget_mb=7900 floor_mb=32 hash_mem_multiplier=1 temp_file_limit_mb=6144
 --   bound: build_nodes gtfs_untimed_trips=1 gtfs_route_kreise=3 transit_stop_modes=5
 --   bound: owner_other connections=32 work_mem_mb=32 hash_mem_multiplier=2 nodes=2 processes=1
 --   every other login role runs at the server's work_mem (32MB on the
@@ -59,15 +61,18 @@
 --   one index build at a time (migrations run one file after another):
 --   bound: maintenance builds=1 maintenance_work_mem_mb=256
 --   bound: autovacuum workers=3 work_mem_mb=30
---   bound: readers_mb=11520
+--   bound: readers_mb=14592
 --   the headroom is the database pod's memory limit less shared_buffers:
 --   bound: pod_mb=40960 shared_buffers_mb=10240 headroom_mb=30720 cap_pct=90
 --   total = readers + owner_other + others + maintenance + autovacuum + the
---   build budget = 26188 MB, under the cap of 27648 MB by 1460 MB; per build
+--   build budget = 27574 MB, under the cap of 27648 MB by 74 MB; per build
 --   work_mem = max(floor_mb, floor(budget / nodes)). The build budget is the
 --   ceiling a build may take: a build sets its own work_mem and multiplier in
---   its session (the ingest workers' build plan, 82 MB today), so it does not
---   follow the owner role's work_mem.
+--   its session (the ingest workers' build plan: at most 82 MB, multiplier 1,
+--   no parallel worker), so it does not follow the owner role's work_mem,
+--   and the budget is what is left under the cap, rounded down to 7900.
+--   The bound holds only once the pod runs at 40 GiB with shared_buffers
+--   10 GB: a release carrying it is pinned strictly after that deploy.
 --
 --   The pod is the production database pod at 40 GiB (owner 2026-11-19; the
 --   infra change goes live before this repository's next release is pinned),

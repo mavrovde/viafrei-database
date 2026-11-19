@@ -1,4 +1,4 @@
-# pg_db_role_setting on production, measured read-only 2026-11-19 after the hand-applied memory settings (50 rows): role, database, setting=value.
+# pg_db_role_setting on production, measured read-only 2026-11-19 22:2x UTC, after the hand-applied memory settings and the owner role at work_mem 32MB (50 rows): role, database, setting=value.
 # (all roles) = a database-wide setting; (all dbs) = a role's setting in every database. One row per setting.
 # Every role setting is now held IN DATABASE viafrei; db/roles/settings.sql must hold, in force, exactly the role settings of database viafrei here, and its database-wide one.
 (all roles)	template_postgis	search_path="$user", public, topology, tiger
@@ -14,7 +14,7 @@ viafrei	viafrei	jit=off
 viafrei	viafrei	maintenance_work_mem=256MB
 viafrei	viafrei	max_parallel_maintenance_workers=0
 viafrei	viafrei	max_parallel_workers_per_gather=0
-viafrei	viafrei	work_mem=64MB
+viafrei	viafrei	work_mem=32MB
 viafrei_digest	viafrei	TimeZone=UTC
 viafrei_digest	viafrei	default_transaction_read_only=on
 viafrei_digest	viafrei	effective_cache_size=40GB

@@ -83,8 +83,16 @@ describe("the memory bound: the arithmetic of its lines", () => {
     });
   });
 
+  it("each reader's processes are 1 + its max_parallel_workers_per_gather, written on its line, none left out", () => {
+    for (const r of READERS) {
+      expect(b.get(r)?.has("processes"), r).toBe(true);
+      expect(get(r, "processes"), r).toBe(1 + Number(setting(r, "max_parallel_workers_per_gather") ?? "0"));
+    }
+    expect(Object.fromEntries(READERS.map((r) => [r, get(r, "processes")]))).toEqual({ viafrei_digest: 1, viafrei_mcp: 2 });
+  });
+
   it("each reader's worst case, their sum the owner's readers_mb, and inside 80 % of the headroom", () => {
-    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 8448, viafrei_mcp: 3072 });
+    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 8448, viafrei_mcp: 6144 });
     const readers = READERS.reduce((s, r) => s + worst(r), 0);
     expect(readers).toBe(get("", "readers_mb"));
     expect(readers).toBeLessThanOrEqual(0.8 * get("", "headroom_mb"));
@@ -96,11 +104,13 @@ describe("the memory bound: the arithmetic of its lines", () => {
       others: 640,
       maintenance: 256,
       autovacuum: 90,
-      build: 9586,
+      build: 7900,
     });
-    expect(total()).toBe(26188);
+    expect(total()).toBe(27574);
     expect(cap()).toBe(27648);
-    expect(cap() - total()).toBe(1460);
+    expect(cap() - total()).toBe(74);
+    // The budget is what is left under the cap, rounded down to a hundred.
+    expect(get("build", "budget_mb")).toBe(Math.floor((cap() - get("", "readers_mb") - rest() + get("build", "budget_mb")) / 100) * 100);
   });
 
   it("shared_buffers is a quarter of the pod", () => {
@@ -108,7 +118,7 @@ describe("the memory bound: the arithmetic of its lines", () => {
   });
 
   it("each build's work_mem is its share of the budget per node, never under the floor, and its nodes fit the budget", () => {
-    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 9586, gtfs_route_kreise: 3195, transit_stop_modes: 1917 });
+    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 7900, gtfs_route_kreise: 2633, transit_stop_modes: 1580 });
     for (const x of BUILDS) expect(buildWorkMem(x) * get("build_nodes", x), x).toBeLessThanOrEqual(get("build", "budget_mb"));
   });
 

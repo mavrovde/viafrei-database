@@ -184,11 +184,7 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     const ours = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
     const theirs = prod.filter((p) => p.database === "viafrei" && p.role !== "(all roles)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
     expect(prod.filter((p) => p.database === "(all dbs)")).toEqual([]);
-    // One deliberate difference: the owner's work_mem, 64MB by hand on production, is 32MB here (owner, 2026-11-19 night),
-    // so that the memory bound fits; production takes it with the release that carries 0321.
-    const differs = ["viafrei|work_mem=64mb"];
-    expect(theirs.filter((x) => differs.includes(x))).toEqual(differs);
-    expect(ours).toEqual([...theirs.filter((x) => !differs.includes(x)), "viafrei|work_mem=32mb"].sort());
+    expect(ours).toEqual(theirs);
     expect(ours.filter((x) => /\|(work_mem|hash_mem_multiplier|maintenance_work_mem|effective_cache_size)=/.test(x))).toEqual([
       "viafrei_digest|effective_cache_size=40gb",
       "viafrei_digest|hash_mem_multiplier=2",
