@@ -11,6 +11,14 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.3.4](https://github.com/mavrovde/viafrei-database/compare/v0.3.3...v0.3.4) (2026-11-19)
+
+
+### Changed
+
+* **db:** feed_ts index on vrn_transit_delays for the freshness probe ([#56](https://github.com/mavrovde/viafrei-database/issues/56)) ([12dfb5e](https://github.com/mavrovde/viafrei-database/commit/12dfb5e72169f001f353146357e98260a2f3789b))
+* **db:** indexes for the open road-events read and the station-facilities location read ([#54](https://github.com/mavrovde/viafrei-database/issues/54)) ([84c0d05](https://github.com/mavrovde/viafrei-database/commit/84c0d057bd0846c86cbed6c1a21e816c58731efe))
+
 ## [0.3.3](https://github.com/mavrovde/viafrei-database/compare/v0.3.2...v0.3.3) (2026-11-18)
 
 
