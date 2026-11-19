@@ -18,6 +18,7 @@ const GATE = join(ROOT, "scripts", "coverage-schema.ts");
 const GATE_TESTS = ["test/coverage-schema.test.ts"];
 const API_TESTS = ["test/api-schemas.db.test.ts"];
 const MAP_TESTS = ["test/contract-mapping.db.test.ts"];
+const HOT_TESTS = ["test/hot-path-indexes.db.test.ts"];
 export const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -243,5 +244,10 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0308 makes a new key own by default", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "audience       text not null default 'public'", to: "audience       text not null default 'own'" },
   { name: "db: 0308 accepts any key audience", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "check (audience in ('public', 'own'))", to: "check (audience <> '')" },
   { name: "db: 0308 forgets the store's version 3", config: DB, file: at("db", "migrations", "0308_access_store.sql"), tests: API_TESTS, from: "values (1), (2), (3);", to: "values (1), (2);" },
+  // 0317 (the digest's hot path indexes): each index's key and predicate, and the rebuild of an INVALID leftover.
+  { name: "db: 0317 indexes the open events by source, not feed", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "on public.road_events (feed_key)", to: "on public.road_events (source_id)" },
+  { name: "db: 0317 indexes the deleted events too", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "  where closed_at is null and deleted_at is null;", to: "  where closed_at is null;" },
+  { name: "db: 0317 indexes a facility's planar point, not its geography", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "using gist ((st_point(lon, lat)::geography))", to: "using gist ((st_point(lon, lat)))" },
+  { name: "db: 0317 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0317_hot_path_indexes.sql"), tests: HOT_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
   { name: "roles: api_reader's password is fatal", file: at("src", "roles.ts"), tests: ["test/roles.test.ts"], from: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false }', to: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: true }' },
 ];
