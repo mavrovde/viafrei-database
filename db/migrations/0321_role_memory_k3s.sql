@@ -7,8 +7,8 @@
 -- Production was given these values by hand on 2026-11-19 (role settings IN
 -- DATABASE, the rows that take precedence); the deploy re-applies
 -- db/roles/settings.sql on every run, which set them back to the old values.
--- settings.sql carries these statements after the baseline's, so a re-run now
--- ends at these values. The memory bound in settings.sql is re-derived for the
+-- settings.sql carries these values in place of the baseline's (one statement
+-- per setting), so a re-run now sets these values. The memory bound in settings.sql is re-derived for the
 -- pod's headroom (test/memory-bound.test.ts).
 --
 -- effective_cache_size is a planner estimate, not an allocation. Set per role
@@ -18,7 +18,7 @@
 --   the baseline's values: work_mem 16MB, hash_mem_multiplier 1.0 for the three
 --   roles, maintenance_work_mem 64MB for the owner, and
 --   alter role <role> in database <db> reset effective_cache_size;
---   then remove these statements from db/roles/settings.sql;
+--   then the same values back in db/roles/settings.sql;
 --   delete from schema_migrations where version = 321;
 
 set local lock_timeout = '5s';

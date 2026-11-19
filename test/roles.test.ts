@@ -141,7 +141,7 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
     const run: PsqlRunner = (s, a = []) => (seen.push({ script: String(s), args: a.join(" ") }), Promise.resolve({ code: 0, stdout: "", stderr: "" }));
     const r = await applyRoleSettings(run, join(REPO, "db", "roles"));
     expect(r.ok).toBe(true);
-    expect(r.line).toMatch(/^ {2}role settings: 56 applied to this database/);
+    expect(r.line).toMatch(/^ {2}role settings: 49 applied to this database/);
     expect(seen).toHaveLength(1);
     expect(seen[0]?.args).toBe("-f -");
     expect(seen[0]?.script).toBe(readFileSync(join(REPO, "db", "roles", SETTINGS_FILE), "utf8"));
@@ -162,11 +162,14 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
 });
 
 describe("db/roles/settings.sql is the schema's role settings", () => {
-  it("holds the baseline's ALTER ROLE … IN DATABASE statements and every later migration's, in order, and nothing else", () => {
+  it("holds what the baseline's ALTER ROLE … IN DATABASE statements and every later migration's leave in force, each setting once, and nothing else", () => {
     const schema = schemaSettingStatements();
-    expect(schema.length).toBeGreaterThanOrEqual(43);
-    expect(settingStatements(settingsFile())).toEqual(schema);
-    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--") && !l.includes("ALTER DATABASE"))).toEqual(schema);
+    expect(schema.length).toBeGreaterThanOrEqual(53);
+    const key = (x: { role: string; name: string; value: string }): string => `${x.role}|${x.name}=${x.value}`;
+    const file = parseSettings(settingsFile());
+    expect(file.map(key).sort()).toEqual(inForce(parseSettings(schema.join("\n"))).map(key).sort());
+    expect(new Set(file.map((x) => `${x.role}|${x.name}`)).size).toBe(file.length);
+    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--") && !l.includes("ALTER DATABASE"))).toEqual(settingStatements(settingsFile()));
   });
 
   it("holds production's settings: every role's, value for value, and the database-wide search_path of database viafrei", () => {
@@ -207,12 +210,11 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
       { role: "r", name: "work_mem", value: "64MB" },
     ];
     expect(inForce(s)).toEqual([s[1], s[2], s[3]]);
-    expect(byRole(s, "owner").get("r")).toEqual(["jit=off", "work_mem=64MB"]);
   });
 
   it("every statement parses to a role, a setting and a value, the readers' memory and jit among them", () => {
     const s = parseSettings(settingsFile());
-    expect(s).toHaveLength(55);
+    expect(s).toHaveLength(48);
     const m = byRole(s, "owner");
     expect(m.get("viafrei_mcp")).toContain("jit=off");
     expect(m.get("viafrei_digest")).toEqual(expect.arrayContaining(["jit=off", "work_mem=64MB", "hash_mem_multiplier=2", "max_parallel_workers_per_gather=0", "default_transaction_read_only=on"]));

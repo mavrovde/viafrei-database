@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPO } from "./helpers.js";
-import { inForce, parseSettings } from "./role-settings.js";
+import { parseSettings } from "./role-settings.js";
 
 const SQL = readFileSync(join(REPO, "db", "roles", "settings.sql"), "utf8");
 
@@ -52,7 +52,7 @@ const cap = (): number => (get("", "cap_pct") / 100) * get("", "headroom_mb");
 const autovacuum = (): number => get("autovacuum", "workers") * get("autovacuum", "work_mem_mb");
 const buildWorkMem = (build: string): number => Math.max(get("build", "floor_mb"), Math.floor(get("build", "budget_mb") / get("build_nodes", build)));
 
-const settings = inForce(parseSettings(SQL));
+const settings = parseSettings(SQL);
 const setting = (role: string, name: string): string | undefined => settings.find((s) => s.role === role && s.name === name)?.value;
 
 describe("the memory bound: the arithmetic of its lines", () => {
