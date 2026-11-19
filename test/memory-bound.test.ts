@@ -56,43 +56,78 @@ const settings = parseSettings(SQL);
 const setting = (role: string, name: string): string | undefined => settings.find((s) => s.role === role && s.name === name)?.value;
 
 describe("the memory bound: the arithmetic of its lines", () => {
-  it("settings.sql carries every bound line: both readers, the owner's five and the headroom", () => {
-    expect([...b.keys()].sort()).toEqual(["", "autovacuum", "build", "build_nodes", "owner_other", "owner_role", "viafrei_digest", "viafrei_mcp"]);
-    expect(get("", "headroom_mb")).toBe(1152);
-    expect(get("", "cap_pct")).toBe(90);
+  const peak = (role: string): number => Math.ceil((get("peaks", role) * (100 + get("peaks", "margin_pct"))) / 100);
+  const headroom = (sbMb: number): number => get("", "pod_mb") - sbMb;
+  const maintenance = (): number => get("maintenance", "builds") * get("maintenance", "maintenance_work_mem_mb");
+  const rest = (): number => worst("owner_other") + worst("others") + maintenance() + autovacuum() + get("build", "budget_mb");
+  const total = (): number => get("", "readers_mb") + rest();
+
+  it("settings.sql carries every bound line: the peaks, both readers, the owner's, the others, maintenance, autovacuum and the pod", () => {
+    expect([...b.keys()].sort()).toEqual(["", "autovacuum", "build", "build_nodes", "maintenance", "others", "owner_other", "owner_role", "peaks", "viafrei_digest", "viafrei_mcp"]);
+    expect({ pod: get("", "pod_mb"), sb: get("", "shared_buffers_mb"), cap: get("", "cap_pct") }).toEqual({ pod: 40960, sb: 10240, cap: 90 });
+    expect(get("", "headroom_mb")).toBe(headroom(get("", "shared_buffers_mb")));
+    expect(get("", "headroom_mb")).toBe(30720);
     expect(BUILDS).toEqual(["gtfs_route_kreise", "gtfs_untimed_trips", "transit_stop_modes"]);
   });
 
+  it("each role's connections are its measured peak plus the margin, rounded up; the owner's less the session the build runs on", () => {
+    expect(get("peaks", "margin_pct")).toBe(30);
+    for (const r of READERS) expect(get(r, "connections"), r).toBe(peak(r));
+    expect(get("owner_other", "connections")).toBe(peak("viafrei") - 1);
+    expect(get("others", "connections")).toBe(peak("viafrei_ingestor") + peak("viafrei_translate"));
+    expect({ digest: get("viafrei_digest", "connections"), mcp: get("viafrei_mcp", "connections"), owner_other: get("owner_other", "connections"), others: get("others", "connections") }).toEqual({
+      digest: 33,
+      mcp: 12,
+      owner_other: 32,
+      others: 5,
+    });
+  });
+
+  it("each reader's processes are 1 + its max_parallel_workers_per_gather, written on its line, none left out", () => {
+    for (const r of READERS) {
+      expect(b.get(r)?.has("processes"), r).toBe(true);
+      expect(get(r, "processes"), r).toBe(1 + Number(setting(r, "max_parallel_workers_per_gather") ?? "0"));
+    }
+    expect(Object.fromEntries(READERS.map((r) => [r, get(r, "processes")]))).toEqual({ viafrei_digest: 1, viafrei_mcp: 2 });
+  });
+
   it("each reader's worst case, their sum the owner's readers_mb, and inside 80 % of the headroom", () => {
-    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 224, viafrei_mcp: 576 });
+    expect(Object.fromEntries(READERS.map((r) => [r, worst(r)]))).toEqual({ viafrei_digest: 8448, viafrei_mcp: 6144 });
     const readers = READERS.reduce((s, r) => s + worst(r), 0);
     expect(readers).toBe(get("", "readers_mb"));
     expect(readers).toBeLessThanOrEqual(0.8 * get("", "headroom_mb"));
   });
 
-  it("the build budget is what is left under the cap after readers, the other owner statements and autovacuum", () => {
-    expect(worst("owner_other")).toBe(64);
-    expect(autovacuum()).toBe(90);
-    expect(get("build", "budget_mb")).toBe(Math.floor(cap() - get("", "readers_mb") - worst("owner_other") - autovacuum()));
-    expect(get("build", "budget_mb")).toBe(82);
+  it("readers, the other owner sessions, the other roles, maintenance, autovacuum and the build budget fit under the cap", () => {
+    expect({ owner_other: worst("owner_other"), others: worst("others"), maintenance: maintenance(), autovacuum: autovacuum(), build: get("build", "budget_mb") }).toEqual({
+      owner_other: 4096,
+      others: 640,
+      maintenance: 256,
+      autovacuum: 90,
+      build: 7900,
+    });
+    expect(total()).toBe(27574);
+    expect(cap()).toBe(27648);
+    expect(cap() - total()).toBe(74);
+    // The budget is what is left under the cap, rounded down to a hundred.
+    expect(get("build", "budget_mb")).toBe(Math.floor((cap() - get("", "readers_mb") - rest() + get("build", "budget_mb")) / 100) * 100);
+  });
+
+  it("shared_buffers is a quarter of the pod", () => {
+    expect(get("", "shared_buffers_mb") * 4).toBe(get("", "pod_mb"));
   });
 
   it("each build's work_mem is its share of the budget per node, never under the floor, and its nodes fit the budget", () => {
-    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 82, gtfs_route_kreise: 27, transit_stop_modes: 16 });
+    expect(Object.fromEntries(BUILDS.map((x) => [x, buildWorkMem(x)]))).toEqual({ gtfs_untimed_trips: 7900, gtfs_route_kreise: 2633, transit_stop_modes: 1580 });
     for (const x of BUILDS) expect(buildWorkMem(x) * get("build_nodes", x), x).toBeLessThanOrEqual(get("build", "budget_mb"));
   });
 
-  it("readers, the build, the other owner statements and autovacuum fit under the cap", () => {
-    const total = get("", "readers_mb") + get("build", "budget_mb") + worst("owner_other") + autovacuum();
-    expect(total).toBe(1036);
-    expect(total).toBeLessThanOrEqual(cap());
-  });
-
-  it("the other owner statements run at the owner role's work_mem and multiplier, one process each (no parallel worker)", () => {
+  it("the other owner sessions run at the owner role's work_mem and multiplier, one process each (no parallel worker), and maintenance at its maintenance_work_mem", () => {
     expect(get("owner_other", "work_mem_mb")).toBe(get("owner_role", "work_mem_mb"));
     expect(get("owner_other", "hash_mem_multiplier")).toBe(get("owner_role", "hash_mem_multiplier"));
     expect(get("owner_other", "processes")).toBe(1 + get("owner_role", "parallel_per_gather"));
     expect(get("build", "floor_mb")).toBe(get("owner_role", "work_mem_mb"));
+    expect(get("maintenance", "maintenance_work_mem_mb")).toBe(get("owner_role", "maintenance_work_mem_mb"));
   });
 
   it("a bound line whose value is not a number is refused, not read as NaN", () => {

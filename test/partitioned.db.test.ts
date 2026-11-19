@@ -132,7 +132,7 @@ describe("the partitioned tables of schema public", () => {
     const r = await db.pool.query<{ schema: string; part: string; parent: string; name: string; kind: IndexKind; columns: string[] }>(
       `select pc.relnamespace::regnamespace::text as schema, pc.relname as part, ii.inhparent::regclass::text as parent, ic.relname as name,
               case k.contype when 'p' then 'pkey' when 'u' then 'key' when 'x' then 'excl' else 'idx' end as kind,
-              (select array_agg(case when o.attnum = 0 then coalesce(substring(pg_get_indexdef(x.indexrelid, o.n::int, true) from '^"?([a-z_][a-z_0-9]*)"?[(]'), 'expr') else a.attname::text end order by o.n)
+              (select array_agg(case when o.attnum = 0 then coalesce(substring(pg_get_indexdef(x.indexrelid, o.n::int, true) from '^"?([a-z_][a-z_0-9]*)"?[(]'), substring(pg_get_indexdef(x.indexrelid, o.n::int, true) from '^[(]"?([a-z_][a-z_0-9]*)"?::'), 'expr') else a.attname::text end order by o.n)
                  from unnest(x.indkey::int2[]) with ordinality o(attnum, n)
                  left join pg_attribute a on a.attrelid = x.indrelid and a.attnum = o.attnum
                 where o.n <= x.indnkeyatts) as columns
