@@ -40,7 +40,8 @@ describe.skipIf(url === undefined)("the derived tables", () => {
       const cols = { observed_at: "$1", evse_id: `'${evse}'`, source_feed: "'f'", raw: "'{}'", source_run_id: "1", ...extra };
       return c.query(`insert into charging_point_status (${Object.keys(cols).join(", ")}) values (${Object.values(cols).join(", ")})`, [T]);
     };
-    const T = "2026-11-15T10:00:00Z";
+    // the current hour: the tick lands in a day partition the migrated database holds (a fixed date ran out of them)
+    const T = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000).toISOString();
 
     it("an insert notes one run per instant, feed, run and kind: the feed's time for a snapshot, the newest last_updated for a delta, never later than the tick, the confidential not counted; a second insert adds to it; a run older than 35 days goes", async () => {
       await t.planted(async (c) => {
