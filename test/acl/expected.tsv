@@ -206,6 +206,9 @@ viafrei_ingestor	column	ingestor.runs.updated	UPDATE
 viafrei_ingestor	function	ingestor.project_run(p_run_id bigint)	EXECUTE
 viafrei_ingestor	function	ingestor.register_feed(p_feed_key text, p_display_name text, p_provider text, p_licence_id text, p_licence_label text, p_attribution text, p_cadence_s integer, p_min_interval_s integer, p_enabled boolean, p_registry_version text)	EXECUTE
 viafrei_ingestor	function	ingestor.taken_feed_keys(p_ids text[])	EXECUTE
+viafrei_ingestor	function	public.analyze_after_load(VARIADIC p_tables text[])	EXECUTE
+viafrei_ingestor	function	public.gtfs_derived_refresh(p_view text)	EXECUTE
+viafrei_ingestor	function	public.osm_street_tiles_refresh(p_view text)	EXECUTE
 viafrei_ingestor	relation	domains.charging_point_status	INSERT,SELECT
 viafrei_ingestor	relation	domains.charging_points	INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	domains.charging_points_merged	SELECT

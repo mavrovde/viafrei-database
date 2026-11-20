@@ -50,6 +50,14 @@ vi.mock("../src/service.js", () => ({
       state.calls.push(`passwords ${trigger}`);
       return Promise.resolve(state.rec);
     }
+    retainPartitions(trigger: string, apply: boolean): Promise<Rec> {
+      state.calls.push(`retain ${trigger} ${String(apply)}`);
+      return Promise.resolve(state.rec);
+    }
+    reclaim(trigger: string, dryRun: boolean): Promise<Rec> {
+      state.calls.push(`reclaim ${trigger} ${String(dryRun)}`);
+      return Promise.resolve(state.rec);
+    }
     analyze(table: string, trigger: string): Promise<Rec> {
       state.calls.push(`analyze ${table} ${trigger}`);
       return Promise.resolve(state.rec);
@@ -112,6 +120,10 @@ describe("the one-shot verbs", () => {
     [["partitions", "ensure", "--days", "3"], "partitions cli 3"],
     [["partitions", "ensure", "--days-back", "40"], 'partitions cli 7 {"days":40}'],
     [["partitions", "ensure", "--from", "2026-01-31", "--days", "2"], 'partitions cli 2 {"from":"2026-01-31"}'],
+    [["partitions", "retain"], "retain cli false"],
+    [["partitions", "retain", "--apply"], "retain cli true"],
+    [["reclaim"], "reclaim cli false"],
+    [["reclaim", "--dry-run"], "reclaim cli true"],
     [["roles", "settings"], "settings cli"],
     [["analyze", "fuel_prices"], "analyze fuel_prices cli"],
     [["check"], "check cli"],

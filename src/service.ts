@@ -28,6 +28,8 @@ import { ensurePartitions, ensureSubject, type Back } from "./partitions.js";
 import { applyRolePasswords, applyRoleSettings, type RolesResult } from "./roles.js";
 import { analyzeTable, check, type ActionResult } from "./actions.js";
 import { collect, type Diagnostics } from "./diagnostics.js";
+import { retain } from "./retain.js";
+import { reclaim } from "./reclaim.js";
 import type { Config } from "./config.js";
 import type { Logger } from "./log.js";
 
@@ -35,7 +37,7 @@ import type { Logger } from "./log.js";
 export const MIGRATE_LOCK_KEY = "8531209432493664561";
 
 export type RunRecord = {
-  readonly action: "migrate" | "partitions" | "analyze" | "check" | "roles";
+  readonly action: "migrate" | "partitions" | "analyze" | "check" | "roles" | "reclaim";
   readonly subject: string;
   readonly trigger: "boot" | "owner" | "schedule" | "cli";
   readonly startedAt: Date;
@@ -195,6 +197,16 @@ export class DatabaseService {
       if (trigger === "boot" || this.steps.partitions !== null) this.steps.partitions = r.exitCode === 0;
       return { ok: r.exitCode === 0, lines: [r.message], exitCode: r.exitCode };
     });
+  }
+
+  /** `partitions retain`: the tick days past partition_retention's window (src/retain.ts). */
+  retainPartitions(trigger: RunRecord["trigger"], apply: boolean): Promise<RunRecord> {
+    return this.exclusive("partitions", apply ? "retain apply" : "retain dry-run", trigger, () => retain(this.pool, { apply }));
+  }
+
+  /** `reclaim`: VACUUM (FULL, ANALYZE) of stop_times and trips, once the prune is done (src/reclaim.ts). */
+  reclaim(trigger: RunRecord["trigger"], dryRun: boolean): Promise<RunRecord> {
+    return this.exclusive("reclaim", dryRun ? "dry-run" : "-", trigger, () => reclaim(this.pool, { dryRun }));
   }
 
   applyRoles(trigger: RunRecord["trigger"]): Promise<RunRecord> {

@@ -484,4 +484,20 @@ const fold0306: SchemaMutant[] = [
   { name: "0306: the backfill forgets an ingest key with a change and no feed_state row", from: "and not exists (select 1 from control.feed_state s where s.ledger = 'ingest' and s.key = r.provider)));", to: "and false));" },
 ].map((m) => ({ ...m, file: M0306, tests: LEDGERS }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306];
+/** Migration 0322: the maintenance the applications ran, as functions and storage parameters of the schema. */
+const M0322 = join(ROOT, "db", "migrations", "0322_db_owned_maintenance.sql");
+const maintenance0322: SchemaMutant[] = [
+  { name: "0322: the untimed-trips build runs at the floor, not its whole budget", from: "when 'gtfs_untimed_trips' then '82MB'", to: "when 'gtfs_untimed_trips' then '16MB'" },
+  { name: "0322: the GTFS refresh refreshes nothing", from: "  perform set_config('work_mem', mem, true);\n  execute format('refresh materialized view concurrently public.%I', p_view);", to: "  perform set_config('work_mem', mem, true);" },
+  { name: "0322: the GTFS refresh runs on the caller's work_mem", from: "  perform set_config('work_mem', mem, true);\n", to: "" },
+  { name: "0322: the GTFS refresh takes any view", from: "  if mem is null then\n    raise exception 'gtfs_derived_refresh", to: "  if false then\n    raise exception 'gtfs_derived_refresh" },
+  { name: "0322: the GTFS refresh leaks its hash multiplier", from: "    SET hash_mem_multiplier TO '1'\n", to: "" },
+  { name: "0322: the street refresh takes any view", from: "if p_view is null or p_view not in ('osm_street_tiles', 'osm_street_tiles_lo') then", to: "if p_view is null then" },
+  { name: "0322: the street refresh refreshes nothing", from: "  end if;\n  execute format('refresh materialized view concurrently public.%I', p_view);\nend $$;\n\nCREATE FUNCTION public.analyze_after_load", to: "  end if;\nend $$;\n\nCREATE FUNCTION public.analyze_after_load" },
+  { name: "0322: analyze_after_load analyses a table outside the loaded set", from: "where t is null or not (t = any (allowed));", to: "where t is null;" },
+  { name: "0322: analyze_after_load analyses nothing", from: "  execute 'analyze ' ||", to: "  perform 'analyze ' ||" },
+  { name: "0322: a reader may run the maintenance", from: "REVOKE ALL ON FUNCTION public.analyze_after_load(text[]) FROM PUBLIC;", to: "GRANT EXECUTE ON FUNCTION public.analyze_after_load(text[]) TO PUBLIC;" },
+  { name: "0322: energy_page_keys vacuums on a share of the table again", from: "  autovacuum_vacuum_scale_factor = 0,", to: "  autovacuum_vacuum_scale_factor = 0.05," },
+].map((m) => ({ ...m, file: M0322, tests: ["test/db-owned-maintenance.db.test.ts"] }));
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322];

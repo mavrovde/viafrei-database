@@ -301,9 +301,10 @@ describe.skipIf(url === undefined)("0319-0321 hand changes of 2026-11-19", () =>
       rmSync(dir, { recursive: true, force: true });
     });
 
-    it("applies 0319, 0320 and 0321 over the hand-built state without an error", () => {
+    it("applies 0319, 0320 and 0321 (and every later file) over the hand-built state without an error", () => {
       expect(migrated?.ok, migrated?.lines.join("\n")).toBe(true);
-      expect(migrated?.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual(NEW);
+      const later = readdirSync(join(REPO, "db", "migrations")).filter((n) => /^\d{4}_.*\.sql$/.test(n) && Number(n.slice(0, 4)) > 321).sort();
+      expect(migrated?.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual([...NEW, ...later]);
     });
 
     it("adopts the hand-built indexes under production's names, attaches the loose one, rebuilds the INVALID one, builds none twice", async () => {
