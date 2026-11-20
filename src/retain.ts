@@ -193,7 +193,7 @@ export class RetainHeld extends Error {}
 export const DUMP_ROWS_SQL = `select rows::bigint::text as rows from public.partition_archives
   where table_name = $1 and day = $2::date and dropped_at is null for update`;
 
-async function dropStamped(pool: pg.Pool, relation: string, table: string, day: string, archived: boolean): Promise<void> {
+export async function dropStamped(pool: pg.Pool, relation: string, table: string, day: string, archived: boolean): Promise<void> {
   const c = await pool.connect();
   try {
     await c.query("begin");

@@ -5,7 +5,8 @@
  * The statements themselves run against a database in db-owned-maintenance.db.test.ts.
  */
 import { describe, expect, it } from "vitest";
-import { addDays, archiveCutoff, berlinDay, dayOf, LEFTOVER_SQL, noArchiveCutoff, planRetain, type Retained } from "../src/retain.js";
+import type pg from "pg";
+import { addDays, archiveCutoff, berlinDay, dayOf, dropStamped, LEFTOVER_SQL, noArchiveCutoff, planRetain, type Retained } from "../src/retain.js";
 import { refusals } from "../src/reclaim.js";
 
 const at = (iso: string): Date => new Date(iso);
@@ -134,5 +135,23 @@ describe("reclaim's preconditions", () => {
       "it is 22:00 UTC, inside the GTFS load window (22:00-23:30 UTC)",
     ]);
     expect(refusals(fine, at("2026-11-19T23:30:00Z"))).toEqual(["it is 23:30 UTC, inside the GTFS load window (22:00-23:30 UTC)"]);
+  });
+});
+
+describe("dropStamped", () => {
+  it("rethrows the drop's error even when the rollback fails too, and always releases", async () => {
+    const sent: string[] = [];
+    let released = 0;
+    const client = {
+      query: (sql: string) => {
+        sent.push(sql);
+        return sql.startsWith("drop table") || sql === "rollback" ? Promise.reject(new Error(sql === "rollback" ? "gone" : "lock timeout")) : Promise.resolve({ rows: [] });
+      },
+      release: () => void (released += 1),
+    };
+    const pool = { connect: () => Promise.resolve(client) } as unknown as pg.Pool;
+    await expect(dropStamped(pool, "transit_delays_20261110", "transit_delays", "2026-11-10", false)).rejects.toThrow("lock timeout");
+    expect(sent.at(-1)).toBe("rollback");
+    expect(released).toBe(1);
   });
 });
