@@ -11,6 +11,23 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.4.0](https://github.com/mavrovde/viafrei-database/compare/v0.3.4...v0.4.0) (2026-11-20)
+
+
+### Added
+
+* the database owns its maintenance (0322, partitions retain, reclaim) ([#60](https://github.com/mavrovde/viafrei-database/issues/60)) ([09c1af4](https://github.com/mavrovde/viafrei-database/commit/09c1af43376898cac4991ff3b08f4017c9959094))
+
+
+### Changed
+
+* **db:** production's 2026-11-19 hand changes as migrations 0319-0321 (GiST, lz4, role memory) ([#58](https://github.com/mavrovde/viafrei-database/issues/58)) ([134c816](https://github.com/mavrovde/viafrei-database/commit/134c816e84f82f859b9a8e567fa1d03548b97c8c))
+
+
+### Dependencies
+
+* Bump minimatch, eslint and typescript-eslint ([#42](https://github.com/mavrovde/viafrei-database/issues/42)) ([2400c2c](https://github.com/mavrovde/viafrei-database/commit/2400c2c733d793d372ec1c02a076a766760a820e))
+
 ## [0.3.4](https://github.com/mavrovde/viafrei-database/compare/v0.3.3...v0.3.4) (2026-11-19)
 
 
