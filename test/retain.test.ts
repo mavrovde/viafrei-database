@@ -108,6 +108,7 @@ describe("planRetain", () => {
     expect(p.steps).toEqual([{ kind: "drop-leftover", l: { table: "transit_delays", relation: "transit_delays_20261110", keepDays: 1 }, day: "2026-11-10" }]);
   });
 
+  // A text guard only: the behaviour is proved by day 7 in db-owned-maintenance.db.test.ts.
   it("finds a no-archive leftover whatever partition_archives says of its day: the drop stamps a row it has, it never waits on one", () => {
     expect(LEFTOVER_SQL).not.toMatch(/partition_archives/);
     expect(LEFTOVER_SQL).toMatch(/not r\.archive/);
