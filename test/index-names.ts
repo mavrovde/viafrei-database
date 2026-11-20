@@ -9,7 +9,9 @@
  *   exclusion          <partition>_<columns>_excl
  *   any other index    <partition>_<columns>_idx
  *
- * <columns> is the key's column names joined by `_` (an expression is `expr`),
+ * <columns> is the key's column names joined by `_` (an expression is named as
+ * FigureColname names it: a function call by the function, a cast of a column
+ * by the column — `(geom)::geometry` is `geom` — any other expression `expr`),
  * and the whole is cut to 63 bytes by shortening the longer of the two parts
  * (makeObjectName). When two of one partition's indexes share a name, the second
  * takes `1` after the label (`_idx1`), the third `2`, in the order they are

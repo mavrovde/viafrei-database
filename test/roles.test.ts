@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PsqlResult, PsqlRunner } from "../src/psql.js";
 import { applyRolePasswords, applyRoleSettings, passwordUsable, roleScript, ROLES, SETTINGS_FILE, type RoleSpec } from "../src/roles.js";
 import { REPO } from "./helpers.js";
-import { byRole, databaseSettings, parseSettings, prodSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
+import { byRole, databaseSettings, inForce, parseSettings, prodSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
 
 const PW = "a3f9c2e1b4d5a6f7c8e9d0b1";
 const specs: RoleSpec[] = [
@@ -141,7 +141,7 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
     const run: PsqlRunner = (s, a = []) => (seen.push({ script: String(s), args: a.join(" ") }), Promise.resolve({ code: 0, stdout: "", stderr: "" }));
     const r = await applyRoleSettings(run, join(REPO, "db", "roles"));
     expect(r.ok).toBe(true);
-    expect(r.line).toMatch(/^ {2}role settings: 46 applied to this database/);
+    expect(r.line).toMatch(/^ {2}role settings: 49 applied to this database/);
     expect(seen).toHaveLength(1);
     expect(seen[0]?.args).toBe("-f -");
     expect(seen[0]?.script).toBe(readFileSync(join(REPO, "db", "roles", SETTINGS_FILE), "utf8"));
@@ -162,48 +162,64 @@ describe("applyRoleSettings (db/roles/settings.sql)", () => {
 });
 
 describe("db/roles/settings.sql is the schema's role settings", () => {
-  it("holds the baseline's ALTER ROLE … IN DATABASE statements and every later migration's, in order, and nothing else", () => {
+  it("holds what the baseline's ALTER ROLE … IN DATABASE statements and every later migration's leave in force, each setting once, and nothing else", () => {
     const schema = schemaSettingStatements();
-    expect(schema.length).toBeGreaterThanOrEqual(43);
-    expect(settingStatements(settingsFile())).toEqual(schema);
-    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--") && !l.includes("ALTER DATABASE"))).toEqual(schema);
+    expect(schema.length).toBeGreaterThanOrEqual(53);
+    const key = (x: { role: string; name: string; value: string }): string => `${x.role}|${x.name}=${x.value}`;
+    const file = parseSettings(settingsFile());
+    expect(file.map(key).sort()).toEqual(inForce(parseSettings(schema.join("\n"))).map(key).sort());
+    expect(new Set(file.map((x) => `${x.role}|${x.name}`)).size).toBe(file.length);
+    expect(settingsFile().split("\n").filter((l) => l.trim() !== "" && !l.startsWith("--") && !l.includes("ALTER DATABASE"))).toEqual(settingStatements(settingsFile()));
   });
 
   it("holds production's settings: every role's, value for value, and the database-wide search_path of database viafrei", () => {
     const prod = prodSettings();
-    expect(prod).toHaveLength(40);
+    expect(prod).toHaveLength(50);
     const norm = (x: string): string => {
       const [n = "", ...v] = x.split("=");
       return `${n.toLowerCase()}=${v.join("=").toLowerCase()}`;
     };
-    // viafrei-api's two roles (0307, 0308) and the live ingestor's (0315) are newer than the measurement:
-    // their seven settings are held to their own DDL here, and production gets them with the release that brings the roles.
-    const all = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
-    const newer = (x: string): boolean => x.startsWith("api_") || x.startsWith("viafrei_live_ingestor|");
-    expect(all.filter(newer)).toEqual([
-      "api_access|idle_in_transaction_session_timeout=5s",
-      "api_access|statement_timeout=2s",
-      "api_reader|default_transaction_read_only=on",
-      "api_reader|idle_in_transaction_session_timeout=5s",
-      "api_reader|statement_timeout=2s",
-      "viafrei_live_ingestor|idle_in_transaction_session_timeout=60s",
-      "viafrei_live_ingestor|statement_timeout=30s",
-    ]);
-    const ours = all.filter((x) => !newer(x));
-    const theirs = prod.filter((p) => p.database === "(all dbs)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
+    // Every role's settings, in force after the file runs in order (0321's memory values over the baseline's),
+    // equal production's in database viafrei, where every role setting is held since 2026-11-19.
+    const ours = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
+    const theirs = prod.filter((p) => p.database === "viafrei" && p.role !== "(all roles)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
+    expect(prod.filter((p) => p.database === "(all dbs)")).toEqual([]);
     expect(ours).toEqual(theirs);
+    expect(ours.filter((x) => /\|(work_mem|hash_mem_multiplier|maintenance_work_mem|effective_cache_size)=/.test(x))).toEqual([
+      "viafrei_digest|effective_cache_size=40gb",
+      "viafrei_digest|hash_mem_multiplier=2",
+      "viafrei_digest|work_mem=64mb",
+      "viafrei_mcp|effective_cache_size=40gb",
+      "viafrei_mcp|hash_mem_multiplier=2",
+      "viafrei_mcp|work_mem=64mb",
+      "viafrei|effective_cache_size=40gb",
+      "viafrei|hash_mem_multiplier=2",
+      "viafrei|maintenance_work_mem=256mb",
+      "viafrei|work_mem=32mb",
+    ]);
     expect(databaseSettings(settingsFile())).toEqual(prod.filter((p) => p.role === "(all roles)" && p.database === "viafrei").map((p) => p.setting));
     expect(databaseSettings(settingsFile())).toEqual(['search_path="$user", public, topology, tiger']);
     expect(() => databaseSettings("DO $$ BEGIN EXECUTE 'ALTER DATABASE x SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
   });
 
+  it("a later statement of a role's setting supersedes an earlier one in place, as pg_db_role_setting keeps it; other roles and settings untouched", () => {
+    const s = [
+      { role: "r", name: "work_mem", value: "16MB" },
+      { role: "q", name: "work_mem", value: "8MB" },
+      { role: "r", name: "jit", value: "off" },
+      { role: "r", name: "work_mem", value: "64MB" },
+    ];
+    expect(inForce(s)).toEqual([s[1], s[2], s[3]]);
+  });
+
   it("every statement parses to a role, a setting and a value, the readers' memory and jit among them", () => {
     const s = parseSettings(settingsFile());
-    expect(s).toHaveLength(45);
+    expect(s).toHaveLength(48);
     const m = byRole(s, "owner");
     expect(m.get("viafrei_mcp")).toContain("jit=off");
-    expect(m.get("viafrei_digest")).toEqual(expect.arrayContaining(["jit=off", "work_mem=16MB", "hash_mem_multiplier=1.0", "max_parallel_workers_per_gather=0", "default_transaction_read_only=on"]));
-    expect(m.get("owner")).toEqual(["hash_mem_multiplier=1.0", "jit=off", "maintenance_work_mem=64MB", "max_parallel_maintenance_workers=0", "max_parallel_workers_per_gather=0", "work_mem=16MB"]);
+    expect(m.get("viafrei_digest")).toEqual(expect.arrayContaining(["jit=off", "work_mem=64MB", "hash_mem_multiplier=2", "max_parallel_workers_per_gather=0", "default_transaction_read_only=on"]));
+    expect(m.get("viafrei_digest")).not.toContain("work_mem=16MB");
+    expect(m.get("owner")).toEqual(["effective_cache_size=40GB", "hash_mem_multiplier=2", "jit=off", "maintenance_work_mem=256MB", "max_parallel_maintenance_workers=0", "max_parallel_workers_per_gather=0", "work_mem=32MB"]);
     expect([...m.keys()].sort()).toEqual(["api_access", "api_reader", "owner", "viafrei_digest", "viafrei_ingestor", "viafrei_live_ingestor", "viafrei_mcp", "viafrei_ops", "viafrei_status", "viafrei_translate"]);
     expect(() => parseSettings("DO $$ BEGIN EXECUTE 'ALTER ROLE x IN DATABASE y SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
   });

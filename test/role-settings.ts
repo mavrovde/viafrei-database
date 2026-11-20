@@ -63,6 +63,17 @@ export function prodSettings(): { role: string; database: string; setting: strin
 
 export const settingsFile = (): string => readFileSync(join(REPO, "db", "roles", "settings.sql"), "utf8");
 
+/** The settings in force after applying them in order: a later statement of the same role and setting replaces an earlier one, at the later one's place. */
+export function inForce(settings: readonly Setting[]): Setting[] {
+  const last = new Map<string, Setting>();
+  for (const s of settings) {
+    const k = `${s.role}\u0000${s.name}`;
+    last.delete(k);
+    last.set(k, s);
+  }
+  return [...last.values()];
+}
+
 /** role → sorted `name=value` lines, the shape pg_db_role_setting.setconfig holds; CURRENT_USER becomes `owner`. */
 export function byRole(settings: readonly Setting[], owner: string): Map<string, string[]> {
   const out = new Map<string, string[]>();
