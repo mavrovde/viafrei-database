@@ -1,7 +1,6 @@
 /**
- * 0331: charging_site_twin_claims, charging_point_copies and
- * refresh_charging_derived(feed), the charging reads' two neighbour rules kept
- * by the loads.
+ * 0331: charging_site_twin_claims and refresh_charging_derived(feed), the
+ * register-twin rule's site-only part kept by the loads.
  *
  * The proof is an equality, not a list of cases: a seeded neighbourhood of
  * register and other sites (operators, streets, house numbers, postcodes,
@@ -10,11 +9,10 @@
  *   - for every register site, the reader's rule as it is today (the main
  *     repository's registerTwinSql, copied below with its parameters bound)
  *     equals the stored claims plus the tests the reader keeps, both for the
- *     plain rule and for the MCS variant (registerTwinAlsoPublishesSql);
- *   - the stored copies equal every pair of distinct live, publishable points
- *     with the same EVSE id (without '*' and '-') or the same UUID point id.
- * Then the loads change rows and refresh only their own feed, and the two
- * equalities still hold.
+ *     plain rule and for the MCS variant (registerTwinAlsoPublishesSql), and
+ *     under a licence that leaves a feed out.
+ * Then the loads change rows and refresh only their own feed, and the
+ * equality still holds.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
  *
@@ -164,23 +162,7 @@ const ARGS = [FEEDS, [REG], 50];
 
 const sites = async (c: pg.ClientBase, sql: string, args: unknown[] = ARGS): Promise<string[]> => (await c.query<{ site_id: string }>(sql, args)).rows.map((r) => r.site_id);
 
-/** Every ordered pair of distinct live, publishable points sharing a copy key, as the reads' windows group them. */
-const COPIES_TODAY = `
-  with k as (
-    select 'e' as kind, upper(translate(p.evse_id, '*-', '')) as norm, p.source_feed, p.point_key, p.site_id from charging_points_live p
-     where ${LIVE("p")} and p.evse_id is not null
-    union all
-    select 'u', lower(p.provider_point_id), p.source_feed, p.point_key, p.site_id from charging_points_live p
-     where ${LIVE("p")} and p.provider_point_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-  select a.source_feed || ':' || a.point_key || ' ' || a.kind || ' ' || b.source_feed || ':' || b.point_key || '@' || b.site_id as r
-    from k a join k b on a.kind = b.kind and a.norm = b.norm and not (a.source_feed = b.source_feed and a.point_key = b.point_key)
-   order by 1`;
-const COPIES_STORED = `
-  select source_feed || ':' || point_key || ' ' || kind || ' ' || copy_feed || ':' || copy_point_key || '@' || copy_site_id as r
-    from charging_point_copies order by 1`;
-const rows = async (c: pg.ClientBase, sql: string): Promise<string[]> => (await c.query<{ r: string }>(sql)).rows.map((x) => x.r);
-
-const expectEqual = async (c: pg.ClientBase): Promise<{ claims: number; copies: number }> => {
+const expectEqual = async (c: pg.ClientBase): Promise<number> => {
   const plain = await sites(c, todaySql(""));
   expect(await sites(c, storedSql(""))).toEqual(plain);
   const mcs = await sites(c, todaySql(MCS));
@@ -188,37 +170,27 @@ const expectEqual = async (c: pg.ClientBase): Promise<{ claims: number; copies: 
   // A licence that leaves out a feed: the reader's own test, the same both ways.
   const some = [REG, "afir_a"];
   expect(await sites(c, storedSql(""), [some, [REG], 50])).toEqual(await sites(c, todaySql(""), [some, [REG], 50]));
-  const copies = await rows(c, COPIES_TODAY);
-  expect(await rows(c, COPIES_STORED)).toEqual(copies);
-  return { claims: plain.length, copies: copies.length };
+  return plain.length;
 };
 
 describe.skipIf(url === undefined)("0331 charging stored references", () => {
   const { t } = migratedSuite(url ?? "postgresql://x@127.0.0.1/x", "chargingrefs");
 
-  it("are two tables keyed by their references, an index from the copy's side, fixed autovacuum thresholds", async () => {
-    const cols = async (tb: string): Promise<string[]> =>
-      (
-        await t.pool.query<{ c: string }>(
-          "select column_name || ' ' || data_type || ' ' || is_nullable as c from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position",
-          [tb],
-        )
-      ).rows.map((r) => r.c);
-    expect(await cols("charging_site_twin_claims")).toEqual(["register_feed text NO", "register_site_id text NO", "twin_feed text NO", "twin_site_id text NO"]);
-    expect(await cols("charging_point_copies")).toEqual(["source_feed text NO", "point_key text NO", "kind text NO", "copy_feed text NO", "copy_point_key text NO", "copy_site_id text NO"]);
+  it("is one table keyed by its references, with fixed autovacuum thresholds", async () => {
+    const cols = (
+      await t.pool.query<{ c: string }>(
+        "select column_name || ' ' || data_type || ' ' || is_nullable as c from information_schema.columns where table_schema = 'public' and table_name = 'charging_site_twin_claims' order by ordinal_position",
+      )
+    ).rows.map((r) => r.c);
+    expect(cols).toEqual(["register_feed text NO", "register_site_id text NO", "twin_feed text NO", "twin_site_id text NO"]);
     const ix = (
-      await t.pool.query<{ d: string }>("select pg_get_indexdef(indexrelid) as d from pg_index where indrelid = 'public.charging_point_copies'::regclass order by 1")
+      await t.pool.query<{ d: string }>("select pg_get_indexdef(indexrelid) as d from pg_index where indrelid = 'public.charging_site_twin_claims'::regclass order by 1")
     ).rows.map((r) => r.d);
-    expect(ix).toEqual([
-      "CREATE INDEX charging_point_copies_copy ON public.charging_point_copies USING btree (copy_feed, copy_point_key)",
-      "CREATE UNIQUE INDEX charging_point_copies_pkey ON public.charging_point_copies USING btree (source_feed, point_key, kind, copy_feed, copy_point_key)",
-    ]);
-    for (const tb of ["charging_site_twin_claims", "charging_point_copies"]) {
-      const opts = (await t.pool.query<{ o: string[] }>("select reloptions as o from pg_class where oid = $1::regclass", [`public.${tb}`])).rows[0]?.o;
-      expect([...(opts ?? [])].sort()).toEqual(
-        ["autovacuum_analyze_scale_factor=0", "autovacuum_analyze_threshold=2000", "autovacuum_vacuum_insert_scale_factor=0", "autovacuum_vacuum_insert_threshold=2000", "autovacuum_vacuum_scale_factor=0", "autovacuum_vacuum_threshold=2000"].sort(),
-      );
-    }
+    expect(ix).toEqual(["CREATE UNIQUE INDEX charging_site_twin_claims_pkey ON public.charging_site_twin_claims USING btree (register_feed, register_site_id, twin_feed, twin_site_id)"]);
+    const opts = (await t.pool.query<{ o: string[] }>("select reloptions as o from pg_class where oid = 'public.charging_site_twin_claims'::regclass")).rows[0]?.o;
+    expect([...(opts ?? [])].sort()).toEqual(
+      ["autovacuum_analyze_scale_factor=0", "autovacuum_analyze_threshold=2000", "autovacuum_vacuum_insert_scale_factor=0", "autovacuum_vacuum_insert_threshold=2000", "autovacuum_vacuum_scale_factor=0", "autovacuum_vacuum_threshold=2000"].sort(),
+    );
   });
 
   it("refuses a refresh that names no feed", async () => {
@@ -229,14 +201,12 @@ describe.skipIf(url === undefined)("0331 charging stored references", () => {
     }
   });
 
-  it("equal today's rule and today's copies over six seeded neighbourhoods, each with something to compare", async () => {
+  it("equal today's rule over six seeded neighbourhoods, each with something to compare", async () => {
     for (const s of [1, 2, 3, 4, 5, 6]) {
       await t.planted(async (c) => {
         await seed(c, s);
         await refreshAll(c);
-        const n = await expectEqual(c);
-        expect(n.claims, `seed ${String(s)}`).toBeGreaterThan(0);
-        expect(n.copies, `seed ${String(s)}`).toBeGreaterThan(0);
+        expect(await expectEqual(c), `seed ${String(s)}`).toBeGreaterThan(0);
       });
     }
   });
@@ -275,17 +245,15 @@ describe.skipIf(url === undefined)("0331 charging stored references", () => {
     });
   });
 
-  it("the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys", async () => {
+  it("the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them", async () => {
     await t.asSource(null, async (c) => {
       expect((await c.query<{ n: number }>("select refresh_charging_derived($1) as n", [REG])).rows[0]?.n).toBe(0);
     });
     for (const role of ["viafrei_digest", "viafrei_mcp"]) {
       await t.planted(async (c) => {
         await c.query(`set local role ${role}`);
-        for (const tb of ["charging_site_twin_claims", "charging_point_copies"]) {
-          expect((await c.query<{ n: number }>(`select count(*)::int as n from ${tb}`)).rows[0]?.n).toBe(0);
-        }
-        for (const call of ["select refresh_charging_derived('bnetza_lsr')", "select * from charging_point_copy_keys(null)"]) {
+        expect((await c.query<{ n: number }>("select count(*)::int as n from charging_site_twin_claims")).rows[0]?.n).toBe(0);
+        for (const call of ["select refresh_charging_derived('bnetza_lsr')"]) {
           await c.query("savepoint s");
           const err = await c.query(call).then(
             () => null,
@@ -298,23 +266,20 @@ describe.skipIf(url === undefined)("0331 charging stored references", () => {
     }
   });
 
-  it("a copy is of one of two kinds", async () => {
-    await t.planted(async (c) => {
-      const err = await c
-        .query("insert into charging_point_copies values ('afir_a', 'p', 'x', 'afir_b', 'q', 's')")
-        .then(() => null, (e: unknown) => e as { code?: string; constraint?: string });
-      expect(err?.code).toBe("23514");
-      expect(err?.constraint).toBe("charging_point_copies_kind");
-    });
-  });
-
-  it("a refresh that finds nothing changed writes no row", async () => {
+  it("a refresh that finds nothing changed writes no row; one that finds a change counts what it deleted and inserted", async () => {
     await t.planted(async (c) => {
       await seed(c, 8);
       await refreshAll(c);
       for (const f of FEEDS) {
         expect((await c.query<{ n: number }>("select refresh_charging_derived($1) as n", [f])).rows[0]?.n).toBe(0);
       }
+      const before = Number((await c.query<{ n: string }>("select count(*) as n from charging_site_twin_claims")).rows[0]?.n);
+      expect(before).toBeGreaterThan(0);
+      // Every register site moved 10 km north: each claim goes, none comes, and the count says so.
+      await c.query("update charging_sites set geom = ST_Project(geom, 10000, 0) where source_feed = $1", [REG]);
+      await c.query("select refresh_charging_twin_pairs($1)", [REG]);
+      expect((await c.query<{ n: number }>("select refresh_charging_derived($1) as n", [REG])).rows[0]?.n).toBe(before);
+      expect(Number((await c.query<{ n: string }>("select count(*) as n from charging_site_twin_claims")).rows[0]?.n)).toBe(0);
     });
   });
 });

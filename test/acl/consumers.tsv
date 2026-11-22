@@ -11,7 +11,6 @@ viafrei_digest	control.data_status	select	digest: declared reads
 viafrei_digest	public.db_facilities_live	select	digest: declared reads
 viafrei_digest	public.charging_points_live	select	digest: declared reads
 viafrei_digest	public.charging_sites_live	select	digest: declared reads
-viafrei_digest	public.charging_point_copies	select	digest: declared reads
 viafrei_digest	public.charging_site_twin_claims	select	digest: declared reads
 viafrei_digest	public.charging_site_twin_pairs	select	digest: declared reads
 viafrei_digest	public.parking_facilities_live	select	digest: declared reads
@@ -178,7 +177,6 @@ viafrei_mcp	public.bw_detours_live	select	mcp: declared reads
 viafrei_mcp	public.charging_point_status	select	mcp: declared reads
 viafrei_mcp	public.charging_points_live	select	mcp: declared reads
 viafrei_mcp	public.charging_sites_live	select	mcp: declared reads
-viafrei_mcp	public.charging_point_copies	select	mcp: declared reads
 viafrei_mcp	public.charging_site_twin_claims	select	mcp: declared reads
 viafrei_mcp	public.charging_site_twin_pairs	select	mcp: declared reads
 viafrei_mcp	public.charging_status_runs	select	mcp: declared reads

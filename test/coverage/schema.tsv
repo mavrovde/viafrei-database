@@ -3807,24 +3807,14 @@ grant	viafrei_digest@public.weather_warnings_area_live_de	test/roles-grants.db.t
 grant	viafrei_digest@public.weather_warnings_area_live_de	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours
 function	public.tick_partition_options(part regclass)	test/prod-fixes-1122-evening.db.test.ts > tick_partition_options sets a partition that lost them once, then nothing; another relation it leaves alone
 function	public.tick_partition_options(part regclass)	test/prod-fixes-1122-evening.db.test.ts > a day ensure_daily_partitions makes later gets them too
-check	public.charging_point_copies.charging_point_copies_kind	test/charging-stored-references.db.test.ts > a copy is of one of two kinds
-function	public.charging_point_copy_keys(p_feed text)	test/charging-stored-references.db.test.ts > equal today's rule and today's copies over six seeded neighbourhoods, each with something to compare
-function	public.charging_point_copy_keys(p_feed text)	test/charging-stored-references.db.test.ts > still equal after each load refreshes only its own feed: sites closed, reopened, renamed, moved; points closed, re-keyed, made confidential
-function	public.charging_point_copy_keys(p_feed text)	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
-function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > equal today's rule and today's copies over six seeded neighbourhoods, each with something to compare
+function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > equal today's rule over six seeded neighbourhoods, each with something to compare
 function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > still equal after each load refreshes only its own feed: sites closed, reopened, renamed, moved; points closed, re-keyed, made confidential
 function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > refuses a refresh that names no feed
-function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > a refresh that finds nothing changed writes no row
-function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
-grant	viafrei_digest@public.charging_point_copies	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
-grant	viafrei_digest@public.charging_point_copies	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
-grant	viafrei_digest@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
+function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > a refresh that finds nothing changed writes no row; one that finds a change counts what it deleted and inserted
+function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
+grant	viafrei_digest@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
 grant	viafrei_digest@public.charging_site_twin_claims	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
-grant	viafrei_mcp@public.charging_point_copies	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
-grant	viafrei_mcp@public.charging_point_copies	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
-grant	viafrei_mcp@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read both tables and neither refresh them nor list the copy keys
+grant	viafrei_mcp@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
 grant	viafrei_mcp@public.charging_site_twin_claims	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
-table	public.charging_point_copies	test/charging-stored-references.db.test.ts > are two tables keyed by their references, an index from the copy's side, fixed autovacuum thresholds
-table	public.charging_point_copies	test/charging-stored-references.db.test.ts > equal today's rule and today's copies over six seeded neighbourhoods, each with something to compare
-table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > are two tables keyed by their references, an index from the copy's side, fixed autovacuum thresholds
-table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > equal today's rule and today's copies over six seeded neighbourhoods, each with something to compare
+table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > is one table keyed by its references, with fixed autovacuum thresholds
+table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > equal today's rule over six seeded neighbourhoods, each with something to compare
