@@ -43,6 +43,9 @@
 -- rollback:
 --   set lock_timeout = '3s';
 --   drop trigger if exists road_events_entry_static on public.road_events;
+--   road_events_live: create or replace cannot drop a view column; drop view public.road_events_live cascade (it
+--     takes road_events_current) and create both again from the 0293 baseline with their grants and their 0303
+--     comments, in the same transaction, before entry_static is dropped;
 --   drop function if exists public.road_events_fill_entry_static();
 --   drop index if exists public.road_events_entry_static_unfilled;
 --   drop trigger if exists autobahn_events_derived_reset on public.autobahn_events;
@@ -189,6 +192,48 @@ $function$;
 drop trigger if exists road_events_entry_static on public.road_events;
 create trigger road_events_entry_static before insert or update of payload on public.road_events
   for each row execute function public.road_events_fill_entry_static();
+
+-- road_events_live is road_events' columns exactly (the snapshot contract: every reader reads the
+-- *_live view, never the base table), so it carries entry_static too, appended last: create or
+-- replace keeps the view's grants, its comment and road_events_current, which reads it by name.
+create or replace view public.road_events_live as
+ select id,
+    feed_key,
+    source_id,
+    publication_id,
+    version,
+    publisher,
+    event_type,
+    road_number,
+    referent_from,
+    referent_to,
+    distance_from_m,
+    distance_to_m,
+    geom,
+    feed_ts,
+    overall_start,
+    overall_end,
+    payload,
+    first_seen_at,
+    last_seen_at,
+    closed_at,
+    source_feed,
+    source_publisher,
+    source_run_id,
+    provider_updated_at,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_reason,
+    deleted_run_id,
+    confidentiality,
+    closure_starts_at,
+    closure_ends_at,
+    valid_windows,
+    suspended,
+    entry_static
+   from public.road_events
+  where (deleted_at is null);
 
 -- The rows written before 0330, the only ones the backfill walks: new rows arrive filled.
 create index if not exists road_events_entry_static_unfilled on public.road_events (id) where entry_static is null;

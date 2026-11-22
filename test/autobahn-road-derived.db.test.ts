@@ -73,6 +73,17 @@ describe.skipIf(url === undefined)("autobahn and road derived columns (0330)", (
     await t.drop();
   });
 
+  it("road_events_live is road_events' columns exactly, entry_static last, with its grants and road_events_current kept", async () => {
+    const cols = (rel: string): Promise<string[]> =>
+      rows<{ a: string }>(t.pool, `select attname as a from pg_attribute where attrelid = $1::regclass and attnum > 0 and not attisdropped order by attnum`, [rel]).then((r) => r.map((x) => x.a));
+    const live = await cols("public.road_events_live");
+    expect(live).toEqual(await cols("public.road_events"));
+    expect(live.at(-1)).toBe("entry_static");
+    const g = await one<{ d: boolean; m: boolean; c: string | null }>(t.pool, `select has_table_privilege('viafrei_digest', 'public.road_events_live', 'select') as d,
+      has_table_privilege('viafrei_mcp', 'public.road_events_live', 'select') as m, to_regclass('public.road_events_current')::text as c`);
+    expect(g).toEqual({ d: true, m: true, c: "road_events_current" });
+  });
+
   it("the single-pass overlaps answers as the 0293 two-pass body on every planted description, instant and range", async () => {
     const r = await one<{ n: string; differ: string; inside: string; stated: string }>(
       t.pool,
