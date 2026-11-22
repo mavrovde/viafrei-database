@@ -1306,6 +1306,7 @@ public.autobahn_events	column	derived_future	boolean
 public.autobahn_events	column	derived_site_key	jsonb
 public.autobahn_events	column	derived_extent_ends	public.geography(MultiPoint,4326)
 public.autobahn_events	column	validity_next_change	timestamp with time zone
+public.autobahn_events	column	states_validity	boolean
 public.autobahn_events	index	autobahn_events_brin	CREATE INDEX autobahn_events_brin ON ONLY public.autobahn_events USING brin (observed_at)
 public.autobahn_events	index	autobahn_events_geom_gist	CREATE INDEX autobahn_events_geom_gist ON ONLY public.autobahn_events USING gist (((geom)::public.geometry))
 public.autobahn_events	index	autobahn_events_raw_dedup	CREATE INDEX autobahn_events_raw_dedup ON ONLY public.autobahn_events USING btree (ext_id, observed_at DESC) WHERE ((raw IS NOT NULL) AND (raw_hash IS NOT NULL))
@@ -3541,6 +3542,7 @@ public.road_events	column	closure_starts_at	timestamp with time zone
 public.road_events	column	closure_ends_at	timestamp with time zone
 public.road_events	column	valid_windows	tstzmultirange
 public.road_events	column	suspended	boolean
+public.road_events	column	entry_static	jsonb
 public.road_events	constraint	road_events_pkey	p PRIMARY KEY (id)
 public.road_events	constraint	road_events_source_id_publication_id_key	u UNIQUE (source_id, publication_id)
 public.road_events	index	road_events_contract_event_id	CREATE INDEX road_events_contract_event_id ON public.road_events USING btree ((((('datex:'::text || source_id) || ':'::text) || publication_id))) WHERE (deleted_at IS NULL)

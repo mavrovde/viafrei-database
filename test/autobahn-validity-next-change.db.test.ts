@@ -1,5 +1,5 @@
 /**
- * autobahn_validity_next_change (0328) against autobahn_validity_overlaps, over a planted week of
+ * autobahn_validity_next_change (0330) against autobahn_validity_overlaps, over a planted week of
  * windows (2026-10-19 … 2026-10-26, Berlin; the clocks go back on 2026-10-25): a weekly window with
  * an excepted day, an overnight daily window across the change, a stated span, two touching
  * windows of one day, windows all in the past, and descriptions that state none.
