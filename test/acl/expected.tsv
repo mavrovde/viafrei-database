@@ -178,6 +178,7 @@ viafrei_digest	relation	public.vbb_transit_delays_live	SELECT
 viafrei_digest	relation	public.vbn_transit_delays_live	SELECT
 viafrei_digest	relation	public.vrn_transit_delays_live	SELECT
 viafrei_digest	relation	public.weather_warnings_area_live	SELECT
+viafrei_digest	relation	public.weather_warnings_area_live_de	SELECT
 viafrei_digest	schema	control	USAGE
 viafrei_digest	schema	public	USAGE
 viafrei_ingestor	column	ingestor.runs.attempt	INSERT
