@@ -8,7 +8,9 @@
  *         the file adopts a VALID index of exactly its definition and refuses
  *         anything else under the name (an INVALID leftover, another
  *         definition) with an error, never dropping it;
- *   0324  stop_times' autovacuum settings (scale factor 0.1, cost limit 1000).
+ *   0324  stop_times' autovacuum settings (scale factor 0.1, cost limit 1000);
+ *   0325  the four unused indexes production dropped by hand, dropped here too;
+ *         energy_page_keys_feed, which a read needs, is kept.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
  *
@@ -21,7 +23,7 @@ import { migratedSuite } from "./no-transaction-index.js";
 const url = process.env["TEST_DATABASE_URL"];
 
 if (url === undefined && process.env["VF_REQUIRE_DB"] === "1") {
-  describe("0323-0324 hand changes of 2026-11-22", () => {
+  describe("0323-0325 hand changes of 2026-11-22", () => {
     it("has a database to run against", () => {
       expect.fail("VF_REQUIRE_DB=1 but TEST_DATABASE_URL is not set — the 2026-11-22 hand-changes test did not run");
     });
@@ -140,5 +142,32 @@ describe.skipIf(url === undefined)("0323-0324 hand changes of 2026-11-22", () =>
     const rebuilt = await rerun323();
     expect(rebuilt.ok, rebuilt.text).toBe(true);
     expect((await indexOf(t.pool))?.def).toBe(DEF);
+  });
+
+  const DROPPED = ["charging_points_geom_gist", "road_event_locations_road", "stop_times_stop", "trips_service"];
+  const present = async (names: readonly string[]): Promise<string[]> =>
+    (
+      await t.pool.query<{ n: string }>(
+        "select relname as n from pg_class where relnamespace = 'public'::regnamespace and relkind = 'i' and relname = any($1::text[]) order by 1",
+        [names],
+      )
+    ).rows.map((r) => r.n);
+
+  it("0325 drops the four unused indexes and keeps energy_page_keys_feed and the stop reads' indexes", async () => {
+    expect(await present(DROPPED)).toEqual([]);
+    expect(await present(["energy_page_keys_feed", "stop_times_stop_arr_tod", "stop_times_stop_tod", "trips_pkey"])).toEqual([
+      "energy_page_keys_feed",
+      "stop_times_stop_arr_tod",
+      "stop_times_stop_tod",
+      "trips_pkey",
+    ]);
+  });
+
+  it("0325 run again where the indexes are already gone (production) is a no-op", async () => {
+    await t.pool.query("delete from schema_migrations where version = 325");
+    const run = await service().migrate("cli");
+    expect(run.ok, run.lines.join("\n")).toBe(true);
+    expect(run.lines.filter((l) => l.startsWith("applying"))).toEqual(["applying 0325_drop_unused_indexes.sql (no transaction — see the file's -- no-transaction: note)"]);
+    expect(await present(DROPPED)).toEqual([]);
   });
 });

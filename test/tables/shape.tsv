@@ -1449,7 +1449,6 @@ public.charging_points	index	charging_points_contract_site	CREATE INDEX charging
 public.charging_points	index	charging_points_deleted	CREATE INDEX charging_points_deleted ON public.charging_points USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_points	index	charging_points_evse	CREATE INDEX charging_points_evse ON public.charging_points USING btree (evse_id) WHERE (evse_id IS NOT NULL)
 public.charging_points	index	charging_points_evse_norm	CREATE INDEX charging_points_evse_norm ON public.charging_points USING btree (upper(translate(evse_id, '*-'::text, ''::text))) WHERE (evse_id IS NOT NULL)
-public.charging_points	index	charging_points_geom_gist	CREATE INDEX charging_points_geom_gist ON public.charging_points USING gist (geom) WHERE (closed_at IS NULL)
 public.charging_points	index	charging_points_open_feed	CREATE INDEX charging_points_open_feed ON public.charging_points USING btree (source_feed) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text))
 public.charging_points	index	charging_points_open_site	CREATE INDEX charging_points_open_site ON public.charging_points USING btree (source_feed, site_id) INCLUDE (point_key, evse_id, provider_point_id, connector_types, max_power_kw) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text))
 public.charging_points	index	charging_points_operator	CREATE INDEX charging_points_operator ON public.charging_points USING btree (operator, source_feed) WHERE (closed_at IS NULL)
@@ -2123,6 +2122,7 @@ public.gazetteer_places	index	gazetteer_places_name_trgm	CREATE INDEX gazetteer_
 public.gazetteer_places	index	gazetteer_places_pkey	CREATE UNIQUE INDEX gazetteer_places_pkey ON public.gazetteer_places USING btree (id)
 public.gazetteer_places	index	gazetteer_places_road	CREATE INDEX gazetteer_places_road ON public.gazetteer_places USING btree (road) WHERE (road IS NOT NULL)
 public.gazetteer_places	index	gazetteer_places_source_id_external_id_key	CREATE UNIQUE INDEX gazetteer_places_source_id_external_id_key ON public.gazetteer_places USING btree (source_id, external_id)
+public.gazetteer_places	index	gazetteer_places_stada_station_geom	CREATE INDEX gazetteer_places_stada_station_geom ON public.gazetteer_places USING gist (geom) WHERE ((source_id = 'db_stada'::text) AND (kind = 'station'::text) AND (closed_at IS NULL) AND (geom IS NOT NULL))
 public.gbfs_station_status	column	observed_at	timestamp with time zone not null
 public.gbfs_station_status	column	system_id	text not null
 public.gbfs_station_status	column	station_id	text not null
@@ -3467,7 +3467,6 @@ public.road_event_locations	constraint	road_event_locations_pkey	p PRIMARY KEY (
 public.road_event_locations	constraint	road_event_locations_road_event_id_fkey	f FOREIGN KEY (road_event_id) REFERENCES public.road_events(id) ON DELETE CASCADE
 public.road_event_locations	index	road_event_locations_deleted	CREATE INDEX road_event_locations_deleted ON public.road_event_locations USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.road_event_locations	index	road_event_locations_pkey	CREATE UNIQUE INDEX road_event_locations_pkey ON public.road_event_locations USING btree (road_event_id, seq)
-public.road_event_locations	index	road_event_locations_road	CREATE INDEX road_event_locations_road ON public.road_event_locations USING btree (road_number, road_event_id)
 public.road_event_record_types	column	feed_key	text not null
 public.road_event_record_types	column	record_type	text not null
 public.road_event_record_types	column	known	boolean not null
@@ -3953,7 +3952,6 @@ public.stop_times	column	deleted_reason	text
 public.stop_times	constraint	stop_times_pkey	p PRIMARY KEY (gtfs_feed_key, trip_id, stop_sequence)
 public.stop_times	index	stop_times_deleted	CREATE INDEX stop_times_deleted ON public.stop_times USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.stop_times	index	stop_times_pkey	CREATE UNIQUE INDEX stop_times_pkey ON public.stop_times USING btree (gtfs_feed_key, trip_id, stop_sequence)
-public.stop_times	index	stop_times_stop	CREATE INDEX stop_times_stop ON public.stop_times USING btree (gtfs_feed_key, stop_id, trip_id)
 public.stop_times	index	stop_times_stop_arr_tod	CREATE INDEX stop_times_stop_arr_tod ON public.stop_times USING btree (gtfs_feed_key, stop_id, mod((date_part('epoch'::text, arrival))::bigint, (86400)::bigint)) INCLUDE (arrival, trip_id, stop_sequence, drop_off_type) WHERE ((deleted_at IS NULL) AND (arrival IS NOT NULL))
 public.stop_times	index	stop_times_stop_tod	CREATE INDEX stop_times_stop_tod ON public.stop_times USING btree (gtfs_feed_key, stop_id, mod((date_part('epoch'::text, departure))::bigint, (86400)::bigint)) INCLUDE (departure, trip_id, stop_sequence, pickup_type) WHERE ((deleted_at IS NULL) AND (departure IS NOT NULL))
 public.stops	column	deleted_at	timestamp with time zone
@@ -4164,7 +4162,6 @@ public.trips	constraint	trips_pkey	p PRIMARY KEY (gtfs_feed_key, id)
 public.trips	index	trips_deleted	CREATE INDEX trips_deleted ON public.trips USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.trips	index	trips_pkey	CREATE UNIQUE INDEX trips_pkey ON public.trips USING btree (gtfs_feed_key, id)
 public.trips	index	trips_route	CREATE INDEX trips_route ON public.trips USING btree (gtfs_feed_key, route_id)
-public.trips	index	trips_service	CREATE INDEX trips_service ON public.trips USING btree (gtfs_feed_key, service_id)
 public.validator_horizon	column	id	smallint not null default 1
 public.validator_horizon	column	not_before	timestamp with time zone not null
 public.validator_horizon	column	reason	text not null
