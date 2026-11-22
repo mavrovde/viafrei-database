@@ -23,6 +23,7 @@ const FEEDTS_TESTS = ["test/vrn-transit-delays-feed-ts.db.test.ts"];
 const HAND_TESTS = ["test/hand-changes-1119.db.test.ts"];
 const TWIN_TESTS = ["test/charging-twin-pairs.db.test.ts"];
 const CONNECT_TESTS = ["test/stops-geom-connect.db.test.ts"];
+const HAND_1122E_TESTS = ["test/prod-fixes-1122-evening.db.test.ts"];
 export const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -282,6 +283,14 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0327 indexes the DELFI stops, not Connect", config: DB, file: at("db", "migrations", "0327_stops_geom_connect.sql"), tests: CONNECT_TESTS, from: "  where gtfs_feed_key = 2 and deleted_at is null;", to: "  where gtfs_feed_key = 1 and deleted_at is null;" },
   { name: "db: 0327 indexes the deleted stops too", config: DB, file: at("db", "migrations", "0327_stops_geom_connect.sql"), tests: CONNECT_TESTS, from: "  where gtfs_feed_key = 2 and deleted_at is null;", to: "  where gtfs_feed_key = 2;" },
   { name: "db: 0327 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0327_stops_geom_connect.sql"), tests: CONNECT_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  // 0328 (the German weather twin) and 0329 (the autobahn_events analyze settings).
+  { name: "db: 0328 reads the deleted warnings too", config: DB, file: at("db", "migrations", "0328_weather_warnings_area_live_de.sql"), tests: HAND_1122E_TESTS, from: "    from public.weather_warnings_live w;", to: "    from public.weather_warnings w;" },
+  { name: "db: 0328 drops the instruction", config: DB, file: at("db", "migrations", "0328_weather_warnings_area_live_de.sql"), tests: HAND_1122E_TESTS, from: "w.description, w.instruction\n", to: "w.description\n" },
+  { name: "db: 0328 grants the digest nothing", config: DB, file: at("db", "migrations", "0328_weather_warnings_area_live_de.sql"), tests: HAND_1122E_TESTS, from: "grant select on public.weather_warnings_area_live_de to viafrei_digest;", to: "select 1;" },
+  { name: "db: 0329 sets no existing partition", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "    PERFORM public.tick_partition_options(part);", to: "    NULL;" },
+  { name: "db: 0329 leaves a new day without the settings", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "        perform tick_partition_options(format('%I.%I', s, part)::regclass);\n", to: "" },
+  { name: "db: 0329 sets every tick table's partitions", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "  if parent is distinct from 'public.autobahn_events'::regclass then", to: "  if parent is null then" },
+  { name: "db: 0329 sets a partition again and again", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "  if (select coalesce(c.reloptions, '{}') @> want from pg_class c where c.oid = part) then", to: "  if false then" },
   { name: "db: 0327 adopts an index of another definition under the name", config: DB, file: at("db", "migrations", "0327_stops_geom_connect.sql"), tests: CONNECT_TESTS, from: "  if found_def is distinct from expected then\n", to: "  if false then\n" },
   { name: "0321 and settings.sql disagree on the digest's work_mem", file: at("db", "migrations", "0321_role_memory_k3s.sql"), tests: ["test/roles.test.ts"], from: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''64MB''", to: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''16MB''" },
   { name: "settings.sql leaves out 0321's owner work_mem, so a re-run keeps the baseline's", file: at("db", "roles", "settings.sql"), tests: ["test/roles.test.ts", "test/memory-bound.test.ts"], from: "DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET work_mem TO ''32MB''', current_database()); END $$;\n", to: "" },
