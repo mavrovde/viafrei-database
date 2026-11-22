@@ -19,12 +19,20 @@
 -- (delete what went, insert what is new), so a load that changed nothing
 -- writes nothing.
 --
--- Lock: create table and create function on new objects; the first fill reads
--- charging_sites and the pairs (ACCESS SHARE, blocks no writer) and runs feed
--- by feed.
+-- Order: the readers may read these rows only once every writer of
+-- charging_sites calls refresh_charging_derived(feed) after
+-- refresh_charging_twin_pairs(feed). Today those are the main repository's
+-- loaders (afir/load.ts refreshChargingTwinPairs, which the register and the
+-- Autobahn sweep also go through); viafrei-ingestor writes no charging row.
+-- Before that, rows go stale after the first fill.
+--
+-- Lock: create table and create function on new objects; the first fill is one
+-- insert that reads charging_sites and the pairs (ACCESS SHARE, blocks no
+-- writer) under the pairs' advisory lock, so a load waits for it.
 --
 -- rollback:
 --   drop function public.refresh_charging_derived(text);
+--   drop function public.charging_twin_claims_of(text);
 --   drop table public.charging_site_twin_claims;
 --   delete from schema_migrations where version = 331;
 
@@ -46,6 +54,54 @@ with (
   autovacuum_analyze_threshold = 2000
 );
 
+-- The claims of the pairs with p_feed on either side, or of every pair with
+-- null. The veto reads only the other site, so it is worked out once per site
+-- (vetoed), not once per pair.
+create function public.charging_twin_claims_of(p_feed text)
+    returns table (register_feed text, register_site_id text, twin_feed text, twin_site_id text)
+    language sql stable
+    set search_path to 'public', 'pg_temp'
+    as $$
+  with scope as materialized (
+    select tp.register_feed, tp.register_site_id, tp.twin_feed, tp.twin_site_id
+      from charging_site_twin_pairs tp
+     where p_feed is null or tp.register_feed = p_feed or tp.twin_feed = p_feed
+  ),
+  -- The veto reads only the other site: a site of another feed whose operator a
+  -- live, publishable register site within 50 m also names. Once per site.
+  vetoed as materialized (
+    select distinct cp.twin_feed, cp.twin_site_id
+      from charging_site_twin_pairs cp
+      join charging_sites a on a.source_feed = cp.twin_feed and a.site_id = cp.twin_site_id
+      join charging_sites r on r.source_feed = cp.register_feed and r.site_id = cp.register_site_id
+     where (cp.twin_feed, cp.twin_site_id) in (select s.twin_feed, s.twin_site_id from scope s)
+       and r.deleted_at is null and not r.access_private
+       and r.closed_at is null
+       and r.source_feed = any (charging_twin_register_feeds())
+       and coalesce(r.confidentiality, 'noRestriction') = 'noRestriction'
+       and ST_DWithin(r.geom, a.geom, 50)
+       and r.operator_tokens && a.operator_tokens
+  )
+  select tp.register_feed, tp.register_site_id, tp.twin_feed, tp.twin_site_id
+    from scope tp
+    join charging_sites n on n.source_feed = tp.register_feed and n.site_id = tp.register_site_id
+    join charging_sites a on a.source_feed = tp.twin_feed and a.site_id = tp.twin_site_id
+   where ST_DWithin(a.geom, n.geom, 150)
+     and ((ST_DWithin(a.geom, n.geom, 50)
+           and (a.operator_tokens && n.operator_tokens
+                or (a.street_key <> ''
+                    and a.street_key = n.street_key
+                    and (a.postcode is null or n.postcode is null or a.postcode = n.postcode)
+                    and (a.house_key is null or n.house_key is null or a.house_key = n.house_key)
+                    and not exists (select 1 from vetoed v where v.twin_feed = a.source_feed and v.twin_site_id = a.site_id))))
+          or (a.operator_tokens && n.operator_tokens
+              and a.street_key <> ''
+              and a.street_key = n.street_key
+              and a.house_key is not null
+              and a.house_key = n.house_key
+              and (a.postcode is null or n.postcode is null or a.postcode = n.postcode)))
+$$;
+
 create function public.refresh_charging_derived(p_feed text) returns integer
     language plpgsql security definer
     set search_path to 'public', 'pg_temp'
@@ -58,37 +114,8 @@ begin
   end if;
   perform pg_advisory_xact_lock(hashtextextended('public.charging_site_twin_pairs', 0));
 
-  -- 1. The claims of the pairs with this feed on either side.
   with fresh as materialized (
-    select tp.register_feed, tp.register_site_id, tp.twin_feed, tp.twin_site_id
-      from charging_site_twin_pairs tp
-      join charging_sites n on n.source_feed = tp.register_feed and n.site_id = tp.register_site_id
-      join charging_sites a on a.source_feed = tp.twin_feed and a.site_id = tp.twin_site_id
-     where (tp.register_feed = p_feed or tp.twin_feed = p_feed)
-       and ST_DWithin(a.geom, n.geom, 150)
-       and ((ST_DWithin(a.geom, n.geom, 50)
-             and (a.operator_tokens && n.operator_tokens
-                  or (a.street_key <> ''
-                      and a.street_key = n.street_key
-                      and (a.postcode is null or n.postcode is null or a.postcode = n.postcode)
-                      and (a.house_key is null or n.house_key is null or a.house_key = n.house_key)
-                      and not exists (
-                        select 1
-                          from charging_site_twin_pairs cp
-                          join charging_sites r on r.source_feed = cp.register_feed and r.site_id = cp.register_site_id
-                         where cp.twin_feed = a.source_feed and cp.twin_site_id = a.site_id
-                           and r.deleted_at is null and not r.access_private
-                           and r.closed_at is null
-                           and r.source_feed = any (charging_twin_register_feeds())
-                           and coalesce(r.confidentiality, 'noRestriction') = 'noRestriction'
-                           and ST_DWithin(r.geom, a.geom, 50)
-                           and r.operator_tokens && a.operator_tokens))))
-            or (a.operator_tokens && n.operator_tokens
-                and a.street_key <> ''
-                and a.street_key = n.street_key
-                and a.house_key is not null
-                and a.house_key = n.house_key
-                and (a.postcode is null or n.postcode is null or a.postcode = n.postcode)))
+    select * from charging_twin_claims_of(p_feed)
   ),
   gone as (
     delete from charging_site_twin_claims c
@@ -108,18 +135,14 @@ begin
 end $$;
 
 comment on table public.charging_site_twin_claims is 'The register-twin rule''s site-only part per candidate pair (0331): within 150 m, and within 50 m sharing an operator or an address the veto leaves, or sharing both. Kept by refresh_charging_derived(feed); the reader adds the circle, the licence and the other site''s liveness.';
+comment on function public.charging_twin_claims_of(text) is 'The register-twin rule''s site-only part for the pairs with this feed on either side, or for every pair with null (0331); the veto once per site.';
 comment on function public.refresh_charging_derived(text) is 'Rebuilds the twin claims touching this feed and returns the rows it deleted plus inserted; every charging loader calls it after refresh_charging_twin_pairs(feed), in its transaction (0331).';
 
 revoke all on function public.refresh_charging_derived(text) from public;
+revoke all on function public.charging_twin_claims_of(text) from public;
 grant execute on function public.refresh_charging_derived(text) to viafrei_ingestor;
 grant select on public.charging_site_twin_claims to viafrei_digest, viafrei_mcp;
 
--- The first fill, feed by feed (each call reads only what touches its feed).
-do $$
-declare
-  f text;
-begin
-  for f in select distinct source_feed from charging_sites order by 1 loop
-    perform refresh_charging_derived(f);
-  end loop;
-end $$;
+-- The first fill, in one pass: every pair's claim, under the pairs' lock.
+select pg_advisory_xact_lock(hashtextextended('public.charging_site_twin_pairs', 0));
+insert into public.charging_site_twin_claims select * from public.charging_twin_claims_of(null);

@@ -201,12 +201,16 @@ describe.skipIf(url === undefined)("0331 charging stored references", () => {
     }
   });
 
-  it("equal today's rule over six seeded neighbourhoods, each with something to compare", async () => {
+  it("equal today's rule over six seeded neighbourhoods, each with something to compare; the first fill's one pass equals the per-feed refreshes", async () => {
+    const KEYS = "select register_feed || '/' || register_site_id || '>' || twin_feed || '/' || twin_site_id as r from";
     for (const s of [1, 2, 3, 4, 5, 6]) {
       await t.planted(async (c) => {
         await seed(c, s);
         await refreshAll(c);
         expect(await expectEqual(c), `seed ${String(s)}`).toBeGreaterThan(0);
+        // The migration's first fill: every pair's claim in one call, the same rows the refreshes keep.
+        const stored = (await c.query<{ r: string }>(`${KEYS} charging_site_twin_claims order by 1`)).rows.map((x) => x.r);
+        expect((await c.query<{ r: string }>(`${KEYS} charging_twin_claims_of(null) order by 1`)).rows.map((x) => x.r), `seed ${String(s)}`).toEqual(stored);
       });
     }
   });
