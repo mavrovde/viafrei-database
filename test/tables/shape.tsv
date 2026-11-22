@@ -3978,6 +3978,7 @@ public.stops	index	stops_contract_search_fold	CREATE INDEX stops_contract_search
 public.stops	index	stops_contract_stop_place	CREATE INDEX stops_contract_stop_place ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || COALESCE(parent_id, id)))) WHERE (deleted_at IS NULL)
 public.stops	index	stops_contract_stop_point	CREATE INDEX stops_contract_stop_point ON public.stops USING btree (((((gtfs_feed_key)::text || ':'::text) || id))) WHERE (deleted_at IS NULL)
 public.stops	index	stops_deleted	CREATE INDEX stops_deleted ON public.stops USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
+public.stops	index	stops_geom_connect	CREATE INDEX stops_geom_connect ON public.stops USING gist (geom) WHERE ((gtfs_feed_key = 2) AND (deleted_at IS NULL))
 public.stops	index	stops_geom_gist	CREATE INDEX stops_geom_gist ON public.stops USING gist (geom)
 public.stops	index	stops_id_prefix	CREATE INDEX stops_id_prefix ON public.stops USING btree (gtfs_feed_key, id text_pattern_ops)
 public.stops	index	stops_name_trgm	CREATE INDEX stops_name_trgm ON public.stops USING gin (lower(name) public.gin_trgm_ops)
