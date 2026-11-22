@@ -1301,6 +1301,11 @@ public.autobahn_events	column	raw	jsonb
 public.autobahn_events	column	source	text not null default 'autobahn'::text
 public.autobahn_events	column	source_run_id	bigint
 public.autobahn_events	column	raw_hash	bytea
+public.autobahn_events	column	derived_starts_at	timestamp with time zone
+public.autobahn_events	column	derived_future	boolean
+public.autobahn_events	column	derived_site_key	jsonb
+public.autobahn_events	column	derived_extent_ends	public.geography(MultiPoint,4326)
+public.autobahn_events	column	validity_next_change	timestamp with time zone
 public.autobahn_events	index	autobahn_events_brin	CREATE INDEX autobahn_events_brin ON ONLY public.autobahn_events USING brin (observed_at)
 public.autobahn_events	index	autobahn_events_geom_gist	CREATE INDEX autobahn_events_geom_gist ON ONLY public.autobahn_events USING gist (((geom)::public.geometry))
 public.autobahn_events	index	autobahn_events_raw_dedup	CREATE INDEX autobahn_events_raw_dedup ON ONLY public.autobahn_events USING btree (ext_id, observed_at DESC) WHERE ((raw IS NOT NULL) AND (raw_hash IS NOT NULL))
