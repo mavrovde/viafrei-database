@@ -17,6 +17,7 @@
 --
 -- ensure_daily_partitions(days_ahead, days_back) is 0304's body with the one
 -- call added; its signature, arguments, refusals and notice are unchanged.
+-- The one-argument form is restated unchanged, so both bodies live here.
 --
 -- Lock: alter table ... set (autovacuum_...) takes SHARE UPDATE EXCLUSIVE,
 -- which blocks no reader and no writer; each runs under lock_timeout 2s in
@@ -147,6 +148,14 @@ begin
 
   raise notice 'ensure_daily_partitions: % table(s) on the daily schedule in schema(s) %, days % .. %, % partition(s) created, % BRIN index(es) set to autosummarize',
     total, array_to_string(schemas, ', '), current_date - days_back, current_date + days_ahead, made, summarized;
+end $$;
+
+-- The one-argument form, as 0304 left it, restated here so this file holds the helper's whole current text.
+CREATE OR REPLACE FUNCTION public.ensure_daily_partitions(days_ahead integer DEFAULT 7) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+begin
+  perform public.ensure_daily_partitions(days_ahead, 3);
 end $$;
 
 DO $$
