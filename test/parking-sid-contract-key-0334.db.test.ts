@@ -9,6 +9,7 @@
  * Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
 import { describe, expect, it } from "vitest";
+import { partitionIndexName } from "./index-names.js";
 import { migratedSuite, reapply } from "./no-transaction-index.js";
 
 const url = process.env["TEST_DATABASE_URL"];
@@ -74,12 +75,16 @@ describe.skipIf(url === undefined)("0334 parking_occupancy_sid contract key", ()
       const other = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${NEWEST}`, ["p:17", ["truckpark_sid_dyn"], new Date()])).rows.map((r) => r["QUERY PLAN"]).join("\n");
       for (const p of held) expect(other).not.toMatch(new RegExp(`Seq Scan on ${p} `));
       const got = await c.query(NEWEST, params);
-      const want = await c.query(
-        `select free_spaces, total_spaces, occupancy_status, observed_at, source_ref
+      // the same read with no index scan of any kind: a plan that cannot touch the new index
+      const FENCED = `select free_spaces, total_spaces, occupancy_status, observed_at, source_ref
            from (select * from contract.occupancy_observation o where o.facility_id = $1 and o.source_ref = any($2::text[]) and o.observed_at <= $3::timestamptz offset 0) o
-          order by o.observed_at desc limit 1`,
-        params,
-      );
+          order by o.observed_at desc limit 1`;
+      await c.query("set local enable_indexscan = off");
+      await c.query("set local enable_bitmapscan = off");
+      await c.query("set local enable_indexonlyscan = off");
+      const fencedPlan = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${FENCED}`, params)).rows.map((r) => r["QUERY PLAN"]).join("\n");
+      expect(fencedPlan).not.toMatch(/expr_observed_at_idx|contract_key|Index/);
+      const want = await c.query(FENCED, params);
       expect(got.rows).toHaveLength(1);
       expect(got.rows).toEqual(want.rows);
     } finally {
@@ -104,6 +109,9 @@ describe.skipIf(url === undefined)("0334 parking_occupancy_sid contract key", ()
     );
     expect(r.rows.map((x) => x.p)).toEqual(parts);
     expect(r.rows.find((x) => x.p === byHand)?.i).toBe("by_hand_sid_key");
+    // the failed build and every other partition's index: PostgreSQL's own name for the parent's clone
+    expect(r.rows.find((x) => x.p === failed)?.i).toBe(partitionIndexName(failed, "idx", ["expr", "observed_at"]));
+    for (const x of r.rows.filter((y) => y.p !== byHand)) expect(x.i).toBe(partitionIndexName(x.p, "idx", ["expr", "observed_at"]));
     const left = await t.pool.query("select 1 from pg_class where relname = 'failed_sid_key'");
     expect(left.rows).toHaveLength(0);
     const valid = await t.pool.query<{ v: boolean }>("select indisvalid as v from pg_index where indexrelid = 'public.parking_occupancy_sid_contract_key'::regclass");

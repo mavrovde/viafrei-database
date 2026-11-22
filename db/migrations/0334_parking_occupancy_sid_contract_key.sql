@@ -24,7 +24,13 @@
 -- A concurrent build holds SHARE UPDATE EXCLUSIVE, which blocks no writer; the
 -- parent's ON ONLY index and the attaches take a short lock under lock_timeout.
 --
+-- Each partition's index takes the name PostgreSQL gives the clone of the
+-- parent's index on a day made later, <partition>_expr_observed_at_idx (the
+-- expression is named expr; README.md, Partitions), so every day partition's
+-- index is named by one rule, whoever built it.
+--
 -- rollback:
+--   set lock_timeout = '5s';
 --   drop index if exists public.parking_occupancy_sid_contract_key;
 --   delete from schema_migrations where version = 334;
 
@@ -50,7 +56,7 @@ create index if not exists parking_occupancy_sid_contract_key on only public.par
 commit;
 
 -- 2. Each partition with no index attached to the parent's and no VALID matching index to adopt: built concurrently.
-select format('create index concurrently if not exists %I on %I.%I (($k$sid:$k$ || facility_id), observed_at)', p.relname || '_contract_key', n.nspname, p.relname)
+select format('create index concurrently if not exists %I on %I.%I (($k$sid:$k$ || facility_id), observed_at)', p.relname || '_expr_observed_at_idx', n.nspname, p.relname)
   from pg_inherits h
   join pg_class p on p.oid = h.inhrelid
   join pg_namespace n on n.oid = p.relnamespace
@@ -63,7 +69,7 @@ select format('create index concurrently if not exists %I on %I.%I (($k$sid:$k$ 
  order by p.relname
 \gexec
 
--- 3. Each partition with no index attached: its VALID matching index attached (the one named <partition>_geom_idx
+-- 3. Each partition with no index attached: its VALID matching index attached (the one named <partition>_expr_observed_at_idx
 --    first), one statement (and one short lock) per partition; the parent's index turns VALID with the last.
 set lock_timeout = '5s';
 select format('alter index public.parking_occupancy_sid_contract_key attach partition %I.%I', n.nspname, m.relname)
@@ -75,7 +81,7 @@ select format('alter index public.parking_occupancy_sid_contract_key attach part
           where x.indrelid = p.oid and x.indisvalid
             and not x.indisunique and x.indpred is null
             and split_part(pg_get_indexdef(x.indexrelid), ' USING ', 2) = $k$btree ((('sid:'::text || facility_id)), observed_at)$k$
-          order by i.relname <> p.relname || '_contract_key', i.relname
+          order by i.relname <> p.relname || '_expr_observed_at_idx', i.relname
           limit 1) m
  where h.inhparent = 'public.parking_occupancy_sid'::regclass
    and not exists (
