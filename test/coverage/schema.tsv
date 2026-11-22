@@ -3791,3 +3791,9 @@ trigger	live.refresh_requests.refresh_requests_notify	test/live-refresh.db.test.
 trigger	live.refresh_requests.refresh_requests_transition	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
 function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: the stop place lookup reads the stops under the DHID through the id-prefix index, not every stop (#49)
 view	contract.road	test/contract-mapping.db.test.ts > road: a read of no shape column draws no shape, and a read of one road draws that road's alone (#49)
+view	public.weather_warnings_area_live_de	test/prod-fixes-1122-evening.db.test.ts > weather_warnings_area_live_de returns area_live's rows minus the English, and never calls weather_warning_english()
+view	public.weather_warnings_area_live_de	test/prod-fixes-1122-evening.db.test.ts > weather_warnings_area_live_de has area_live's columns, in order, without the en_* ones
+grant	viafrei_digest@public.weather_warnings_area_live_de	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
+grant	viafrei_digest@public.weather_warnings_area_live_de	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours
+function	public.tick_partition_options(part regclass)	test/prod-fixes-1122-evening.db.test.ts > tick_partition_options sets a partition that lost them once, then nothing; another relation it leaves alone
+function	public.tick_partition_options(part regclass)	test/prod-fixes-1122-evening.db.test.ts > a day ensure_daily_partitions makes later gets them too

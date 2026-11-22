@@ -28,6 +28,7 @@ viafrei_digest	public.speed_enforcement_live	select	digest: declared reads
 viafrei_digest	public.osm_speed_cameras_live	select	digest: declared reads
 viafrei_digest	public.transit_station_live	select	digest: declared reads
 viafrei_digest	public.weather_warnings_area_live	select	digest: declared reads
+viafrei_digest	public.weather_warnings_area_live_de	select	digest: declared reads
 viafrei_digest	public.transit_departures_odbl_live	select	digest: declared reads
 viafrei_digest	public.transit_odbl_service_days_live	select	digest: declared reads
 viafrei_digest	public.transit_stops_odbl_live	select	digest: declared reads
