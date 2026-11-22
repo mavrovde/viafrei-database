@@ -16,6 +16,7 @@
  *
  * Skipped without TEST_DATABASE_URL unless VF_REQUIRE_DB=1.
  */
+import { readFileSync } from "node:fs";
 import type pg from "pg";
 import { describe, expect, it } from "vitest";
 import { migratedSuite } from "./no-transaction-index.js";
@@ -161,6 +162,14 @@ describe.skipIf(url === undefined)("0323-0324 hand changes of 2026-11-22", () =>
       "stop_times_stop_tod",
       "trips_pkey",
     ]);
+  });
+
+  it("0325 bounds each drop's lock wait: lock_timeout set before the first drop, reset at the end (review)", () => {
+    const sql = readFileSync(new URL("../db/migrations/0325_drop_unused_indexes.sql", import.meta.url), "utf8").replace(/--[^\n]*/g, "");
+    const set = sql.indexOf("set lock_timeout = '5s';");
+    expect(set).toBeGreaterThan(-1);
+    expect(set).toBeLessThan(sql.indexOf("drop index concurrently"));
+    expect(sql.trimEnd().endsWith("reset lock_timeout;")).toBe(true);
   });
 
   it("0325 run again where the indexes are already gone (production) is a no-op", async () => {

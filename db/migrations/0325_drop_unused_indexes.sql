@@ -35,7 +35,13 @@
 --   create index concurrently if not exists stop_times_stop on public.stop_times using btree (gtfs_feed_key, stop_id, trip_id);
 --   delete from schema_migrations where version = 325;
 
+-- lock_timeout bounds each drop's wait for its locks (rule 6); a drop that
+-- waits longer fails with 55P03 and migrate retries the file, each drop being
+-- if exists. Set for this file's session and reset at its end, as no
+-- transaction holds a set local here.
+set lock_timeout = '5s';
 drop index concurrently if exists public.road_event_locations_road;
 drop index concurrently if exists public.charging_points_geom_gist;
 drop index concurrently if exists public.trips_service;
 drop index concurrently if exists public.stop_times_stop;
+reset lock_timeout;
