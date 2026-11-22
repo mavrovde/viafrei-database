@@ -1753,7 +1753,6 @@ public.delfi_siri_et_calls	column	source_run_id	bigint
 public.delfi_siri_et_calls	column	source_feed	text not null default 'delfi_siri_et'::text
 public.delfi_siri_et_calls	column	vehicle_mode	text
 public.delfi_siri_et_calls	index	delfi_siri_et_calls_observed_brin	CREATE INDEX delfi_siri_et_calls_observed_brin ON ONLY public.delfi_siri_et_calls USING brin (observed_at)
-public.delfi_siri_et_calls	index	delfi_siri_et_calls_stop	CREATE INDEX delfi_siri_et_calls_stop ON ONLY public.delfi_siri_et_calls USING btree (stop_ref, observed_at)
 public.delfi_siri_et_calls_latest	column	stop_ref	text not null
 public.delfi_siri_et_calls_latest	column	service_day	date not null
 public.delfi_siri_et_calls_latest	column	journey_ref	text not null
@@ -2491,6 +2490,7 @@ public.lorry_city	column	created_at	timestamp with time zone not null default no
 public.lorry_city	column	updated_at	timestamp with time zone not null default now()
 public.lorry_city	constraint	lorry_city_key	u UNIQUE (source_feed, feature_key)
 public.lorry_city	constraint	lorry_city_pkey	p PRIMARY KEY (id)
+public.lorry_city	index	lorry_city_contract_geography	CREATE INDEX lorry_city_contract_geography ON public.lorry_city USING gist ((((geom)::public.geometry)::public.geography)) WHERE (closed_at IS NULL)
 public.lorry_city	index	lorry_city_geom_open	CREATE INDEX lorry_city_geom_open ON public.lorry_city USING gist (geom) WHERE (closed_at IS NULL)
 public.lorry_city	index	lorry_city_key	CREATE UNIQUE INDEX lorry_city_key ON public.lorry_city USING btree (source_feed, feature_key)
 public.lorry_city	index	lorry_city_pkey	CREATE UNIQUE INDEX lorry_city_pkey ON public.lorry_city USING btree (id)
@@ -2532,6 +2532,7 @@ public.lorry_hb	column	created_at	timestamp with time zone not null default now(
 public.lorry_hb	column	updated_at	timestamp with time zone not null default now()
 public.lorry_hb	constraint	lorry_hb_key	u UNIQUE (source_feed, feature_key)
 public.lorry_hb	constraint	lorry_hb_pkey	p PRIMARY KEY (id)
+public.lorry_hb	index	lorry_hb_contract_geography	CREATE INDEX lorry_hb_contract_geography ON public.lorry_hb USING gist ((((geom)::public.geometry)::public.geography)) WHERE (closed_at IS NULL)
 public.lorry_hb	index	lorry_hb_geom_open	CREATE INDEX lorry_hb_geom_open ON public.lorry_hb USING gist (geom) WHERE (closed_at IS NULL)
 public.lorry_hb	index	lorry_hb_key	CREATE UNIQUE INDEX lorry_hb_key ON public.lorry_hb USING btree (source_feed, feature_key)
 public.lorry_hb	index	lorry_hb_pkey	CREATE UNIQUE INDEX lorry_hb_pkey ON public.lorry_hb USING btree (id)
@@ -2573,6 +2574,7 @@ public.lorry_ivm	column	created_at	timestamp with time zone not null default now
 public.lorry_ivm	column	updated_at	timestamp with time zone not null default now()
 public.lorry_ivm	constraint	lorry_ivm_key	u UNIQUE (source_feed, feature_key)
 public.lorry_ivm	constraint	lorry_ivm_pkey	p PRIMARY KEY (id)
+public.lorry_ivm	index	lorry_ivm_contract_geography	CREATE INDEX lorry_ivm_contract_geography ON public.lorry_ivm USING gist ((((geom)::public.geometry)::public.geography)) WHERE (closed_at IS NULL)
 public.lorry_ivm	index	lorry_ivm_geom_open	CREATE INDEX lorry_ivm_geom_open ON public.lorry_ivm USING gist (geom) WHERE (closed_at IS NULL)
 public.lorry_ivm	index	lorry_ivm_key	CREATE UNIQUE INDEX lorry_ivm_key ON public.lorry_ivm USING btree (source_feed, feature_key)
 public.lorry_ivm	index	lorry_ivm_pkey	CREATE UNIQUE INDEX lorry_ivm_pkey ON public.lorry_ivm USING btree (id)
@@ -2614,6 +2616,7 @@ public.lorry_long_network	column	created_at	timestamp with time zone not null de
 public.lorry_long_network	column	updated_at	timestamp with time zone not null default now()
 public.lorry_long_network	constraint	lorry_long_network_key	u UNIQUE (source_feed, feature_key)
 public.lorry_long_network	constraint	lorry_long_network_pkey	p PRIMARY KEY (id)
+public.lorry_long_network	index	lorry_long_network_contract_geography	CREATE INDEX lorry_long_network_contract_geography ON public.lorry_long_network USING gist ((((geom)::public.geometry)::public.geography)) WHERE (closed_at IS NULL)
 public.lorry_long_network	index	lorry_long_network_geom_open	CREATE INDEX lorry_long_network_geom_open ON public.lorry_long_network USING gist (geom) WHERE (closed_at IS NULL)
 public.lorry_long_network	index	lorry_long_network_key	CREATE UNIQUE INDEX lorry_long_network_key ON public.lorry_long_network USING btree (source_feed, feature_key)
 public.lorry_long_network	index	lorry_long_network_pkey	CREATE UNIQUE INDEX lorry_long_network_pkey ON public.lorry_long_network USING btree (id)
@@ -2656,6 +2659,7 @@ public.lorry_sevas	column	created_at	timestamp with time zone not null default n
 public.lorry_sevas	column	updated_at	timestamp with time zone not null default now()
 public.lorry_sevas	constraint	lorry_sevas_key	u UNIQUE (source_feed, feature_key)
 public.lorry_sevas	constraint	lorry_sevas_pkey	p PRIMARY KEY (id)
+public.lorry_sevas	index	lorry_sevas_contract_geography	CREATE INDEX lorry_sevas_contract_geography ON public.lorry_sevas USING gist ((((geom)::public.geometry)::public.geography)) WHERE (closed_at IS NULL)
 public.lorry_sevas	index	lorry_sevas_geom_open	CREATE INDEX lorry_sevas_geom_open ON public.lorry_sevas USING gist (geom) WHERE (closed_at IS NULL)
 public.lorry_sevas	index	lorry_sevas_key	CREATE UNIQUE INDEX lorry_sevas_key ON public.lorry_sevas USING btree (source_feed, feature_key)
 public.lorry_sevas	index	lorry_sevas_pkey	CREATE UNIQUE INDEX lorry_sevas_pkey ON public.lorry_sevas USING btree (id)
@@ -4233,7 +4237,6 @@ public.vbn_siri_et_calls	index	vbn_siri_et_calls_brin	CREATE INDEX vbn_siri_et_c
 public.vbn_siri_et_calls	index	vbn_siri_et_calls_feed_ts	CREATE INDEX vbn_siri_et_calls_feed_ts ON ONLY public.vbn_siri_et_calls USING btree (feed_ts)
 public.vbn_siri_et_calls	index	vbn_siri_et_calls_kreis	CREATE INDEX vbn_siri_et_calls_kreis ON ONLY public.vbn_siri_et_calls USING btree ("left"(\nCASE\n    WHEN ((stop_ref ~* '^de:[0-9]+(:|$)'::text) AND (length(split_part(stop_ref, ':'::text, 2)) = ANY (ARRAY[2, 3, 5, 8]))) THEN split_part(stop_ref, ':'::text, 2)\n    ELSE NULL::text\nEND, 5), observed_at DESC)
 public.vbn_siri_et_calls	index	vbn_siri_et_calls_region	CREATE INDEX vbn_siri_et_calls_region ON ONLY public.vbn_siri_et_calls USING btree ("left"(\nCASE\n    WHEN ((stop_ref ~* '^de:[0-9]+(:|$)'::text) AND (length(split_part(stop_ref, ':'::text, 2)) = ANY (ARRAY[2, 3, 5, 8]))) THEN split_part(stop_ref, ':'::text, 2)\n    ELSE NULL::text\nEND, 2), observed_at DESC)
-public.vbn_siri_et_calls	index	vbn_siri_et_calls_stop	CREATE INDEX vbn_siri_et_calls_stop ON ONLY public.vbn_siri_et_calls USING btree (stop_ref, observed_at)
 public.vrn_transit_delays	column	observed_at	timestamp with time zone not null
 public.vrn_transit_delays	column	feed_ts	timestamp with time zone not null
 public.vrn_transit_delays	column	trip_id	text not null
