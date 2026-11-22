@@ -11,6 +11,14 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.4.3](https://github.com/mavrovde/viafrei-database/compare/v0.4.2...v0.4.3) (2026-11-22)
+
+
+### Changed
+
+* **db:** a German-only weather view and analysed autobahn_events days (0328, 0329) ([#92](https://github.com/mavrovde/viafrei-database/issues/92)) ([a3eec0c](https://github.com/mavrovde/viafrei-database/commit/a3eec0c6cf581dd168d7046f45d12f7bca3572b8))
+* **db:** index the live VBN Connect stops by position (0327) ([#90](https://github.com/mavrovde/viafrei-database/issues/90)) ([e67767f](https://github.com/mavrovde/viafrei-database/commit/e67767f8132207cedcf66b505cc41cbec91371d9))
+
 ## [0.4.2](https://github.com/mavrovde/viafrei-database/compare/v0.4.1...v0.4.2) (2026-11-22)
 
 
