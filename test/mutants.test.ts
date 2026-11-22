@@ -124,9 +124,22 @@ describe("the mutant set", () => {
   });
 });
 
+/** The length of the mutant-shards matrix (`shard: [1, …, n]`); 0 when the workflow carries no such line. */
+export function shardCountOf(workflow: string): number {
+  const m = /^\s+shard: \[([\d, ]+)\]\s*$/mu.exec(workflow);
+  return m === null ? 0 : m[1]!.split(",").length;
+}
+
 describe("the release's shards of the set", () => {
-  // The count release.yml's mutant-shards matrix runs (test/workflows.test.ts holds the workflow to it).
-  const COUNT = 20;
+  it("reads the shard count from release.yml's matrix (20), and 0 from a workflow without one", () => {
+    expect(shardCountOf(readFileSync(join(REPO, ".github", "workflows", "release.yml"), "utf8"))).toBe(20);
+    expect(shardCountOf("jobs:\n  a:\n    strategy:\n      matrix:\n        shard: [1, 2, 3]\n")).toBe(3);
+    expect(shardCountOf("jobs: {}\n")).toBe(0);
+  });
+
+  // The count release.yml's mutant-shards matrix runs, read from the workflow (test/workflows.test.ts holds the run
+  // line to it), so a matrix change alone is judged at its new count.
+  const COUNT = shardCountOf(readFileSync(join(REPO, ".github", "workflows", "release.yml"), "utf8"));
   // every job has 15 minutes; a shard plans 8 of them, one of which is its setup (checkout, npm ci, psql). The
   // other 7 are headroom for the runner: in v0.4.1 two shards planned at 10.5 minutes ran 1.4-1.7x the file's seconds.
   const BUDGET_S = 8 * 60;

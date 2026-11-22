@@ -1,854 +1,861 @@
 # seconds	mutant (npm run mutate -- --costs-out; regenerated at each release)
-11.6	0306: the backfill forgets a feed key with a change and no feed_state row
-6.1	0306: the backfill forgets an ingest key with a change and no feed_state row
-6.0	0306: the backfill recomputes no feed key
-6.1	0306: the backfill recomputes no ingest key
-9.5	0306: the feed recompute drops a key whose only fact is a change
-6.1	0306: the fold skips a finished pending feed run again
-6.1	0306: the fold skips a finished running or pending ingest run again
-6.0	0306: the ingest recompute drops a key whose only fact is a change
+6.7	0306: the backfill forgets a feed key with a change and no feed_state row
+6.4	0306: the backfill forgets an ingest key with a change and no feed_state row
+6.3	0306: the backfill recomputes no feed key
+6.4	0306: the backfill recomputes no ingest key
+6.7	0306: the feed recompute drops a key whose only fact is a change
+6.6	0306: the fold skips a finished pending feed run again
+6.3	0306: the fold skips a finished running or pending ingest run again
+6.7	0306: the ingest recompute drops a key whose only fact is a change
 0.4	0321 and settings.sql disagree on the digest's work_mem
-21.9	0322: a reader may run the maintenance
-22.0	0322: analyze_after_load analyses a table outside the loaded set
-21.8	0322: analyze_after_load analyses nothing
-43.0	0322: energy_page_keys vacuums on a share of the table again
-21.9	0322: the GTFS refresh leaks its hash multiplier
-22.2	0322: the GTFS refresh refreshes nothing
-35.3	0322: the GTFS refresh runs on the caller's work_mem
-22.1	0322: the GTFS refresh takes any view
-39.1	0322: the street refresh refreshes nothing
-22.1	0322: the street refresh takes any view
-22.0	0322: the untimed-trips build runs at the floor, not its whole budget
+22.6	0322: a reader may run the maintenance
+22.4	0322: analyze_after_load analyses a table outside the loaded set
+23.3	0322: analyze_after_load analyses nothing
+28.2	0322: energy_page_keys vacuums on a share of the table again
+22.7	0322: the GTFS refresh leaks its hash multiplier
+23.5	0322: the GTFS refresh refreshes nothing
+22.6	0322: the GTFS refresh runs on the caller's work_mem
+22.6	0322: the GTFS refresh takes any view
+23.3	0322: the street refresh refreshes nothing
+22.2	0322: the street refresh takes any view
+23.3	0322: the untimed-trips build runs at the floor, not its whole budget
 0.3	MCP's parallel worker is left out of its processes
 0.3	MCP's work_mem moves without its bound
 0.6	a failed partitions step counts as done
 0.6	a failed role step counts as done
-0.7	a file with another checksum counts as applied
-0.5	a gap is not pending
+0.6	a file with another checksum counts as applied
+0.6	a gap is not pending
 0.6	a mismatch does not block readiness
-0.7	ahead versions block readiness
+0.6	ahead versions block readiness
 0.6	an image without migrations is ready
 0.6	an unreadable ledger counts as ready
 0.4	cli: --days-back and --from are both taken
 0.4	cli: a roles sub-verb that is neither is taken
-0.4	cli: roles passwords without VF_DB_ROLE_DIR runs
-6.0	control: admit ignores the others' unmet floors
-5.9	control: admit ignores the spacing
-11.5	control: admit lets a burst past its maximum
-5.9	control: admit lets a caller past its cap
-5.9	control: admit lets the MCP role name a worker's share
-5.8	control: admit lets the key past its ceiling
-5.9	control: admit never sets the owed mark
-5.9	control: admit records the wrong outcome in its refusal row
-6.0	control: admit's owed mark is not cleared by its owner
-10.6	control: admit's person stamp never makes the background yield
-5.9	control: audit_change forgets the actor
-6.0	control: audit_change records unchanged fields
-5.9	control: audit_change takes a change without a reason
-9.0	control: bucket_width is the window, not a minute of it
-6.0	control: changes may be deleted
-5.9	control: changes_append_only lets the row through
-8.7	control: fit_shares gives no floor to a caller without one
-6.0	control: fit_shares keeps floors that no longer fit
-5.9	control: fit_shares lets a ceiling below its callers through
-5.9	control: hold holds a key without a hold
-5.9	control: hold shortens a hold in force
-8.8	control: hold takes any reason
-6.0	control: publish_terms does not fit the keys
-10.1	control: publish_terms makes no budget state
-5.9	control: publish_terms raises a lowered ceiling back
-5.9	control: publish_terms takes an empty declaration
-5.9	control: release hands back more than was admitted
-5.9	control: rollup_refresh counts a share refusal as a ceiling
-9.3	control: rollup_refresh deletes the hourly rollup at 89 days
-6.1	control: rollup_refresh keeps refusals past 14 days
-5.9	control: rollup_refresh keeps usage past 48 h
-5.9	control: set_budget does not fit the caps to a lowered ceiling
-5.8	control: set_budget keeps the floor of a door switched off
-5.9	control: set_budget takes a cap below the floor
-5.8	control: set_budget takes a ceiling above the licence
-5.9	control: set_budget takes a floor above the cap
-5.9	control: set_budget takes a fraction
-9.3	control: set_budget takes a spacing faster than the licence
-8.9	control: the audit trigger is skipped under replica
-5.9	control: the budget shape trigger watches another column
-10.5	control: the callers audit trigger is gone
-5.9	control: the shape takes a caller without a floor
-6.0	control: the shape takes a cap over the ceiling
-5.9	control: the shape takes a cap that eats the others' floors
-9.1	control: the shape takes floors over the ceiling
-5.9	control: the shares audit trigger misses an update
-10.8	control: the shares shape trigger misses an insert
-5.8	control: want stamps a key without spacing
+0.5	cli: roles passwords without VF_DB_ROLE_DIR runs
+6.4	control: admit ignores the others' unmet floors
+6.1	control: admit ignores the spacing
+6.1	control: admit lets a burst past its maximum
+6.1	control: admit lets a caller past its cap
+8.7	control: admit lets the MCP role name a worker's share
+6.1	control: admit lets the key past its ceiling
+8.8	control: admit never sets the owed mark
+6.6	control: admit records the wrong outcome in its refusal row
+6.1	control: admit's owed mark is not cleared by its owner
+6.5	control: admit's person stamp never makes the background yield
+6.5	control: audit_change forgets the actor
+6.1	control: audit_change records unchanged fields
+6.5	control: audit_change takes a change without a reason
+6.6	control: bucket_width is the window, not a minute of it
+8.4	control: changes may be deleted
+6.6	control: changes_append_only lets the row through
+6.4	control: fit_shares gives no floor to a caller without one
+6.6	control: fit_shares keeps floors that no longer fit
+6.2	control: fit_shares lets a ceiling below its callers through
+6.5	control: hold holds a key without a hold
+6.2	control: hold shortens a hold in force
+6.1	control: hold takes any reason
+6.6	control: publish_terms does not fit the keys
+6.5	control: publish_terms makes no budget state
+6.6	control: publish_terms raises a lowered ceiling back
+6.4	control: publish_terms takes an empty declaration
+6.0	control: release hands back more than was admitted
+6.1	control: rollup_refresh counts a share refusal as a ceiling
+6.0	control: rollup_refresh deletes the hourly rollup at 89 days
+6.5	control: rollup_refresh keeps refusals past 14 days
+6.2	control: rollup_refresh keeps usage past 48 h
+6.6	control: set_budget does not fit the caps to a lowered ceiling
+8.7	control: set_budget keeps the floor of a door switched off
+6.4	control: set_budget takes a cap below the floor
+6.1	control: set_budget takes a ceiling above the licence
+6.0	control: set_budget takes a floor above the cap
+6.2	control: set_budget takes a fraction
+6.4	control: set_budget takes a spacing faster than the licence
+6.4	control: the audit trigger is skipped under replica
+6.5	control: the budget shape trigger watches another column
+6.6	control: the callers audit trigger is gone
+6.1	control: the shape takes a caller without a floor
+6.4	control: the shape takes a cap over the ceiling
+8.7	control: the shape takes a cap that eats the others' floors
+6.6	control: the shape takes floors over the ceiling
+6.1	control: the shares audit trigger misses an update
+6.1	control: the shares shape trigger misses an insert
+6.1	control: want stamps a key without spacing
 0.4	coverage: a catalogue holding vf_test objects is gated
 0.4	coverage: a fixture file with no function is gated
-8.5	db: 0064 road_events_current shows a marked row
-5.9	db: 0109 sbahn is not told from rail
-5.9	db: 0109 the SIRI ET window is nine hours
-10.0	db: 0201 a second run-now may wait
-5.8	db: 0201 the four-times stretch is not bounded
-6.0	db: 0235 the IPv4 mask takes two groups
-5.9	db: 0263 ui.card_page_size takes 51
-5.8	db: 0285 a cap may take the other callers' floors
-8.9	db: 0285 owed_by without owed_at
-11.8	db: 0303 carries feed_runs.status without its skipped state
-14.5	db: 0304 ignores days_back
-5.7	db: 0304 makes the window one day shorter back
-11.6	db: 0304 takes a negative days_back
-5.9	db: 0305 keeps fuel_prices 14 days
-6.0	db: 0305 leaves los_ticks without its BRIN
-8.2	db: 0307 grants api_reader no contract view
-8.5	db: 0307 lets api_reader write the contract
-8.3	db: 0307 states contract 0.2
-14.3	db: 0307 takes an api_reader that is a member of another role
-8.4	db: 0308 accepts any key audience
-13.0	db: 0308 forgets the store's version 3
-12.6	db: 0308 leaves prune_audit open to PUBLIC
-8.0	db: 0308 lets api_access delete audit rows
+6.5	db: 0064 road_events_current shows a marked row
+6.5	db: 0109 sbahn is not told from rail
+6.5	db: 0109 the SIRI ET window is nine hours
+6.4	db: 0201 a second run-now may wait
+6.5	db: 0201 the four-times stretch is not bounded
+6.3	db: 0235 the IPv4 mask takes two groups
+6.4	db: 0263 ui.card_page_size takes 51
+6.2	db: 0285 a cap may take the other callers' floors
+6.5	db: 0285 owed_by without owed_at
+12.3	db: 0303 carries feed_runs.status without its skipped state
+9.0	db: 0304 ignores days_back
+6.1	db: 0304 makes the window one day shorter back
+18.1	db: 0304 takes a negative days_back
+6.6	db: 0305 keeps fuel_prices 14 days
+6.7	db: 0305 leaves los_ticks without its BRIN
+8.5	db: 0307 grants api_reader no contract view
+8.8	db: 0307 lets api_reader write the contract
+8.5	db: 0307 states contract 0.2
+9.8	db: 0307 takes an api_reader that is a member of another role
+8.3	db: 0308 accepts any key audience
+8.9	db: 0308 forgets the store's version 3
+8.5	db: 0308 leaves prune_audit open to PUBLIC
+8.2	db: 0308 lets api_access delete audit rows
 8.3	db: 0308 makes a new key own by default
-8.1	db: 0308 prunes audit rows younger than 30 days
-8.4	db: 0308 prunes usage younger than 30 days
-8.1	db: 0308 refuses the console sign-in audit action
-6.6	db: 0309 files the MTS-K purpose note as a condition
-6.3	db: 0309 narrows DELFI static to consumer answers
-6.5	db: 0309 narrows GeoNames to consumer answers
-9.3	db: 0311 shows BW messages after they stop being current
-6.4	db: 0312 calls a source stale after twice its cadence
-6.4	db: 0312 calls a source with no cadence stale after a day
-10.1	db: 0312 departure counts GTFS times from midnight, an hour off on a clock-change day
-6.3	db: 0312 departure counts GTFS times from noon
-6.4	db: 0312 departure keeps a cancelled trip running
-11.1	db: 0312 departure keeps a skipped stop running
-6.4	db: 0312 departure never reports a platform change
-6.6	db: 0312 departure reads Trip Updates while the feed is down
-6.4	db: 0312 departure reads past NO_DATA
-6.5	db: 0312 departure reads the earliest stop's update, not the latest earlier one
-6.5	db: 0312 departure shows a delay of days
-6.5	db: 0312 departure takes Trip Updates before SIRI ET
-9.7	db: 0312 departure takes a bridged call that names another end
-6.4	db: 0312 departure takes another line's call
-8.0	db: 0312 drifts a contract column's type
-6.5	db: 0312 drops a stop's own DHID as its lookup code
-6.3	db: 0312 drops the Autobahn payload a tick does not store
-6.4	db: 0312 files GeoNames under roads
-6.4	db: 0312 folds an umlaut to its bare letter
-6.5	db: 0312 gives Tankerkoenig fuel to every key
-6.4	db: 0312 junction Land reaches past 20 km
-6.7	db: 0312 junction Land reads a closed Gemeinde
-6.4	db: 0312 junction Land reads an unkeyed Gemeinde
-10.6	db: 0312 keeps Autobahn events that left the newest sweep
-6.4	db: 0312 keeps every licence class of a restricted source
-6.6	db: 0312 keeps the Autobahn API for own keys
-6.4	db: 0312 keeps the accents a German name does not carry
-6.4	db: 0312 keeps the spaces of a folded name
-6.6	db: 0312 leaves FaSta without its stop place
-11.4	db: 0312 leaves a junction's Land empty
-11.1	db: 0312 lets a confidential road event show
-6.4	db: 0312 lets a confidential road event's observation show
-6.5	db: 0312 lets a private charging site show
-9.9	db: 0312 lists a register row a feed owns as a second source
-6.4	db: 0312 lists a station's EVA numbers twice
-6.5	db: 0312 lists lorry parks and chargers as traffic events
-6.4	db: 0312 maps the CC BY-NC-SA fuel history
-12.9	db: 0312 moves an Autobahn sweep back on a late tick
-6.5	db: 0312 names no municipality for a stop no DB station lists
-6.4	db: 0312 names the source URL as a rule's legal basis
-6.4	db: 0312 offers no changed share-alike data
-6.5	db: 0312 publishes a road event we retracted
-10.9	db: 0312 reads a feed's register row by its key, not its licence id
-6.4	db: 0312 road length counts a break
-10.2	db: 0312 road line bridges a gap
-6.4	db: 0312 road line draws a lone point
-14.9	db: 0312 road line drops the cycles
-11.4	db: 0312 road line finds no spur
-6.5	db: 0312 road line keeps the chains in code order
-6.6	db: 0312 road line lays a spur among the road's pieces
-6.4	db: 0312 road line starts a chain at a point a link reaches
-6.5	db: 0312 road states put a spur last
-6.6	db: 0312 road states read an unnamed point
-9.6	db: 0312 road states repeat a Land
-6.4	db: 0312 scheduled_call counts GTFS times from midnight, an hour off on a clock-change day
-6.4	db: 0312 scheduled_call counts GTFS times from noon
-6.5	db: 0312 serves Toll Collect SID without its per-request terms gate
-6.5	db: 0312 serves a gazetteer junction as other
+8.5	db: 0308 prunes audit rows younger than 30 days
+8.8	db: 0308 prunes usage younger than 30 days
+8.8	db: 0308 refuses the console sign-in audit action
+6.8	db: 0309 files the MTS-K purpose note as a condition
+6.7	db: 0309 narrows DELFI static to consumer answers
+7.1	db: 0309 narrows GeoNames to consumer answers
+6.8	db: 0311 shows BW messages after they stop being current
+6.9	db: 0312 calls a source stale after twice its cadence
+7.1	db: 0312 calls a source with no cadence stale after a day
+6.7	db: 0312 departure counts GTFS times from midnight, an hour off on a clock-change day
+7.0	db: 0312 departure counts GTFS times from noon
+6.7	db: 0312 departure keeps a cancelled trip running
+6.7	db: 0312 departure keeps a skipped stop running
+6.7	db: 0312 departure never reports a platform change
+6.8	db: 0312 departure reads Trip Updates while the feed is down
+7.1	db: 0312 departure reads past NO_DATA
+6.6	db: 0312 departure reads the earliest stop's update, not the latest earlier one
+6.7	db: 0312 departure shows a delay of days
+7.1	db: 0312 departure takes Trip Updates before SIRI ET
+7.0	db: 0312 departure takes a bridged call that names another end
+8.5	db: 0312 departure takes another line's call
+9.4	db: 0312 drifts a contract column's type
+7.1	db: 0312 drops a stop's own DHID as its lookup code
+6.9	db: 0312 drops the Autobahn payload a tick does not store
+6.8	db: 0312 files GeoNames under roads
+6.7	db: 0312 folds an umlaut to its bare letter
+6.9	db: 0312 gives Tankerkoenig fuel to every key
+7.0	db: 0312 junction Land reaches past 20 km
+6.8	db: 0312 junction Land reads a closed Gemeinde
+6.6	db: 0312 junction Land reads an unkeyed Gemeinde
+6.8	db: 0312 keeps Autobahn events that left the newest sweep
+6.6	db: 0312 keeps every licence class of a restricted source
+7.2	db: 0312 keeps the Autobahn API for own keys
+6.8	db: 0312 keeps the accents a German name does not carry
+7.1	db: 0312 keeps the spaces of a folded name
+6.7	db: 0312 leaves FaSta without its stop place
+6.8	db: 0312 leaves a junction's Land empty
+6.8	db: 0312 lets a confidential road event show
+7.1	db: 0312 lets a confidential road event's observation show
+6.7	db: 0312 lets a private charging site show
+6.7	db: 0312 lists a register row a feed owns as a second source
+7.0	db: 0312 lists a station's EVA numbers twice
+6.7	db: 0312 lists lorry parks and chargers as traffic events
+6.9	db: 0312 maps the CC BY-NC-SA fuel history
+7.1	db: 0312 moves an Autobahn sweep back on a late tick
+6.9	db: 0312 names no municipality for a stop no DB station lists
+6.6	db: 0312 names the source URL as a rule's legal basis
+7.2	db: 0312 offers no changed share-alike data
+7.1	db: 0312 publishes a road event we retracted
+6.8	db: 0312 reads a feed's register row by its key, not its licence id
+6.9	db: 0312 road length counts a break
+7.3	db: 0312 road line bridges a gap
+7.1	db: 0312 road line draws a lone point
+7.1	db: 0312 road line drops the cycles
+6.8	db: 0312 road line finds no spur
+6.9	db: 0312 road line keeps the chains in code order
+6.8	db: 0312 road line lays a spur among the road's pieces
+6.6	db: 0312 road line starts a chain at a point a link reaches
+6.7	db: 0312 road states put a spur last
+6.5	db: 0312 road states read an unnamed point
+7.0	db: 0312 road states repeat a Land
+7.1	db: 0312 scheduled_call counts GTFS times from midnight, an hour off on a clock-change day
+6.8	db: 0312 scheduled_call counts GTFS times from noon
+7.1	db: 0312 serves Toll Collect SID without its per-request terms gate
+6.7	db: 0312 serves a gazetteer junction as other
 6.5	db: 0312 severity calls a ten-minute jam short
-10.3	db: 0312 severity grades a hazard other
-11.4	db: 0312 severity grades roadworks as a short jam
-6.4	db: 0312 severity ignores an item the provider marks blocked
-6.5	db: 0312 severity leaves a German closure ungraded
-11.1	db: 0312 takes a timetable-only row before the DB station
-6.4	db: 0312 the accessibility sources answer for transit
-6.5	db: 0312 traffic_event calls a lane deviation a closure
-6.3	db: 0312 traffic_event calls any traffic type a jam
-11.4	db: 0316 draws every road's shape for any read
-6.5	db: 0316 finds no KVB Haltestelle without a parent stop
-6.4	db: 0316 lets PUBLIC run the stop place lookup
-6.5	db: 0316 reads a longer number under the DHID as its stop
-6.5	db: 0316 reads an OpenStation DHID as written
-6.5	db: 0316 reads an id past the DHID's colon as its stop
-11.4	db: 0316 reads every stop for a stop place
-6.3	db: 0316 road credits no LCL
-6.8	db: 0317 indexes a facility's planar point, not its geography
-6.7	db: 0317 indexes the deleted events too
-6.5	db: 0317 indexes the open events by source, not feed
-10.1	db: 0317 keeps an INVALID leftover
-7.5	db: 0318 builds each partition's index by observed_at
-7.6	db: 0318 indexes vrn's parent by observed_at, not feed_ts
-11.3	db: 0318 keeps an INVALID leftover
-7.6	db: 0318 never attaches the partitions' indexes
-14.9	db: 0319 builds a second index where a matching one waits to be adopted
-14.5	db: 0319 indexes the geography, not the geometry the box reads test
-22.5	db: 0319 keeps an INVALID leftover
-14.8	db: 0319 never attaches the partitions' indexes
-14.5	db: 0320 leaves road_events.payload on pglz
-6.0	db: a clash numbers with an underscore
-11.6	db: a dry run applies the role settings
-12.1	db: a migration drops a foreign key
-5.9	db: a migration drops a tick's BRIN
-11.9	db: a migration drops a unique constraint
-6.4	db: a migration drops an own-update policy
-12.4	db: a migration gives a tick a default partition
-6.3	db: a migration grants a forbidden relation
-10.8	db: a migration lifts a NOT NULL
-14.5	db: a migration loosens a check
-6.5	db: a migration opens an own-insert policy
-12.0	db: a partition index is not resolved to its key
-5.8	db: a plant keeps the other checks
-22.6	db: a plant keeps the triggers enabled ALWAYS
-14.3	db: a plant the check allows
-21.7	db: a self-referencing key plants no row of its own
-10.1	db: an expression column is named expr
-20.8	db: constraints.tsv loses a check the catalogue holds
-6.2	db: expected.tsv loses a grant the catalogue holds
-10.0	db: expected.tsv names a privilege nobody holds
-21.5	db: migrate applies no database-wide setting
-11.9	db: migrate does not apply the role settings
-0.7	db: migrate takes a file that quit psql as applied
-6.0	db: partitions/expected.tsv loses a partitioned table
-5.8	db: partitions/expected.tsv moves a no-archive tick to the archive
-6.5	db: the ACL read leaves out column grants
-5.9	db: the archive ledger takes a day twice
-6.1	db: the consumer list claims a write the role has not
-22.3	db: the key test inserts its row once
+6.7	db: 0312 severity grades a hazard other
+7.1	db: 0312 severity grades roadworks as a short jam
+6.9	db: 0312 severity ignores an item the provider marks blocked
+6.9	db: 0312 severity leaves a German closure ungraded
+7.1	db: 0312 takes a timetable-only row before the DB station
+6.6	db: 0312 the accessibility sources answer for transit
+7.2	db: 0312 traffic_event calls a lane deviation a closure
+6.6	db: 0312 traffic_event calls any traffic type a jam
+7.0	db: 0316 draws every road's shape for any read
+6.9	db: 0316 finds no KVB Haltestelle without a parent stop
+6.7	db: 0316 lets PUBLIC run the stop place lookup
+7.1	db: 0316 reads a longer number under the DHID as its stop
+6.6	db: 0316 reads an OpenStation DHID as written
+6.9	db: 0316 reads an id past the DHID's colon as its stop
+6.9	db: 0316 reads every stop for a stop place
+7.0	db: 0316 road credits no LCL
+7.4	db: 0317 indexes a facility's planar point, not its geography
+9.0	db: 0317 indexes the deleted events too
+9.3	db: 0317 indexes the open events by source, not feed
+8.8	db: 0317 keeps an INVALID leftover
+8.1	db: 0318 builds each partition's index by observed_at
+7.7	db: 0318 indexes vrn's parent by observed_at, not feed_ts
+8.0	db: 0318 keeps an INVALID leftover
+8.3	db: 0318 never attaches the partitions' indexes
+15.3	db: 0319 builds a second index where a matching one waits to be adopted
+16.6	db: 0319 indexes the geography, not the geometry the box reads test
+15.3	db: 0319 keeps an INVALID leftover
+19.7	db: 0319 never attaches the partitions' indexes
+15.5	db: 0320 leaves road_events.payload on pglz
+6.8	db: 0326 a feed's refresh keeps the pairs that went
+6.3	db: 0326 a register refresh deletes the other register sites' pairs
+8.8	db: 0326 pairs a closed twin
+6.3	db: 0326 pairs by street alone with an empty key
+6.7	db: 0326 pairs sites 160 m apart
+6.1	db: 0326 refreshes without the lock
+6.3	db: 0326 rewrites every pair on a refresh
+6.1	db: a clash numbers with an underscore
+12.8	db: a dry run applies the role settings
+12.4	db: a migration drops a foreign key
+6.2	db: a migration drops a tick's BRIN
+12.5	db: a migration drops a unique constraint
+6.7	db: a migration drops an own-update policy
+6.6	db: a migration gives a tick a default partition
+6.9	db: a migration grants a forbidden relation
+7.2	db: a migration lifts a NOT NULL
+14.6	db: a migration loosens a check
+6.9	db: a migration opens an own-insert policy
+13.0	db: a partition index is not resolved to its key
+6.4	db: a plant keeps the other checks
+14.9	db: a plant keeps the triggers enabled ALWAYS
+15.0	db: a plant the check allows
+12.7	db: a self-referencing key plants no row of its own
+6.7	db: an expression column is named expr
+14.3	db: constraints.tsv loses a check the catalogue holds
+6.9	db: expected.tsv loses a grant the catalogue holds
+7.0	db: expected.tsv names a privilege nobody holds
+12.4	db: migrate applies no database-wide setting
+12.2	db: migrate does not apply the role settings
+0.8	db: migrate takes a file that quit psql as applied
+6.5	db: partitions/expected.tsv loses a partitioned table
+6.4	db: partitions/expected.tsv moves a no-archive tick to the archive
+6.8	db: the ACL read leaves out column grants
+6.1	db: the archive ledger takes a day twice
+6.9	db: the consumer list claims a write the role has not
+12.4	db: the key test inserts its row once
 12.4	db: the key test keeps the foreign keys in replica mode
-14.1	db: the lifted control keeps the check
-6.0	db: the name cut shortens the partition's part first
-11.9	db: the null test keeps no NOT NULL
-6.2	derived: a closed zone keeps its overlaps
-6.3	derived: a delete recomputes nothing
-10.3	derived: a road zone gets overlaps
-6.3	derived: a run stated later than its tick
-6.3	derived: a second insert keeps the stated time
+14.4	db: the lifted control keeps the check
+6.4	db: the name cut shortens the partition's part first
+12.4	db: the null test keeps no NOT NULL
+6.0	derived: a closed zone keeps its overlaps
+6.0	derived: a delete recomputes nothing
+6.2	derived: a road zone gets overlaps
+6.1	derived: a run stated later than its tick
+5.9	derived: a second insert keeps the stated time
 5.9	derived: a second insert replaces the ticks
-5.8	derived: a snapshot run stated by last_updated
-6.2	derived: an insert refreshes nothing
-5.8	derived: an unchanged update refreshes
-5.9	derived: an update forgets the new run
-10.4	derived: an update recomputes nothing
-5.9	derived: gaps across products
-8.9	derived: gaps of every station
-6.0	derived: gaps outside the days
-5.9	derived: only a move refreshes
-9.9	derived: overlaps along a touching edge
-5.9	derived: overlaps one way
-6.2	derived: overlaps with a closed zone
-5.8	derived: overlaps with a road
-5.9	derived: overlaps within one feed
-5.8	derived: the larger area
-9.0	derived: the note counts the confidential
-5.8	derived: the note misses a padded delta
-5.8	derived: the recompute counts the confidential
-11.4	derived: the run ledger is never pruned
-5.8	derived: warm radius not clamped up
-9.8	derived: warm without a population floor
-5.8	derived: warm without the motorway
-8.5	fixtures: a lift runs in autocommit
-8.4	fixtures: a lift runs unarmed
-8.3	fixtures: drop_check drops a key too
-14.6	fixtures: the file installs on a database not named test_
-13.4	fixtures: the install runs without VF_TEST_FIXTURES=1
-8.5	fixtures: the install takes a database not named test_
-10.3	fuel: outliers compare across products
-10.0	fuel: outliers have no history before the window
-6.1	fuel: outliers miss the jump
-5.7	fuel: outliers miss the upper band
-5.8	fuel: outliers oldest first
-5.8	fuel: outliers outside the window
+6.3	derived: a snapshot run stated by last_updated
+6.3	derived: an insert refreshes nothing
+6.0	derived: an unchanged update refreshes
+6.0	derived: an update forgets the new run
+6.2	derived: an update recomputes nothing
+6.2	derived: gaps across products
+6.2	derived: gaps of every station
+6.2	derived: gaps outside the days
+6.4	derived: only a move refreshes
+6.0	derived: overlaps along a touching edge
+6.1	derived: overlaps one way
+6.3	derived: overlaps with a closed zone
+6.4	derived: overlaps with a road
+6.3	derived: overlaps within one feed
+6.0	derived: the larger area
+6.0	derived: the note counts the confidential
+6.2	derived: the note misses a padded delta
+5.9	derived: the recompute counts the confidential
+6.2	derived: the run ledger is never pruned
+6.4	derived: warm radius not clamped up
+6.1	derived: warm without a population floor
+6.1	derived: warm without the motorway
+8.9	fixtures: a lift runs in autocommit
+9.1	fixtures: a lift runs unarmed
+9.2	fixtures: drop_check drops a key too
+9.3	fixtures: the file installs on a database not named test_
+8.5	fixtures: the install runs without VF_TEST_FIXTURES=1
+9.3	fixtures: the install takes a database not named test_
+6.7	fuel: outliers compare across products
+6.6	fuel: outliers have no history before the window
+6.6	fuel: outliers miss the jump
+6.7	fuel: outliers miss the upper band
+6.5	fuel: outliers oldest first
+6.2	fuel: outliers outside the window
 6.0	fuel: relabel ignores the towns
-5.8	fuel: relabel rewrites every station
-6.1	fuel: the Land is the farthest city
-10.7	fuel: the Land reads a closed place
-5.8	fuel: the Land reads a district
-5.8	fuel: the Land reads another source
-5.8	fuel: the towns are six
-5.8	fuel: the towns farthest first
-9.4	fuel: the towns reach 30 km
-6.2	fuel: the towns read a closed place
-5.8	fuel: the trigger misses a moved station
-9.0	fuel: the trigger sets no towns
+8.1	fuel: relabel rewrites every station
+6.0	fuel: the Land is the farthest city
+6.6	fuel: the Land reads a closed place
+6.4	fuel: the Land reads a district
+5.9	fuel: the Land reads another source
+6.3	fuel: the towns are six
+6.1	fuel: the towns farthest first
+6.0	fuel: the towns reach 30 km
+8.3	fuel: the towns read a closed place
+6.2	fuel: the trigger misses a moved station
+6.0	fuel: the trigger sets no towns
 0.4	gate: a kind read as none passes
 0.4	gate: a malformed row is skipped
 0.4	gate: a row for no object is not stale
 0.4	gate: a row naming no test passes
 0.4	gate: a test listing with no title passes
 0.4	gate: a title built at run time is listed
-0.5	gate: an empty manifest passes
+0.4	gate: an empty manifest passes
 0.4	gate: an object without a row is not missing
 0.4	gate: an unreadable test tree is an error, not a refusal
 0.4	gate: the gap may keep a covered row
 0.4	gate: the gap may keep a vanished row
 0.4	gate: the ok verdict ignores unknown tests
-6.1	ledgers: a budget pause resumes at the refusal, not after its wait
-6.1	ledgers: a degraded feed run with no count is a success
-6.0	ledgers: a delete does not bump the version
-6.0	ledgers: a delete keeps the forgotten run's extent
-6.1	ledgers: a delete never recomputes
-9.1	ledgers: a feed change ignores the closed count
-5.9	ledgers: a feed refusal counts as an attempt
-6.2	ledgers: a feed update ignores a new budget hit
-6.1	ledgers: a hold comes before the owner
-13.6	ledgers: a hold's pause starts at its end
-6.0	ledgers: a pause restarts at a refusal before the attempt
+6.3	ledgers: a budget pause resumes at the refusal, not after its wait
+6.6	ledgers: a degraded feed run with no count is a success
+6.5	ledgers: a delete does not bump the version
+6.7	ledgers: a delete keeps the forgotten run's extent
+6.3	ledgers: a delete never recomputes
+6.2	ledgers: a feed change ignores the closed count
+6.3	ledgers: a feed refusal counts as an attempt
+6.4	ledgers: a feed update ignores a new budget hit
+6.8	ledgers: a hold comes before the owner
+6.1	ledgers: a hold's pause starts at its end
+6.1	ledgers: a pause restarts at a refusal before the attempt
 6.1	ledgers: a paused feed is stale
-6.0	ledgers: a schedule pause is not read
-6.0	ledgers: a truncate forgets both ledgers
-6.1	ledgers: an ended hold still pauses
-6.1	ledgers: an error feed run is no attempt
-6.0	ledgers: an ingest feed_state trigger is skipped under replica
-11.8	ledgers: an ingest update never recomputes
-6.0	ledgers: an interrupted ingest run is a success
-6.1	ledgers: an owner pause in runtime_config is not read
-14.0	ledgers: an owner pause set to false still pauses
-12.2	ledgers: feed_checks lists closed feeds
-6.0	ledgers: feed_checks reads the attempt, not the success
+6.2	ledgers: a schedule pause is not read
+6.5	ledgers: a truncate forgets both ledgers
+6.5	ledgers: an ended hold still pauses
+6.7	ledgers: an error feed run is no attempt
+6.5	ledgers: an ingest feed_state trigger is skipped under replica
+6.6	ledgers: an ingest update never recomputes
+6.5	ledgers: an interrupted ingest run is a success
+8.3	ledgers: an owner pause in runtime_config is not read
+6.5	ledgers: an owner pause set to false still pauses
+6.6	ledgers: feed_checks lists closed feeds
+6.3	ledgers: feed_checks reads the attempt, not the success
 6.3	ledgers: project_run maps partial to error
-6.0	ledgers: project_run projects twice
-6.0	ledgers: project_run takes a feed it did not register
-11.0	ledgers: project_run takes a running run
+6.3	ledgers: project_run projects twice
+6.3	ledgers: project_run takes a feed it did not register
+6.9	ledgers: project_run takes a running run
 6.2	ledgers: project_run takes another source's run
-13.4	ledgers: project_run's changed count drops the updates
-6.4	ledgers: register_feed leaves a closed feed closed
-6.0	ledgers: register_feed takes a key that is no source
-6.0	ledgers: register_feed takes another publisher's key
-5.9	ledgers: registered_sources calls a disabled source enabled
-6.0	ledgers: registered_sources takes another publisher's label
-15.9	ledgers: source bounds are not checked on update
-6.0	ledgers: source bounds ignore the catalogue's floor
-6.0	ledgers: source bounds ignore the schedule's floor
-13.9	ledgers: source bounds read a closed catalogue row
-6.0	ledgers: source bounds stretch five times
-6.2	ledgers: source bounds take an unknown source
-6.2	ledgers: stale after two cadences
-12.1	ledgers: taken_feed_keys names the ingestor's own
-6.0	ledgers: the bump update ignores the count
-6.0	ledgers: the extent takes the newest count, not the largest
-11.2	ledgers: the extent window is an hour
-6.1	ledgers: the fold takes an older attempt
-6.2	ledgers: the fold takes an older refusal
-10.3	ledgers: the fold's change moves back
-6.0	ledgers: the ingest budget is the whole key
-11.1	ledgers: the ingest bump on insert is gone
-6.2	ledgers: the ingest bump on update is gone
-6.3	ledgers: the observed time moves back
-6.1	ledgers: the pause starts at the last refusal, not the first after the attempt
-5.9	ledgers: the recompute's feed refusal is the oldest
-11.6	ledgers: the recompute's feed success takes a degraded run with no count
-6.0	ledgers: the recompute's ingest change ignores rows
-6.0	ledgers: the version bumps on unchanged
+6.6	ledgers: project_run's changed count drops the updates
+6.6	ledgers: register_feed leaves a closed feed closed
+6.3	ledgers: register_feed takes a key that is no source
+8.4	ledgers: register_feed takes another publisher's key
+8.8	ledgers: registered_sources calls a disabled source enabled
+6.8	ledgers: registered_sources takes another publisher's label
+6.3	ledgers: source bounds are not checked on update
+6.4	ledgers: source bounds ignore the catalogue's floor
+6.5	ledgers: source bounds ignore the schedule's floor
+6.8	ledgers: source bounds read a closed catalogue row
+6.2	ledgers: source bounds stretch five times
+6.3	ledgers: source bounds take an unknown source
+6.6	ledgers: stale after two cadences
+6.2	ledgers: taken_feed_keys names the ingestor's own
+6.1	ledgers: the bump update ignores the count
+6.4	ledgers: the extent takes the newest count, not the largest
+6.7	ledgers: the extent window is an hour
+6.2	ledgers: the fold takes an older attempt
+6.7	ledgers: the fold takes an older refusal
+6.5	ledgers: the fold's change moves back
+6.5	ledgers: the ingest budget is the whole key
+6.3	ledgers: the ingest bump on insert is gone
+6.7	ledgers: the ingest bump on update is gone
+6.8	ledgers: the observed time moves back
+6.4	ledgers: the pause starts at the last refusal, not the first after the attempt
+6.2	ledgers: the recompute's feed refusal is the oldest
+6.4	ledgers: the recompute's feed success takes a degraded run with no count
+6.3	ledgers: the recompute's ingest change ignores rows
+6.6	ledgers: the version bumps on unchanged
 0.5	lint: rule 6 judges files before 0294
 0.5	lint: rule 6 misses a create or replace view
-0.6	lint: rule 6 misses a create trigger
-0.5	lint: rule 6 misses a drop trigger
+0.5	lint: rule 6 misses a create trigger
+0.6	lint: rule 6 misses a drop trigger
 0.5	lint: rule 6 misses a dynamic alter
-0.6	lint: rule 6 misses a lock table
+0.5	lint: rule 6 misses a lock table
 0.5	lint: rule 6 misses a plain drop index
 0.5	lint: rule 6 misses a plain reindex
 0.5	lint: rule 6 misses a truncate
 0.5	lint: rule 6 never fires
-0.6	lint: rule 6 reads a function body as applied
-0.5	lint: rule 6 reads into string literals
+0.5	lint: rule 6 reads a function body as applied
+0.6	lint: rule 6 reads into string literals
 0.5	lint: rule 6 takes a lock_timeout set after the statement
 0.5	lint: rule 6 takes lock and truncate anywhere in the text
-9.3	loads: a kept week notes no try
-5.9	loads: a read week keeps its old parts
-5.9	loads: a refold adds
-5.9	loads: a week needs no state
-6.0	loads: an unread week overwrites a read one
-5.9	loads: an unread week stores its parts
-5.9	loads: growth calls an unlabelled week read
+6.2	loads: a kept week notes no try
+6.1	loads: a read week keeps its old parts
+8.0	loads: a refold adds
+6.7	loads: a week needs no state
+6.1	loads: an unread week overwrites a read one
+6.6	loads: an unread week stores its parts
+6.1	loads: growth calls an unlabelled week read
 6.1	loads: growth calls every week complete
-5.9	loads: growth counts a client with no session
-5.9	loads: growth counts every class's calls
-5.9	loads: growth counts no week
-6.2	loads: growth counts the caller's own errors
-5.8	loads: growth counts the scanners' sessions
-5.9	loads: growth keeps 105 weeks
-6.0	loads: growth keeps the Search Console weeks
-9.8	loads: growth misses the server errors
-8.2	loads: growth reads MCP in a week the hours do not cover
-8.8	loads: growth reads MCP past the week
-6.2	loads: growth reads the MCP day rows
+8.1	loads: growth counts a client with no session
+6.2	loads: growth counts every class's calls
+6.1	loads: growth counts no week
+6.1	loads: growth counts the caller's own errors
+6.6	loads: growth counts the scanners' sessions
+6.7	loads: growth keeps 105 weeks
+8.3	loads: growth keeps the Search Console weeks
+6.2	loads: growth misses the server errors
+6.1	loads: growth reads MCP in a week the hours do not cover
+6.2	loads: growth reads MCP past the week
+6.5	loads: growth reads the MCP day rows
 6.1	loads: growth reads the route day before the week
-6.0	loads: growth reads the site day before the week
-5.9	loads: growth skips this week
-6.0	loads: growth takes more than 105 weeks
-9.5	loads: growth takes no week
-6.1	loads: growth's automation includes the crawlers
-10.1	loads: growth's clicks are the impressions
-5.9	loads: growth's connect is any route
-10.3	loads: growth's home is any two-letter prefix
-6.0	loads: growth's own calls are the real ones
-5.9	loads: growth's people include our own views
-9.1	loads: growth's refresh keeps the old MCP state
-6.2	loads: growth's refresh keeps the old site state
-5.9	loads: growth's week starts on Sunday
-5.8	loads: refresh counts no held row
-6.0	loads: refresh counts no partition dropped
-5.9	loads: refresh counts no partition made
-6.1	loads: refresh counts the ingest buckets only
+6.4	loads: growth reads the site day before the week
+6.5	loads: growth skips this week
+6.5	loads: growth takes more than 105 weeks
+6.5	loads: growth takes no week
+6.2	loads: growth's automation includes the crawlers
+6.5	loads: growth's clicks are the impressions
+6.2	loads: growth's connect is any route
+6.2	loads: growth's home is any two-letter prefix
+6.1	loads: growth's own calls are the real ones
+6.2	loads: growth's people include our own views
+6.6	loads: growth's refresh keeps the old MCP state
+6.1	loads: growth's refresh keeps the old site state
+6.6	loads: growth's week starts on Sunday
+6.1	loads: refresh counts no held row
+6.7	loads: refresh counts no partition dropped
+6.4	loads: refresh counts no partition made
+6.0	loads: refresh counts the ingest buckets only
 6.0	loads: refresh counts unchanged as ok
-8.7	loads: refresh does not bin the window's start
-6.0	loads: refresh folds no usage
-6.0	loads: refresh keeps a feed key of any shape
-6.0	loads: refresh keeps the 90-day-old partitions
-8.9	loads: refresh keeps the old days
-5.9	loads: refresh keeps the old held rows
-5.9	loads: refresh keeps the old usage
-5.9	loads: refresh reads the feed runs before the window
-6.1	loads: refresh reads the ingest runs after the window
-6.1	loads: refresh takes an empty window
+6.1	loads: refresh does not bin the window's start
+6.1	loads: refresh folds no usage
+6.5	loads: refresh keeps a feed key of any shape
+8.2	loads: refresh keeps the 90-day-old partitions
+6.2	loads: refresh keeps the old days
+6.2	loads: refresh keeps the old held rows
+6.0	loads: refresh keeps the old usage
+6.6	loads: refresh reads the feed runs before the window
+6.6	loads: refresh reads the ingest runs after the window
+6.5	loads: refresh takes an empty window
 6.2	loads: refresh takes nine days
-6.0	loads: refresh's day keeps its old errors
-10.0	loads: refresh's day quiet is its runs
-5.8	loads: refresh's day success is its first
-10.4	loads: refresh's feed bucket keeps its old errors
-8.6	loads: refresh's feed success misses degraded
-9.8	loads: refresh's held rows are yesterday's
-8.9	loads: refresh's ingest duration count has no fallback
-6.0	loads: refresh's ingest duration has no fallback
-6.1	loads: refresh's ingest quiet counts the running
-6.0	loads: refresh's ingest sees no rows
-6.0	loads: refresh's ingest success misses degraded
-5.9	loads: refresh's last status is the oldest
-6.0	loads: refresh's quiet misses a held run
-5.9	loads: the fold counts the caller's own errors
-5.9	loads: the fold keeps any tool name
-10.9	loads: the fold misses the server errors
-5.9	loads: the fold reads every rpc
-9.6	loads: the fold reads the day after
-6.1	loads: the fold reads the day before
-5.9	loads: the fold reads the day rows
-5.9	loads: the fold takes an inverted range
-6.2	loads: the fold takes no range
-10.1	loads: the fold's days are UTC
-6.2	loads: the fold's errors go below zero
-6.0	merged: route_recommendations: a closed row counts
-11.4	merged: route_recommendations: an unknown source wins
-5.9	merged: route_recommendations: the emptier wins
-6.0	merged: route_recommendations: the last id wins
-6.0	merged: route_recommendations: the least trusted wins
-10.9	merged: route_recommendations: the match key is ignored
-5.9	merged: route_recommendations: the oldest wins
-6.0	merged: speed_cameras: a closed row counts
+6.2	loads: refresh's day keeps its old errors
+6.3	loads: refresh's day quiet is its runs
+6.5	loads: refresh's day success is its first
+6.1	loads: refresh's feed bucket keeps its old errors
+6.1	loads: refresh's feed success misses degraded
+8.0	loads: refresh's held rows are yesterday's
+6.2	loads: refresh's ingest duration count has no fallback
+6.6	loads: refresh's ingest duration has no fallback
+6.5	loads: refresh's ingest quiet counts the running
+6.1	loads: refresh's ingest sees no rows
+6.1	loads: refresh's ingest success misses degraded
+6.6	loads: refresh's last status is the oldest
+6.5	loads: refresh's quiet misses a held run
+6.1	loads: the fold counts the caller's own errors
+6.5	loads: the fold keeps any tool name
+6.1	loads: the fold misses the server errors
+6.2	loads: the fold reads every rpc
+6.2	loads: the fold reads the day after
+6.5	loads: the fold reads the day before
+6.3	loads: the fold reads the day rows
+6.6	loads: the fold takes an inverted range
+6.6	loads: the fold takes no range
+6.1	loads: the fold's days are UTC
+6.3	loads: the fold's errors go below zero
+6.4	merged: route_recommendations: a closed row counts
+6.5	merged: route_recommendations: an unknown source wins
+6.2	merged: route_recommendations: the emptier wins
+6.5	merged: route_recommendations: the last id wins
+6.2	merged: route_recommendations: the least trusted wins
+6.1	merged: route_recommendations: the match key is ignored
+6.4	merged: route_recommendations: the oldest wins
+6.5	merged: speed_cameras: a closed row counts
 6.0	merged: speed_cameras: an unknown source wins
-5.8	merged: speed_cameras: the last id wins
-5.9	merged: speed_cameras: the least trusted wins
-6.0	merged: speed_cameras: the match key is ignored
-10.9	merged: speed_cameras: the oldest wins
-13.0	merged: transit_agencies_odbl: a closed row counts
-5.9	merged: transit_agencies_odbl: an unknown source wins
-5.9	merged: transit_agencies_odbl: the last id wins
-10.8	merged: transit_agencies_odbl: the least trusted wins
-5.9	merged: transit_agencies_odbl: the match key is ignored
-5.9	merged: transit_agencies_odbl: the oldest wins
-5.9	merged: transit_routes_odbl: a closed row counts
-6.0	merged: transit_routes_odbl: an unknown source wins
-5.9	merged: transit_routes_odbl: the last id wins
-6.0	merged: transit_routes_odbl: the least trusted wins
-6.0	merged: transit_routes_odbl: the match key is ignored
-10.8	merged: transit_routes_odbl: the oldest wins
-11.2	merged: transit_service_dates_odbl: a closed row counts
-5.9	merged: transit_service_dates_odbl: an unknown source wins
-5.9	merged: transit_service_dates_odbl: the last id wins
-9.6	merged: transit_service_dates_odbl: the least trusted wins
-5.9	merged: transit_service_dates_odbl: the match key is ignored
-6.1	merged: transit_service_dates_odbl: the oldest wins
-6.0	merged: transit_stop_times_odbl: a closed row counts
-5.9	merged: transit_stop_times_odbl: an unknown source wins
-5.9	merged: transit_stop_times_odbl: the last id wins
-5.9	merged: transit_stop_times_odbl: the least trusted wins
-6.0	merged: transit_stop_times_odbl: the match key is ignored
-9.7	merged: transit_stop_times_odbl: the oldest wins
-14.3	merged: transit_stops_odbl: a closed row counts
-5.9	merged: transit_stops_odbl: an unknown source wins
-6.0	merged: transit_stops_odbl: the last id wins
-12.0	merged: transit_stops_odbl: the least trusted wins
-6.0	merged: transit_stops_odbl: the match key is ignored
-5.9	merged: transit_stops_odbl: the oldest wins
-6.0	merged: transit_trip_updates_odbl: a closed row counts
-6.0	merged: transit_trip_updates_odbl: an unknown source wins
-6.0	merged: transit_trip_updates_odbl: the last id wins
-5.9	merged: transit_trip_updates_odbl: the least trusted wins
-6.0	merged: transit_trip_updates_odbl: the match key is ignored
-12.0	merged: transit_trip_updates_odbl: the oldest wins
-17.2	merged: transit_trips_odbl: a closed row counts
-5.9	merged: transit_trips_odbl: an unknown source wins
-6.0	merged: transit_trips_odbl: the last id wins
-16.7	merged: transit_trips_odbl: the least trusted wins
-5.9	merged: transit_trips_odbl: the match key is ignored
-5.9	merged: transit_trips_odbl: the oldest wins
+8.7	merged: speed_cameras: the last id wins
+6.2	merged: speed_cameras: the least trusted wins
+6.2	merged: speed_cameras: the match key is ignored
+6.5	merged: speed_cameras: the oldest wins
+6.2	merged: transit_agencies_odbl: a closed row counts
+6.1	merged: transit_agencies_odbl: an unknown source wins
+6.6	merged: transit_agencies_odbl: the last id wins
+6.1	merged: transit_agencies_odbl: the least trusted wins
+6.4	merged: transit_agencies_odbl: the match key is ignored
+8.6	merged: transit_agencies_odbl: the oldest wins
+6.1	merged: transit_routes_odbl: a closed row counts
+6.4	merged: transit_routes_odbl: an unknown source wins
+6.3	merged: transit_routes_odbl: the last id wins
+6.4	merged: transit_routes_odbl: the least trusted wins
+6.1	merged: transit_routes_odbl: the match key is ignored
+6.1	merged: transit_routes_odbl: the oldest wins
+6.2	merged: transit_service_dates_odbl: a closed row counts
+6.5	merged: transit_service_dates_odbl: an unknown source wins
+6.6	merged: transit_service_dates_odbl: the last id wins
+6.2	merged: transit_service_dates_odbl: the least trusted wins
+6.5	merged: transit_service_dates_odbl: the match key is ignored
+6.3	merged: transit_service_dates_odbl: the oldest wins
+6.5	merged: transit_stop_times_odbl: a closed row counts
+6.2	merged: transit_stop_times_odbl: an unknown source wins
+6.2	merged: transit_stop_times_odbl: the last id wins
+6.1	merged: transit_stop_times_odbl: the least trusted wins
+6.6	merged: transit_stop_times_odbl: the match key is ignored
+6.6	merged: transit_stop_times_odbl: the oldest wins
+6.1	merged: transit_stops_odbl: a closed row counts
+6.0	merged: transit_stops_odbl: an unknown source wins
+6.5	merged: transit_stops_odbl: the last id wins
+6.1	merged: transit_stops_odbl: the least trusted wins
+6.2	merged: transit_stops_odbl: the match key is ignored
+8.2	merged: transit_stops_odbl: the oldest wins
+6.2	merged: transit_trip_updates_odbl: a closed row counts
+6.2	merged: transit_trip_updates_odbl: an unknown source wins
+6.2	merged: transit_trip_updates_odbl: the last id wins
+6.7	merged: transit_trip_updates_odbl: the least trusted wins
+8.2	merged: transit_trip_updates_odbl: the match key is ignored
+6.6	merged: transit_trip_updates_odbl: the oldest wins
+6.2	merged: transit_trips_odbl: a closed row counts
+6.4	merged: transit_trips_odbl: an unknown source wins
+6.6	merged: transit_trips_odbl: the last id wins
+6.6	merged: transit_trips_odbl: the least trusted wins
+6.1	merged: transit_trips_odbl: the match key is ignored
+6.3	merged: transit_trips_odbl: the oldest wins
 0.4	migrate: a file is not read back from the ledger
 0.4	migrate: a read-back counts a missing version as present
-5.9	ops: a place slug may be freed
-5.9	ops: a place slug may be re-pointed
-6.0	ops: a place slug may be renamed
-5.8	ops: a refused restart counts
-8.7	ops: a restart limits every worker
-6.0	ops: a restart within four minutes
-5.9	ops: a run-now ignores the licence floor
-5.9	ops: a run-now of an unknown source goes
-6.0	ops: a run-now reads a closed catalogue row
-11.4	ops: a station slug may be freed
-5.9	ops: a station slug may be re-pointed
-5.9	ops: a stopped watch still counts
-9.2	ops: autosummarize is set twice
-3.8	ops: autosummarize reaches a btree
-5.9	ops: departs_at counts from midnight local
-5.9	ops: eleven watches a session
-5.9	ops: forget_ips clears the newer addresses too
-5.9	ops: forget_ips records a run on every call
-5.9	ops: forget_ips records no run when it cleared one
-5.8	ops: ops_audit clears an address younger than twelve months
-6.0	ops: ops_audit lets an address be rewritten
-5.9	ops: ops_audit lets another column change with the address
-9.7	ops: ops_audit may be deleted
-8.6	ops: passkeys hold eleven
-8.5	ops: the English twin ignores the cell
-6.0	ops: the English twin ignores the event
-5.9	ops: the English twin ignores the sending time
-5.9	ops: the English twin of a deleted warning
-6.2	ops: the mask misses IPv6
-5.8	ops: the mask takes a five-digit hex group for an address
-5.8	ops: the mask takes a six-digit hex run for an address
-13.9	ops: the mask takes a version for an address
-6.0	ops: the page key skips a byte
-5.8	ops: the sign counter may go back
-5.8	ops: the traffic class calls a stateless client real
-8.7	ops: the traffic class misses a probe
-5.8	ops: the watch event names no event
-6.8	ops: the watch event notifies no channel
-10.1	ops: two run-nows wait
-12.0	ops: watches count across sessions
-0.5	partitions: --from takes a date that is not on the calendar
+6.6	ops: a place slug may be freed
+6.4	ops: a place slug may be re-pointed
+6.5	ops: a place slug may be renamed
+6.1	ops: a refused restart counts
+6.1	ops: a restart limits every worker
+6.1	ops: a restart within four minutes
+6.5	ops: a run-now ignores the licence floor
+6.6	ops: a run-now of an unknown source goes
+6.6	ops: a run-now reads a closed catalogue row
+6.1	ops: a station slug may be freed
+6.0	ops: a station slug may be re-pointed
+6.1	ops: a stopped watch still counts
+6.7	ops: autosummarize is set twice
+4.3	ops: autosummarize reaches a btree
+6.1	ops: departs_at counts from midnight local
+6.2	ops: eleven watches a session
+6.1	ops: forget_ips clears the newer addresses too
+6.1	ops: forget_ips records a run on every call
+6.1	ops: forget_ips records no run when it cleared one
+6.5	ops: ops_audit clears an address younger than twelve months
+6.2	ops: ops_audit lets an address be rewritten
+6.5	ops: ops_audit lets another column change with the address
+6.5	ops: ops_audit may be deleted
+6.1	ops: passkeys hold eleven
+6.2	ops: the English twin ignores the cell
+6.2	ops: the English twin ignores the event
+8.3	ops: the English twin ignores the sending time
+6.6	ops: the English twin of a deleted warning
+6.6	ops: the mask misses IPv6
+6.1	ops: the mask takes a five-digit hex group for an address
+6.2	ops: the mask takes a six-digit hex run for an address
+6.1	ops: the mask takes a version for an address
+6.5	ops: the page key skips a byte
+6.5	ops: the sign counter may go back
+8.5	ops: the traffic class calls a stateless client real
+6.6	ops: the traffic class misses a probe
+6.2	ops: the watch event names no event
+7.1	ops: the watch event notifies no channel
+6.1	ops: two run-nows wait
+6.1	ops: watches count across sessions
+0.4	partitions: --from takes a date that is not on the calendar
 0.4	partitions: a back count past the bound is taken
-0.3	partitions: the days back are not passed
+0.4	partitions: the days back are not passed
 0.6	pending files do not block readiness
-5.9	road: event_raw prefers a row without its raw
-5.8	road: in force after its end
-10.4	road: in force before its start
-5.9	road: in force outside its windows
-5.9	road: in force while suspended
-6.0	road: jam rollup counts a warning without a traffic type
-9.2	road: jam rollup counts roadworks
-9.9	road: jam rollup leaves the hourless roads out
-5.8	road: jam rollup rewrites unchanged hours
-5.9	road: jam rollup takes a window over two days
-5.9	road: jam rollup takes an empty window
-5.9	road: known ignores the known flag
-9.1	road: known ignores the payload when the flag is unknown
-5.8	road: known in force after its end
-5.8	road: known in force before its start
-8.5	road: known in force outside its windows
-5.8	road: raw_resolve ignores its own raw
-12.3	road: raw_resolve ignores the hash
-5.9	road: raw_resolve reads the previous day
-5.9	road: raw_resolve takes the oldest raw
-8.9	road: road_event_locations_live shows a deleted event's location
-6.0	road: road_event_locations_live shows a deleted location
-8.8	road: road_events_current shows the closed
-5.9	road: road_events_current shows the confidential
-5.9	road: road_events_current shows the not in force
-5.9	road: road_ref_key keeps case
+6.4	road: event_raw prefers a row without its raw
+6.1	road: in force after its end
+6.0	road: in force before its start
+8.4	road: in force outside its windows
+6.1	road: in force while suspended
+6.4	road: jam rollup counts a warning without a traffic type
+6.4	road: jam rollup counts roadworks
+6.5	road: jam rollup leaves the hourless roads out
+6.4	road: jam rollup rewrites unchanged hours
+6.2	road: jam rollup takes a window over two days
+6.4	road: jam rollup takes an empty window
+6.6	road: known ignores the known flag
+6.1	road: known ignores the payload when the flag is unknown
+6.6	road: known in force after its end
+8.2	road: known in force before its start
+6.3	road: known in force outside its windows
+6.6	road: raw_resolve ignores its own raw
+5.9	road: raw_resolve ignores the hash
+6.6	road: raw_resolve reads the previous day
+6.4	road: raw_resolve takes the oldest raw
+6.4	road: road_event_locations_live shows a deleted event's location
+6.1	road: road_event_locations_live shows a deleted location
+6.6	road: road_events_current shows the closed
+6.4	road: road_events_current shows the confidential
+6.0	road: road_events_current shows the not in force
+6.5	road: road_ref_key keeps case
 6.0	road: road_ref_key keeps dots and dashes
-5.8	road: road_ref_key keeps leading zeros
-8.7	road: road_ref_key returns an empty key
-5.8	road: suspended when any status is suspended
-5.9	road: suspended with no status at all
-5.9	road: texts_backfill ignores since
-5.9	road: texts_backfill keeps an older position
-9.6	road: texts_backfill narrows the first sighting
-5.9	road: texts_backfill takes the first sighting's position
-6.0	road: the suspended trigger fires on every update
-5.8	road: the suspended trigger keeps the writer's flag
-5.9	road: the suspended trigger misses a payload update
-10.2	road: validity_date reads a two-digit year as the 1900s
-5.8	road: validity_date takes a three-digit year
-5.8	road: validity_date takes month 13
-5.8	road: validity_date takes the 31st of every month
-5.8	road: validity_overlaps ends an overnight day window the same day
-5.9	road: validity_overlaps ends the weekly window past the last date
-9.8	road: validity_overlaps forgets the excepted days
-5.9	road: validity_overlaps ignores the weekday
-9.4	road: validity_overlaps reads Berlin time as UTC
-5.9	road: validity_overlaps reads Tag as no day
-5.9	road: validity_overlaps reads an object as lines
-10.2	road: validity_overlaps says false when nothing is stated
-5.8	road: validity_overlaps starts the weekly days on the first asked day
-5.9	road: validity_overlaps touches a span at its end
-5.8	road: validity_time refuses 24:00
-5.8	road: validity_time takes a minute of 60
+6.3	road: road_ref_key keeps leading zeros
+6.0	road: road_ref_key returns an empty key
+6.1	road: suspended when any status is suspended
+6.1	road: suspended with no status at all
+6.0	road: texts_backfill ignores since
+6.0	road: texts_backfill keeps an older position
+6.1	road: texts_backfill narrows the first sighting
+6.6	road: texts_backfill takes the first sighting's position
+6.5	road: the suspended trigger fires on every update
+6.2	road: the suspended trigger keeps the writer's flag
+6.2	road: the suspended trigger misses a payload update
+6.5	road: validity_date reads a two-digit year as the 1900s
+6.4	road: validity_date takes a three-digit year
+6.0	road: validity_date takes month 13
+6.2	road: validity_date takes the 31st of every month
+6.0	road: validity_overlaps ends an overnight day window the same day
+6.4	road: validity_overlaps ends the weekly window past the last date
+6.5	road: validity_overlaps forgets the excepted days
+6.4	road: validity_overlaps ignores the weekday
+6.4	road: validity_overlaps reads Berlin time as UTC
+6.4	road: validity_overlaps reads Tag as no day
+6.1	road: validity_overlaps reads an object as lines
+6.0	road: validity_overlaps says false when nothing is stated
+6.1	road: validity_overlaps starts the weekly days on the first asked day
+6.1	road: validity_overlaps touches a span at its end
+6.4	road: validity_time refuses 24:00
+6.4	road: validity_time takes a minute of 60
 5.9	road: validity_time takes a one-digit minute
 0.4	roles: a failed settings run counts as applied
 0.4	roles: a settings file with no statement counts as applied
 0.4	roles: api_reader's password is fatal
-7.6	seed: a database is seeded twice
-11.1	seed: a live departure is seeded with its feed down
-12.3	seed: a row the view reads otherwise passes
-6.4	seed: a stop point loses its platform
-7.7	seed: the file seeds a database not named test_
-7.6	seed: the verb takes a database not named test_
+11.2	seed: a database is seeded twice
+10.1	seed: a live departure is seeded with its feed down
+10.6	seed: a row the view reads otherwise passes
+6.7	seed: a stop point loses its platform
+11.2	seed: the file seeds a database not named test_
+8.1	seed: the verb takes a database not named test_
 0.4	settings.sql leaves out 0321's owner work_mem, so a re-run keeps the baseline's
 0.4	settings.sql: a role setting is dropped
-0.3	settings.sql: the database-wide search_path is dropped
+0.4	settings.sql: the database-wide search_path is dropped
 0.3	shared_buffers is raised past the fit
-5.8	text: card misses the debit card
-5.8	text: charging sites skip the fold on update
-5.8	text: free of charge false for no payment text
-8.3	text: free of charge only at the start
-5.8	text: fuel stations skip the fold
-8.8	text: house key prefers the street
+6.6	text: card misses the debit card
+5.9	text: charging sites skip the fold on update
+7.5	text: free of charge false for no payment text
+7.6	text: free of charge only at the start
+6.3	text: fuel stations skip the fold
+7.9	text: house key prefers the street
 6.0	text: opening hours miss the restricted
-5.9	text: operator tokens keep duplicates
-5.8	text: operator tokens keep the legal form
-5.8	text: operator tokens keep two letters
-9.0	text: parking untrimmed
-5.8	text: postcode keeps four digits
-6.1	text: postcode takes six digits
-5.8	text: postcode takes the first of two
-6.1	text: street bays skip the fold on update
-5.8	text: street key keeps Strasse
-6.0	text: street key keeps the digits
-5.8	text: street key keeps the ß
-10.3	text: the postcode trigger keeps the raw
+6.1	text: operator tokens keep duplicates
+5.9	text: operator tokens keep the legal form
+6.2	text: operator tokens keep two letters
+7.5	text: parking untrimmed
+6.3	text: postcode keeps four digits
+6.0	text: postcode takes six digits
+6.1	text: postcode takes the first of two
+7.5	text: street bays skip the fold on update
+5.9	text: street key keeps Strasse
+7.7	text: street key keeps the digits
+6.2	text: street key keeps the ß
+7.6	text: the postcode trigger keeps the raw
 0.4	the build budget is raised past the cap
-0.4	the digest's line leaves out its processes
-0.3	the digest's measured peak is lowered without its connections
+0.3	the digest's line leaves out its processes
+0.4	the digest's measured peak is lowered without its connections
 0.6	the image head is the file count, not the highest version
 0.3	the owner's maintenance_work_mem moves without its bound
-0.3	the owner's work_mem goes back to 64MB without its bound
+0.4	the owner's work_mem goes back to 64MB without its bound
 0.6	the partitions step is not required
 0.3	the readers' bound gives MCP a third node
-0.6	the role step is not required
+0.7	the role step is not required
 0.6	the schema is not required
-6.2	views: public.bfrk_stops_live shows what it should leave out
-6.2	views: public.bw_detours_live shows what it should leave out
-9.4	views: public.charging_feed_runs_live shows nothing
-6.1	views: public.charging_point_status_live shows nothing
-20.5	views: public.charging_points_live shows what it should leave out
-6.2	views: public.charging_sites_live shows what it should leave out
-6.1	views: public.charging_sites_live without (NOT access_private)
-13.2	views: public.charging_sites_live without (deleted_at IS NULL)
-6.2	views: public.city_traffic_now_live shows a segment with no status
-9.3	views: public.city_traffic_now_live shows another feed's pull
-6.0	views: public.city_traffic_now_live shows any pull of the feed
-6.1	views: public.city_traffic_pulls_live shows nothing
-6.1	views: public.city_traffic_segments_live shows nothing
-6.1	views: public.connect_transit_delays_live shows what it should leave out
-6.3	views: public.connect_transit_delays_live without (observed_at <= now())
-6.1	views: public.connect_transit_delays_live without (observed_at > (now() - '06:00:00'::interval))
-6.1	views: public.db_facilities_live shows nothing
-11.2	views: public.delfi_service_alerts_live shows what it should leave out
-6.0	views: public.delfi_service_alerts_live without (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text)
-6.1	views: public.delfi_service_alerts_live without (closed_at IS NULL)
-6.2	views: public.delfi_siri_et_calls_live shows what it should leave out
-6.1	views: public.delfi_siri_et_calls_live without (observed_at <= now())
-6.1	views: public.delfi_siri_et_calls_live without (observed_at > (now() - '08:00:00'::interval))
-6.1	views: public.fuel_feed_health shows a station polled before the hour as covered
-9.2	views: public.fuel_feed_health shows a station with an error as covered
-9.9	views: public.fuel_feed_health shows an inactive station's price
-6.1	views: public.fuel_feed_health shows another provider's runs
-6.2	views: public.fuel_feed_health shows every station as active
-6.0	views: public.fuel_feed_health shows the errors before the hour
-6.0	views: public.fuel_feed_health shows the newest run of any status as the last ok
-6.3	views: public.fuel_feed_health shows the runs before the day
-6.1	views: public.fuel_price_latest_live shows what it should leave out
-6.2	views: public.fuel_station_board_live shows a closed station's price
-6.1	views: public.fuel_station_board_live shows a deleted station
-6.0	views: public.fuel_station_board_live shows a price of zero
-13.6	views: public.fuel_station_board_live shows e5 as e10
-6.0	views: public.fuel_station_watch_due shows a backoff capped at ten hours
-6.3	views: public.fuel_station_watch_due shows a station never polled
-6.0	views: public.fuel_station_watch_due shows an inactive station
-11.6	views: public.fuel_station_watch_due shows the backoff from the third error
-6.3	views: public.fuel_station_watch_due shows the never-polled last
-6.1	views: public.fuel_station_watch_due shows the order without the priority
+6.7	views: public.bfrk_stops_live shows what it should leave out
+6.8	views: public.bw_detours_live shows what it should leave out
+6.3	views: public.charging_feed_runs_live shows nothing
+6.4	views: public.charging_point_status_live shows nothing
+6.3	views: public.charging_points_live shows what it should leave out
+6.7	views: public.charging_sites_live shows what it should leave out
+6.5	views: public.charging_sites_live without (NOT access_private)
+6.3	views: public.charging_sites_live without (deleted_at IS NULL)
+6.5	views: public.city_traffic_now_live shows a segment with no status
+6.7	views: public.city_traffic_now_live shows another feed's pull
+6.8	views: public.city_traffic_now_live shows any pull of the feed
+6.3	views: public.city_traffic_pulls_live shows nothing
+6.8	views: public.city_traffic_segments_live shows nothing
+6.7	views: public.connect_transit_delays_live shows what it should leave out
+6.8	views: public.connect_transit_delays_live without (observed_at <= now())
+6.8	views: public.connect_transit_delays_live without (observed_at > (now() - '06:00:00'::interval))
+6.4	views: public.db_facilities_live shows nothing
+6.3	views: public.delfi_service_alerts_live shows what it should leave out
+6.4	views: public.delfi_service_alerts_live without (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text)
+8.3	views: public.delfi_service_alerts_live without (closed_at IS NULL)
+8.5	views: public.delfi_siri_et_calls_live shows what it should leave out
+6.3	views: public.delfi_siri_et_calls_live without (observed_at <= now())
+6.4	views: public.delfi_siri_et_calls_live without (observed_at > (now() - '08:00:00'::interval))
+6.3	views: public.fuel_feed_health shows a station polled before the hour as covered
+8.6	views: public.fuel_feed_health shows a station with an error as covered
+6.3	views: public.fuel_feed_health shows an inactive station's price
+6.4	views: public.fuel_feed_health shows another provider's runs
+6.7	views: public.fuel_feed_health shows every station as active
+6.4	views: public.fuel_feed_health shows the errors before the hour
+6.3	views: public.fuel_feed_health shows the newest run of any status as the last ok
+8.6	views: public.fuel_feed_health shows the runs before the day
+6.6	views: public.fuel_price_latest_live shows what it should leave out
+6.3	views: public.fuel_station_board_live shows a closed station's price
+6.7	views: public.fuel_station_board_live shows a deleted station
+6.6	views: public.fuel_station_board_live shows a price of zero
+8.9	views: public.fuel_station_board_live shows e5 as e10
+8.7	views: public.fuel_station_watch_due shows a backoff capped at ten hours
+6.4	views: public.fuel_station_watch_due shows a station never polled
+6.4	views: public.fuel_station_watch_due shows an inactive station
+6.3	views: public.fuel_station_watch_due shows the backoff from the third error
+6.7	views: public.fuel_station_watch_due shows the never-polled last
+6.8	views: public.fuel_station_watch_due shows the order without the priority
 6.3	views: public.fuel_stations_live shows what it should leave out
-10.9	views: public.gbfs_station_status_live shows what it should leave out
-9.6	views: public.gbfs_stations_live shows what it should leave out
-6.1	views: public.gbfs_stations_live without (st.closed_at IS NULL)
-6.1	views: public.gbfs_stations_live without sy.admitted)
-8.8	views: public.gbfs_vehicles_live shows what it should leave out
-6.3	views: public.gtfs_route_kreise shows a Kreis that is not five digits
-11.2	views: public.gtfs_route_kreise shows a deleted stop time
-6.0	views: public.gtfs_route_kreise shows a deleted trip
-6.1	views: public.gtfs_route_kreise shows a stop that is not German
-9.1	views: public.gtfs_route_kreise shows the Kreis one character on
-6.1	views: public.gtfs_untimed_trips shows a deleted stop time
-6.1	views: public.gtfs_untimed_trips shows a trip of one stop
-6.3	views: public.gtfs_untimed_trips shows a trip whose times move
-6.1	views: public.hh_cameras_live shows what it should leave out
-14.6	views: public.hh_roadworks_live shows what it should leave out
-6.1	views: public.hh_roadworks_live without (closed_at IS NULL)
-6.1	views: public.hh_roadworks_live without released)
-11.3	views: public.hydrogen_stations_live shows what it should leave out
-6.2	views: public.lez_zones_live shows what it should leave out
-6.1	views: public.lorry_city_live shows what it should leave out
-6.1	views: public.lorry_hb_live shows what it should leave out
-11.6	views: public.lorry_ivm_live shows what it should leave out
-6.1	views: public.lorry_long_network_live shows what it should leave out
-6.1	views: public.lorry_reads_live shows a degraded run with no count
-6.1	views: public.lorry_reads_live shows a failed run
-9.5	views: public.lorry_reads_live shows a feed that is not a lorry feed
-6.3	views: public.lorry_reads_live shows an unfinished run
-6.2	views: public.lorry_sevas_live shows what it should leave out
-9.8	views: public.los_lane_now_live shows a closed lane
-6.0	views: public.los_lane_now_live shows a closed site
-6.1	views: public.los_lane_now_live shows a restricted lane
-6.1	views: public.los_lane_now_live shows a restricted lane state
+6.5	views: public.gbfs_station_status_live shows what it should leave out
+6.4	views: public.gbfs_stations_live shows what it should leave out
+8.1	views: public.gbfs_stations_live without (st.closed_at IS NULL)
+6.8	views: public.gbfs_stations_live without sy.admitted)
+6.2	views: public.gbfs_vehicles_live shows what it should leave out
+6.4	views: public.gtfs_route_kreise shows a Kreis that is not five digits
+8.3	views: public.gtfs_route_kreise shows a deleted stop time
+6.8	views: public.gtfs_route_kreise shows a deleted trip
+6.8	views: public.gtfs_route_kreise shows a stop that is not German
+6.4	views: public.gtfs_route_kreise shows the Kreis one character on
+6.3	views: public.gtfs_untimed_trips shows a deleted stop time
+6.4	views: public.gtfs_untimed_trips shows a trip of one stop
+6.4	views: public.gtfs_untimed_trips shows a trip whose times move
+6.3	views: public.hh_cameras_live shows what it should leave out
+6.2	views: public.hh_roadworks_live shows what it should leave out
+8.1	views: public.hh_roadworks_live without (closed_at IS NULL)
+6.8	views: public.hh_roadworks_live without released)
+6.4	views: public.hydrogen_stations_live shows what it should leave out
+6.3	views: public.lez_zones_live shows what it should leave out
+6.4	views: public.lorry_city_live shows what it should leave out
+8.6	views: public.lorry_hb_live shows what it should leave out
+6.3	views: public.lorry_ivm_live shows what it should leave out
+6.8	views: public.lorry_long_network_live shows what it should leave out
+6.3	views: public.lorry_reads_live shows a degraded run with no count
+6.4	views: public.lorry_reads_live shows a failed run
+8.6	views: public.lorry_reads_live shows a feed that is not a lorry feed
+6.7	views: public.lorry_reads_live shows an unfinished run
+6.4	views: public.lorry_sevas_live shows what it should leave out
+6.3	views: public.los_lane_now_live shows a closed lane
+6.6	views: public.los_lane_now_live shows a closed site
+6.8	views: public.los_lane_now_live shows a restricted lane
+6.7	views: public.los_lane_now_live shows a restricted lane state
 6.4	views: public.los_lane_now_live shows a restricted site
-6.1	views: public.los_lane_now_live shows a site off the main carriageway
-9.1	views: public.los_lane_now_live shows a site with no place
-6.4	views: public.los_lane_now_live shows a site with no road
-9.9	views: public.los_now_live shows a closed site
-10.0	views: public.los_now_live shows a restricted site
-6.1	views: public.los_now_live shows a restricted state
-6.1	views: public.los_now_live shows a site off the main carriageway
-6.4	views: public.los_now_live shows a site with no place
-6.1	views: public.los_now_live shows a site with no road
-6.2	views: public.los_sites_live shows what it should leave out
-6.2	views: public.los_sites_live without (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text)
-6.1	views: public.los_sites_live without (closed_at IS NULL)
-6.0	views: public.motorway_points_live shows what it should leave out
+8.4	views: public.los_lane_now_live shows a site off the main carriageway
+6.3	views: public.los_lane_now_live shows a site with no place
+8.0	views: public.los_lane_now_live shows a site with no road
+6.4	views: public.los_now_live shows a closed site
+6.4	views: public.los_now_live shows a restricted site
+6.6	views: public.los_now_live shows a restricted state
+6.6	views: public.los_now_live shows a site off the main carriageway
+6.2	views: public.los_now_live shows a site with no place
+6.2	views: public.los_now_live shows a site with no road
+6.5	views: public.los_sites_live shows what it should leave out
+6.4	views: public.los_sites_live without (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text)
+6.5	views: public.los_sites_live without (closed_at IS NULL)
+6.6	views: public.motorway_points_live shows what it should leave out
 6.3	views: public.motorway_points_live without (cid = 58)
-6.1	views: public.motorway_points_live without (road_number ~ '^A[1-9][0-9]{0,2}$'::text)
-12.5	views: public.motorway_points_live without (tabcd = 1)
-8.7	views: public.motorway_register_live shows a TMC road that is no motorway
-6.1	views: public.motorway_register_live shows a road twice
-6.1	views: public.motorway_register_live shows an Autobahn API road that is no motorway
-6.1	views: public.motorway_register_live shows another country's table
-6.5	views: public.motorway_register_live shows another location table
-6.1	views: public.motorway_summary_live shows nothing
-6.1	views: public.mvv_bus_load_live shows what it should leave out
-6.1	views: public.opendata_roadworks_live shows what it should leave out
-8.8	views: public.opendata_roadworks_live without (closed_at IS NULL)
-6.0	views: public.opendata_roadworks_live without affects_traffic)
-6.1	views: public.opendata_roadworks_live without answerable AND
-11.3	views: public.osm_addresses_live shows what it should leave out
-6.2	views: public.osm_pois_live shows what it should leave out
-6.2	views: public.osm_speed_cameras_live shows what it should leave out
-6.3	views: public.osm_street_tiles shows a closed street
-10.8	views: public.osm_street_tiles shows the smallest class
-6.1	views: public.osm_street_tiles shows tiles of ten kilometres
-6.1	views: public.osm_street_tiles_lo shows a closed street
-6.2	views: public.osm_street_tiles_lo shows a street with no simplified line
-14.0	views: public.osm_street_tiles_lo shows the minor classes
-6.4	views: public.osm_street_tiles_lo shows the smallest class
-6.1	views: public.osm_street_tiles_lo shows tiles of one kilometre
-6.3	views: public.parking_facilities_bysa_live shows what it should leave out
-17.2	views: public.parking_facilities_live shows what it should leave out
-6.1	views: public.parking_facilities_odbl_live shows what it should leave out
-6.3	views: public.parking_facilities_sid_live shows nothing
-6.2	views: public.parking_forecast_profiles_live shows what it should leave out
-6.0	views: public.parking_occupancy_live shows nothing
-10.4	views: public.parking_occupancy_odbl_live shows nothing
+6.7	views: public.motorway_points_live without (road_number ~ '^A[1-9][0-9]{0,2}$'::text)
+6.6	views: public.motorway_points_live without (tabcd = 1)
+6.7	views: public.motorway_register_live shows a TMC road that is no motorway
+6.3	views: public.motorway_register_live shows a road twice
+6.7	views: public.motorway_register_live shows an Autobahn API road that is no motorway
+6.7	views: public.motorway_register_live shows another country's table
+6.2	views: public.motorway_register_live shows another location table
+6.4	views: public.motorway_summary_live shows nothing
+6.4	views: public.mvv_bus_load_live shows what it should leave out
+6.8	views: public.opendata_roadworks_live shows what it should leave out
+6.5	views: public.opendata_roadworks_live without (closed_at IS NULL)
+6.4	views: public.opendata_roadworks_live without affects_traffic)
+6.6	views: public.opendata_roadworks_live without answerable AND
+6.4	views: public.osm_addresses_live shows what it should leave out
+6.5	views: public.osm_pois_live shows what it should leave out
+6.4	views: public.osm_speed_cameras_live shows what it should leave out
+8.4	views: public.osm_street_tiles shows a closed street
+6.5	views: public.osm_street_tiles shows the smallest class
+6.4	views: public.osm_street_tiles shows tiles of ten kilometres
+6.5	views: public.osm_street_tiles_lo shows a closed street
+6.3	views: public.osm_street_tiles_lo shows a street with no simplified line
+6.2	views: public.osm_street_tiles_lo shows the minor classes
+6.7	views: public.osm_street_tiles_lo shows the smallest class
+6.4	views: public.osm_street_tiles_lo shows tiles of one kilometre
+6.4	views: public.parking_facilities_bysa_live shows what it should leave out
+6.3	views: public.parking_facilities_live shows what it should leave out
+6.4	views: public.parking_facilities_odbl_live shows what it should leave out
+6.4	views: public.parking_facilities_sid_live shows nothing
+6.8	views: public.parking_forecast_profiles_live shows what it should leave out
+6.8	views: public.parking_occupancy_live shows nothing
+6.3	views: public.parking_occupancy_odbl_live shows nothing
 6.3	views: public.parking_occupancy_sid_live shows nothing
-6.2	views: public.parking_sites_live shows what it should leave out
-6.1	views: public.road_context_live shows what it should leave out
-6.1	views: public.road_context_live without (closed_at IS NULL)
-6.1	views: public.road_context_live without answerable)
-13.9	views: public.road_events_live shows what it should leave out
-6.3	views: public.road_weather_forecast_live shows nothing
-6.2	views: public.road_weather_stations_live shows what it should leave out
-10.9	views: public.road_weather_stations_live without (NOT inactive)
-6.1	views: public.road_weather_stations_live without (closed_at IS NULL)
-6.1	views: public.routes_live shows what it should leave out
-9.8	views: public.service_alert_lands_live shows a restricted alert
-6.4	views: public.service_alert_lands_live shows an alert placed by agency
-6.1	views: public.service_alert_lands_live shows the oldest sighting
-6.1	views: public.speed_enforcement_live shows what it should leave out
-6.2	views: public.station_accessibility_live shows what it should leave out
-12.8	views: public.station_equipment_live shows what it should leave out
-6.1	views: public.station_index_live shows a closed station
-6.1	views: public.station_index_live shows another station's slug
-6.4	views: public.station_index_live shows the first slug
-10.9	views: public.station_index_live shows the last of two slugs of one instant
-6.1	views: public.station_metro_osm_decided shows what it should leave out
-6.2	views: public.stop_times_live shows what it should leave out
-6.2	views: public.stops_live shows what it should leave out
-6.1	views: public.street_bays_live shows what it should leave out
-6.2	views: public.traffic_count_now_live shows a closed site
-6.1	views: public.traffic_count_now_live shows a site with no count
-6.5	views: public.traffic_count_now_live shows the heavy count as the vehicles
-11.7	views: public.traffic_count_now_live shows the vehicles as the heavy count
-6.0	views: public.traffic_count_profiles_live shows a closed site
-6.2	views: public.traffic_count_profiles_live shows an older month
-6.4	views: public.traffic_count_profiles_live shows another feed's newest month
-8.7	views: public.traffic_count_profiles_live shows the oldest month
-6.1	views: public.transit_delays_live shows what it should leave out
-6.2	views: public.transit_delays_live without (observed_at <= now())
-6.0	views: public.transit_delays_live without (observed_at > (now() - '06:00:00'::interval))
-8.8	views: public.transit_delays_live without (source = 'delfi_rt_tu'::text)
+6.8	views: public.parking_sites_live shows what it should leave out
+6.3	views: public.road_context_live shows what it should leave out
+6.3	views: public.road_context_live without (closed_at IS NULL)
+6.3	views: public.road_context_live without answerable)
+6.5	views: public.road_events_live shows what it should leave out
+6.8	views: public.road_weather_forecast_live shows nothing
+6.4	views: public.road_weather_stations_live shows what it should leave out
+6.3	views: public.road_weather_stations_live without (NOT inactive)
+6.3	views: public.road_weather_stations_live without (closed_at IS NULL)
+6.3	views: public.routes_live shows what it should leave out
+6.8	views: public.service_alert_lands_live shows a restricted alert
+6.3	views: public.service_alert_lands_live shows an alert placed by agency
+8.8	views: public.service_alert_lands_live shows the oldest sighting
+6.7	views: public.speed_enforcement_live shows what it should leave out
+6.9	views: public.station_accessibility_live shows what it should leave out
+6.3	views: public.station_equipment_live shows what it should leave out
+6.9	views: public.station_index_live shows a closed station
+6.6	views: public.station_index_live shows another station's slug
+6.5	views: public.station_index_live shows the first slug
+6.7	views: public.station_index_live shows the last of two slugs of one instant
+6.9	views: public.station_metro_osm_decided shows what it should leave out
+6.3	views: public.stop_times_live shows what it should leave out
+6.4	views: public.stops_live shows what it should leave out
+6.4	views: public.street_bays_live shows what it should leave out
+6.4	views: public.traffic_count_now_live shows a closed site
+6.4	views: public.traffic_count_now_live shows a site with no count
+6.4	views: public.traffic_count_now_live shows the heavy count as the vehicles
+6.3	views: public.traffic_count_now_live shows the vehicles as the heavy count
+6.4	views: public.traffic_count_profiles_live shows a closed site
+6.8	views: public.traffic_count_profiles_live shows an older month
+8.3	views: public.traffic_count_profiles_live shows another feed's newest month
+8.2	views: public.traffic_count_profiles_live shows the oldest month
+6.3	views: public.transit_delays_live shows what it should leave out
+6.4	views: public.transit_delays_live without (observed_at <= now())
+6.7	views: public.transit_delays_live without (observed_at > (now() - '06:00:00'::interval))
+6.9	views: public.transit_delays_live without (source = 'delfi_rt_tu'::text)
 6.3	views: public.transit_departures_odbl_live shows a closed trip
-6.5	views: public.transit_departures_odbl_live shows a service day past the window
-6.2	views: public.transit_departures_odbl_live shows a stop time with no departure
+8.7	views: public.transit_departures_odbl_live shows a service day past the window
+8.4	views: public.transit_departures_odbl_live shows a stop time with no departure
 6.4	views: public.transit_departures_odbl_live shows a stop with no boarding
-10.9	views: public.transit_departures_odbl_live shows another day's trip update
-6.1	views: public.transit_departures_odbl_live shows the last open stop when a later one is closed
-8.8	views: public.transit_departures_odbl_live shows the last stop
-6.4	views: public.transit_odbl_service_days_live shows Berlin twice
-6.1	views: public.transit_odbl_service_days_live shows a closed agency's zone
-6.1	views: public.transit_odbl_service_days_live shows no yesterday
-9.2	views: public.transit_punctuality_area_live shows a Kreis that is a city as well
-6.0	views: public.transit_punctuality_area_live shows a closed city
-10.9	views: public.transit_punctuality_area_live shows a delay older than half an hour
-6.3	views: public.transit_punctuality_area_live shows a town as its Kreis's city
-6.1	views: public.transit_punctuality_area_live shows a trip once per Land in the nation
-9.7	views: public.transit_punctuality_area_live shows an untimed trip observed in its Land
-6.1	views: public.transit_punctuality_area_live shows another source's delay
+8.3	views: public.transit_departures_odbl_live shows another day's trip update
+6.3	views: public.transit_departures_odbl_live shows the last open stop when a later one is closed
+6.4	views: public.transit_departures_odbl_live shows the last stop
+6.3	views: public.transit_odbl_service_days_live shows Berlin twice
+6.7	views: public.transit_odbl_service_days_live shows a closed agency's zone
+6.7	views: public.transit_odbl_service_days_live shows no yesterday
+6.3	views: public.transit_punctuality_area_live shows a Kreis that is a city as well
+6.7	views: public.transit_punctuality_area_live shows a closed city
+6.4	views: public.transit_punctuality_area_live shows a delay older than half an hour
+6.7	views: public.transit_punctuality_area_live shows a town as its Kreis's city
+6.2	views: public.transit_punctuality_area_live shows a trip once per Land in the nation
+6.3	views: public.transit_punctuality_area_live shows an untimed trip observed in its Land
+6.8	views: public.transit_punctuality_area_live shows another source's delay
 6.3	views: public.transit_punctuality_area_live shows late from half a minute
-6.0	views: public.transit_punctuality_area_live shows no skipped stop
-6.1	views: public.transit_punctuality_area_live shows the nation's ninetieth percentile
-8.6	views: public.transit_punctuality_live shows a Land with no trip
-6.2	views: public.transit_punctuality_live shows a delay from the future
-6.1	views: public.transit_punctuality_live shows a delay older than half an hour
-6.1	views: public.transit_punctuality_live shows a four-digit area code
-6.1	views: public.transit_punctuality_live shows a row with no delay
-12.2	views: public.transit_punctuality_live shows another source's delay
-6.2	views: public.transit_punctuality_live shows late from a minute
-14.0	views: public.transit_station_live shows a delay older than half an hour
-6.2	views: public.transit_station_live shows a deleted stop
-6.2	views: public.transit_station_live shows a stop past the platform range
-6.2	views: public.transit_station_live shows an untimed trip in the median
-6.1	views: public.transit_station_live shows another feed's stop
-6.1	views: public.transit_station_live shows late on time
-6.1	views: public.transit_station_live shows no skipped stop
-6.1	views: public.transit_stop_modes shows a deleted route
-9.6	views: public.transit_stop_modes shows a deleted trip
-6.2	views: public.transit_stop_modes shows a stop with no mode
-6.1	views: public.transit_stop_modes shows an empty line name
-11.5	views: public.transit_stop_modes shows the S-Bahn as rail
-6.2	views: public.transit_stop_modes shows the child's name over the parent's
-6.2	views: public.transit_stop_modes shows the other mode
-6.1	views: public.transit_stops_odbl_live shows what it should leave out
-6.1	views: public.transit_stops_odbl_live without (closed_at IS NULL)
-15.1	views: public.transit_stops_odbl_live without (geom IS NOT NULL)
-6.1	views: public.trips_live shows what it should leave out
-6.1	views: public.vbb_transit_delays_live shows what it should leave out
-10.1	views: public.vbn_transit_delays shows nothing
-6.1	views: public.vbn_transit_delays_live shows what it should leave out
-12.6	views: public.vrn_transit_delays_live shows what it should leave out
-9.4	views: public.weather_warnings_area_live shows a deleted warning
-6.2	views: public.weather_warnings_area_live shows a warning with no English
-6.2	views: public.weather_warnings_area_live shows the German headline as the English
-10.5	views: public.weather_warnings_en_live shows what it should leave out
-6.1	views: public.weather_warnings_live shows what it should leave out
+6.2	views: public.transit_punctuality_area_live shows no skipped stop
+6.4	views: public.transit_punctuality_area_live shows the nation's ninetieth percentile
+6.4	views: public.transit_punctuality_live shows a Land with no trip
+6.4	views: public.transit_punctuality_live shows a delay from the future
+6.4	views: public.transit_punctuality_live shows a delay older than half an hour
+8.8	views: public.transit_punctuality_live shows a four-digit area code
+6.4	views: public.transit_punctuality_live shows a row with no delay
+6.7	views: public.transit_punctuality_live shows another source's delay
+6.3	views: public.transit_punctuality_live shows late from a minute
+6.8	views: public.transit_station_live shows a delay older than half an hour
+6.8	views: public.transit_station_live shows a deleted stop
+6.7	views: public.transit_station_live shows a stop past the platform range
+6.8	views: public.transit_station_live shows an untimed trip in the median
+6.7	views: public.transit_station_live shows another feed's stop
+6.4	views: public.transit_station_live shows late on time
+6.6	views: public.transit_station_live shows no skipped stop
+6.3	views: public.transit_stop_modes shows a deleted route
+6.8	views: public.transit_stop_modes shows a deleted trip
+6.4	views: public.transit_stop_modes shows a stop with no mode
+6.8	views: public.transit_stop_modes shows an empty line name
+6.9	views: public.transit_stop_modes shows the S-Bahn as rail
+6.4	views: public.transit_stop_modes shows the child's name over the parent's
+6.3	views: public.transit_stop_modes shows the other mode
+6.4	views: public.transit_stops_odbl_live shows what it should leave out
+6.4	views: public.transit_stops_odbl_live without (closed_at IS NULL)
+6.6	views: public.transit_stops_odbl_live without (geom IS NOT NULL)
+6.7	views: public.trips_live shows what it should leave out
+6.8	views: public.vbb_transit_delays_live shows what it should leave out
+6.3	views: public.vbn_transit_delays shows nothing
+6.3	views: public.vbn_transit_delays_live shows what it should leave out
+6.4	views: public.vrn_transit_delays_live shows what it should leave out
+6.4	views: public.weather_warnings_area_live shows a deleted warning
+6.3	views: public.weather_warnings_area_live shows a warning with no English
+6.8	views: public.weather_warnings_area_live shows the German headline as the English
+6.5	views: public.weather_warnings_en_live shows what it should leave out
+6.8	views: public.weather_warnings_live shows what it should leave out
