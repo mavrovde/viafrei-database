@@ -248,7 +248,7 @@ merge of the release pull request into main
   -> a draft GitHub release, then the annotated tag vX.Y.Z on that commit
      (CI and Security checked again first; an existing tag is refused)
   -> the release workflow, started on that tag:
-     gate, every mutant (npm run mutate, in twelve parallel shards), build,
+     gate, every mutant (npm run mutate, in twenty parallel shards), build,
      push by digest, sign,
      attest, verify, tag the image
   -> the draft release is published with the image digest and how to verify it
@@ -327,7 +327,7 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository; the exception to the sentence above, it runs weekly and on a branch-protection change only |
 | Snyk | Snyk (dependencies) | Snyk Open Source over the npm dependencies (high or critical fails); another exception, it runs weekly on `main` only, never on a pull request or a push |
 | Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
-| Release | Mutation shard | one of twelve parallel jobs (`npm run mutate -- --shard k/12`, the mutants cut by their cost in `scripts/mutant-costs.tsv` so no shard plans more than 12 of its 15 minutes), each against an empty PostGIS of its own, with its own unmutated control runs first and a 15-minute limit, uploading the seconds each mutant took: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, a unit or database run that fails before any mutant is planted, or a shard that selects no mutant fails the shard. Together the twelve are the only run of the full set; no pull request or push runs it |
+| Release | Mutation shard | one of twenty parallel jobs (`npm run mutate -- --shard k/20`, the mutants cut by their cost in `scripts/mutant-costs.tsv` so no shard plans more than 8 of its 15 minutes), each against an empty PostGIS of its own, with its own unmutated control runs first and a 15-minute limit, uploading the seconds each mutant took: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, a unit or database run that fails before any mutant is planted, or a shard that selects no mutant fails the shard. Together the twenty are the only run of the full set; no pull request or push runs it |
 | Release | Mutation check | the fan-in the build waits for: green only when every Mutation shard finished green, so a survivor in any shard, or a shard that failed, timed out or never started, stops the release before anything is built; it joins the shards' measured seconds into the artifact `mutant-costs`, the next `scripts/mutant-costs.tsv` |
 | Release | Snyk (dependencies) | the same Snyk scan, called on that commit before anything is built: a high or critical advisory stops the release |
 
@@ -399,7 +399,7 @@ TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
 TEST_DATABASE_URL=postgresql://… npm run mutate -- --only <text>   # the mutants whose name contains <text>; the full set is run by the release (below)
-TEST_DATABASE_URL=postgresql://… npm run mutate -- --shard 2/12    # one shard of the set, as one release job runs it
+TEST_DATABASE_URL=postgresql://… npm run mutate -- --shard 2/20    # one shard of the set, as one release job runs it
 TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
 npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```

@@ -33,8 +33,8 @@
 #
 # Then, in this order, so a failure at any step leaves no tag behind:
 #   0. mutants: the full mutation check (npm run mutate) on the gate's commit,
-#      in twelve parallel shards cut by cost (mutant-shards, npm run mutate --
-#      --shard k/12, scripts/mutant-costs.tsv),
+#      in twenty parallel shards cut by cost (mutant-shards, npm run mutate --
+#      --shard k/20, scripts/mutant-costs.tsv),
 #      each against an empty PostGIS of its own and with its own controls;
 #      one surviving mutant, a mutant whose pattern no longer matches or
 #      matches more than one place, a unit or database run that fails before
@@ -181,13 +181,16 @@ jobs:
           echo "head=$head" >> "$GITHUB_OUTPUT"
 
   # Every mutant of scripts/mutants.ts, the only run of the full set (no pull
-  # request or push runs it), cut into twelve shards that run in parallel
-  # (npm run mutate -- --shard k/12, scripts/mutate-run.ts shardOf). The cut
+  # request or push runs it), cut into twenty shards that run in parallel
+  # (npm run mutate -- --shard k/20, scripts/mutate-run.ts shardOf). The cut
   # is by cost: scripts/mutant-costs.tsv holds each mutant's
   # seconds in a release, and the planner deals them so no shard plans more
-  # than 11 of the 15 minutes every job is given (test/mutants.test.ts holds
-  # the committed file to that budget with a minute for setup: 12 of 15). Four
-  # round-robin shards ran 26 to 45 minutes in v0.4.0. Each shard migrates its
+  # than 7 of the 15 minutes every job is given (test/mutants.test.ts holds
+  # the committed file to that budget with a minute for setup: 8 of 15). The
+  # headroom is for the runner, not the list: in v0.4.1 two of twelve shards
+  # planned at 10.5 minutes ran their mutants 1.4 to 1.7 times slower than the
+  # file and met the timeout with nothing stuck. Four round-robin shards ran
+  # 26 to 45 minutes in v0.4.0. Each shard migrates its
   # own databases, makes its own unmutated control runs first and uploads the
   # seconds it measured; the fan-in joins them into the artifact mutant-costs,
   # which is committed as the next cost file after the release. fail-fast is
@@ -203,7 +206,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     services:
       postgis:
         image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
@@ -234,7 +237,7 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
           SHARD: ${{ matrix.shard }}
-        run: npm run mutate -- --shard "$SHARD/12" --costs-out "mutant-costs-$SHARD.tsv"
+        run: npm run mutate -- --shard "$SHARD/20" --costs-out "mutant-costs-$SHARD.tsv"
       # The seconds this shard measured, also when it failed: the next cost file.
       - name: The shard's measured costs
         if: ${{ !cancelled() }}

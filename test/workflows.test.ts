@@ -86,16 +86,16 @@ describe("an image only for a confirmed release", () => {
   });
 
   it("runs every mutant on the gate's commit before anything is built, and only here", () => {
-    const MATRIX = "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n";
+    const MATRIX = "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]\n";
     expect(release).toContain(MATRIX);
     expect(mutantsFaults(release)).toEqual([]);
     expect(mutantsFaults(release.replace("    needs: [gate, mutants, snyk]\n", "    needs: [gate, snyk]\n"))).toEqual(["publish does not wait for the mutation check"]);
-    const run = '        run: npm run mutate -- --shard "$SHARD/12" --costs-out "mutant-costs-$SHARD.tsv"\n';
-    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/12" --only lint --costs-out "mutant-costs-$SHARD.tsv"\n'))).toEqual(["a shard does not run its whole slice"]);
+    const run = '        run: npm run mutate -- --shard "$SHARD/20" --costs-out "mutant-costs-$SHARD.tsv"\n';
+    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/20" --only lint --costs-out "mutant-costs-$SHARD.tsv"\n'))).toEqual(["a shard does not run its whole slice"]);
     expect(mutantsFaults(release.replace(run, "        run: npm run mutate\n"))).toEqual(["a shard does not run its whole slice"]);
     expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/13" --costs-out "mutant-costs-$SHARD.tsv"\n'))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
     expect(mutantsFaults(release.replace(MATRIX, "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
-    expect(mutantsFaults(release.replace(MATRIX, "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace(MATRIX, "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 20]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
     expect(mutantsFaults(release.replace(/(\n {2}mutant-shards:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
     expect(mutantsFaults(release.replace("    if: ${{ !cancelled() && needs.gate.outputs.publish == 'true' }}\n", "    if: needs.gate.outputs.publish == 'true'\n"))).toEqual(["the fan-in does not run when a shard failed"]);
     expect(mutantsFaults(release.replace("    needs: [gate, mutant-shards]\n", "    needs: gate\n"))).toEqual(["the fan-in does not wait for the shards"]);
