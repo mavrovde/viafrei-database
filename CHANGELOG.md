@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.4.1](https://github.com/mavrovde/viafrei-database/compare/v0.4.0...v0.4.1) (2026-11-22)
+
+
+### Changed
+
+* **db:** 0323-0326, production's hand changes and the charging twin pairs ([#70](https://github.com/mavrovde/viafrei-database/issues/70)) ([9262270](https://github.com/mavrovde/viafrei-database/commit/92622705e3a8f77c235dce786ad870bc52e032fd))
+
 ## [0.4.0](https://github.com/mavrovde/viafrei-database/compare/v0.3.4...v0.4.0) (2026-11-20)
 
 
