@@ -44,7 +44,18 @@
 --    moment it lasts, bounded by lock_timeout (a wait longer fails with 55P03
 --    and migrate retries the file).
 --
+-- 4. traffic_count_sites_live: the open counting sites' id, section and
+--    position, for the digest's traffic profiles near a point. That read takes
+--    the sites of the sections in reach and reads their profile rows by site id
+--    (traffic_count_profiles' primary key). Through traffic_count_profiles_live
+--    the same ids cost a join of every profile row to its feed's newest month
+--    and its site; production 2026-11-22, read only, seven recorded inputs: the
+--    same rows from the sites table in 56.5 ms against 72.7 ms for today's read
+--    and 97.6 ms through the profiles view. The table itself stays a digest
+--    never-read: the view shows three columns of the open rows.
+--
 -- rollback:
+--   drop view public.traffic_count_sites_live;
 --   drop statistics if exists public.charging_points_evse_norm_expr;
 --   (charging_points_publishable and charging_sites_publishable predate this file)
 --   drop index concurrently if exists public.lorry_long_network_contract_geography;
@@ -96,6 +107,17 @@ begin;
 set local lock_timeout = '5s';
 drop index if exists public.delfi_siri_et_calls_stop;
 drop index if exists public.vbn_siri_et_calls_stop;
+commit;
+
+-- 4. the open counting sites
+begin;
+set local lock_timeout = '5s';
+create or replace view public.traffic_count_sites_live as
+  select s.id, s.section_key, s.geom
+    from public.traffic_count_sites s
+   where s.closed_at is null;
+comment on view public.traffic_count_sites_live is 'The open counting sites: id, section_key and geom of traffic_count_sites where closed_at is null, for the digest''s traffic profiles near a point (sites of the sections in reach, read by id). Migration 0332.';
+grant select on public.traffic_count_sites_live to viafrei_digest;
 commit;
 
 reset maintenance_work_mem;

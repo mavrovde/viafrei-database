@@ -166,6 +166,7 @@ viafrei_digest	relation	public.stops_live	SELECT
 viafrei_digest	relation	public.street_bays_live	SELECT
 viafrei_digest	relation	public.traffic_count_now_live	SELECT
 viafrei_digest	relation	public.traffic_count_profiles_live	SELECT
+viafrei_digest	relation	public.traffic_count_sites_live	SELECT
 viafrei_digest	relation	public.transit_delays_live	SELECT
 viafrei_digest	relation	public.transit_departures_odbl_live	SELECT
 viafrei_digest	relation	public.transit_odbl_service_days_live	SELECT

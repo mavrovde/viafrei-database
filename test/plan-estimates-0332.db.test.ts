@@ -106,4 +106,36 @@ describe.skipIf(url === undefined)("0332 plan estimates and the lorry read", () 
       c.release();
     }
   });
+
+  it("traffic_count_sites_live is the open sites' id, section and position, nothing more", async () => {
+    const c = await t.pool.connect();
+    try {
+      await c.query("begin");
+      const cols = await c.query<{ c: string }>(
+        "select column_name as c from information_schema.columns where table_schema = 'public' and table_name = 'traffic_count_sites_live' order by ordinal_position",
+      );
+      expect(cols.rows.map((r) => r.c)).toEqual(["id", "section_key", "geom"]);
+      const ins = await c.query<{ id: string }>(
+        `insert into traffic_count_sites (source_feed, site_key, location_key, section_key, scope, name, geom, first_seen_at, last_seen_at, source_publisher, vehicles_stream, closed_at)
+         select 'hh_verkehrszaehlstellen', 'k' || g, 'l' || g, 'sec' || (g % 3), 'one', 'n' || g, ST_SetSRID(ST_MakePoint(9 + g / 100.0, 50), 4326)::geography, now(), now(), 'p', 's' || g,
+                case when g % 4 = 0 then now() end
+           from generate_series(1, 12) g returning id`,
+      );
+      expect(ins.rows).toHaveLength(12);
+      const open = await c.query<{ n: string; m: string }>(
+        `select (select count(*) from traffic_count_sites_live v join traffic_count_sites s using (id)
+                  where v.section_key is not distinct from s.section_key and st_equals(v.geom::geometry, s.geom::geometry))::text as n,
+                (select count(*) from traffic_count_sites where closed_at is null)::text as m`,
+      );
+      expect(open.rows[0]!.n).toBe(open.rows[0]!.m);
+      expect(Number(open.rows[0]!.m)).toBeGreaterThanOrEqual(9);
+      const digest = await c.query<{ v: boolean; t: boolean }>(
+        "select has_table_privilege('viafrei_digest', 'public.traffic_count_sites_live', 'select') as v, has_table_privilege('viafrei_digest', 'public.traffic_count_sites', 'select') as t",
+      );
+      expect(digest.rows[0]).toEqual({ v: true, t: false });
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
 });
