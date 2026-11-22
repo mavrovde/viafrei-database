@@ -185,6 +185,11 @@ describe.skipIf(url === undefined)("autobahn and road derived columns (0330)", (
        select 'test', 'src', 'p' || g, 1, $1::jsonb from generate_series(1, 3) g order by g`,
       [JSON.stringify(SITUATION)],
     );
+    // rows written before 0330: the trigger fills every new one, so the backfill's rows are made unfilled
+    await t.pool.query("update road_events set entry_static = null");
+    // the backfill's walk has its own index: the unfilled ids, in order
+    const ix = await one<{ d: string }>(t.pool, "select indexdef as d from pg_indexes where indexname = 'road_events_entry_static_unfilled'");
+    expect(ix.d).toBe("CREATE INDEX road_events_entry_static_unfilled ON public.road_events USING btree (id) WHERE (entry_static IS NULL)");
     const fill = (n: number): Promise<number> => one<{ n: number }>(t.pool, `select road_events_entry_static_backfill($1) as n`, [n]).then((x) => x.n);
     expect(await fill(2)).toBe(2);
     expect((await rows<{ id: string }>(t.pool, `select publication_id as id from road_events where entry_static is null`)).map((x) => x.id)).toEqual(["p3"]);
@@ -192,5 +197,55 @@ describe.skipIf(url === undefined)("autobahn and road derived columns (0330)", (
     expect(await fill(2)).toBe(0);
     const same = await one<{ n: string }>(t.pool, `select count(*)::text as n from road_events where entry_static = road_event_entry_static(payload)`);
     expect(same.n).toBe("3");
+  });
+
+  it("road_events_entry_static fills a new row, follows the loader's payload upsert, and leaves a write without payload alone", async () => {
+    await t.pool.query("delete from road_events");
+    const other = { situationRecord: [{ groupOfLocations: { gmlLineString: { posList: { "#text": "50.1 8.6 50.2 8.7" } } } }] };
+    await t.pool.query(
+      `insert into road_events (feed_key, source_id, publication_id, version, payload) values ('test', 'src', 'up', 1, $1::jsonb)`,
+      [JSON.stringify(SITUATION)],
+    );
+    const facts = (): Promise<{ ok: boolean; line: unknown }> =>
+      one<{ ok: boolean; line: unknown }>(t.pool, `select entry_static is not distinct from road_event_entry_static(payload) and entry_static is not null as ok, entry_static->'line' as line from road_events where publication_id = 'up'`);
+    expect((await facts()).ok).toBe(true);
+    // the loader's upsert: the same key again, a new payload
+    await t.pool.query(
+      `insert into road_events (feed_key, source_id, publication_id, version, payload) values ('test', 'src', 'up', 2, $1::jsonb)
+       on conflict (source_id, publication_id) do update set payload = excluded.payload, version = excluded.version`,
+      [JSON.stringify(other)],
+    );
+    const after = await facts();
+    expect(after.ok).toBe(true);
+    expect(after.line).toBe("50.1 8.6 50.2 8.7");
+    // a write of another column keeps what the payload says
+    await t.pool.query("update road_events set version = 3 where publication_id = 'up'");
+    expect((await facts()).ok).toBe(true);
+  });
+
+  it("autobahn_events_derived_reset sets the derived values NULL when a column they come from is updated, never when another is", async () => {
+    await t.pool.query(
+      `insert into autobahn_events (observed_at, road, kind, ext_id, title, source, raw, derived_starts_at, derived_future, derived_site_key,
+                                    derived_extent_ends, validity_next_change, states_validity, validity_at_write)
+       select now(), 'A1', 'roadworks', 'rs-' || c, 'A1 | X - Y', 'autobahn', '{}'::jsonb, now(), false, md5('k')::uuid,
+              'MULTIPOINT(8 50, 8.1 50.1)'::geography, now() + interval '1 hour', true, true
+         from unnest($1::text[]) c`,
+      [["title", "subtitle", "raw", "road", "kind", "abnormal_traffic_type", "delay_s", "extent", "raw_hash", "source"]],
+    );
+    const set: Record<string, string> = {
+      title: "title = 'A1 | Z'", subtitle: "subtitle = 's'", raw: "raw = '{\"future\": true}'::jsonb", road: "road = 'A2'", kind: "kind = 'closure'",
+      abnormal_traffic_type: "abnormal_traffic_type = 'queue'", delay_s: "delay_s = 60", extent: "extent = '1,2,3,4'", raw_hash: "raw_hash = '\\x00'::bytea",
+      source: "source = 'other'",
+    };
+    for (const [c, expr] of Object.entries(set)) await t.pool.query(`update autobahn_events set ${expr} where ext_id = $1`, [`rs-${c}`]);
+    const r = await rows<{ c: string; filled: number }>(
+      t.pool,
+      `select substr(ext_id, 4) as c,
+              num_nonnulls(derived_starts_at, derived_future, derived_site_key, derived_extent_ends, validity_next_change, states_validity, validity_at_write) as filled
+         from autobahn_events where ext_id like 'rs-%' order by 1`,
+    );
+    expect(Object.fromEntries(r.map((x) => [x.c, x.filled]))).toEqual({
+      abnormal_traffic_type: 0, delay_s: 0, extent: 0, kind: 0, raw: 0, raw_hash: 0, road: 0, source: 7, subtitle: 0, title: 0,
+    });
   });
 });
