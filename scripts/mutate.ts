@@ -9,9 +9,14 @@
  *
  *   npm run mutate                       every mutant
  *   npm run mutate -- --only <text>      the mutants whose name contains <text>
- *   npm run mutate -- --shard <k>/<n>    shard k of n (scripts/mutate-run.ts shardOf),
- *                                        each shard with its own controls; the release
- *                                        runs the n shards as parallel jobs
+ *   npm run mutate -- --shard <k>/<n>    shard k of n (scripts/mutate-run.ts shardOf), cut
+ *                                        by the costs in scripts/mutant-costs.tsv, each
+ *                                        shard with its own controls; the release runs the
+ *                                        n shards as parallel jobs
+ *   npm run mutate -- --costs-out <f>    also write each judged mutant's seconds to <f>, in
+ *                                        the cost file's shape (the release uploads the
+ *                                        shards' files as one artifact, mutant-costs, the
+ *                                        next cost file)
  *
  * A mutant with `config: DB` (every schema behaviour mutant has it) runs its
  * tests with vitest.db.config.ts and VF_REQUIRE_DB=1, so it needs
@@ -24,7 +29,7 @@ import { spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { FILE, MUTANTS, TESTS } from "./mutants.js";
-import { parseShard, runMutants, shardOf } from "./mutate-run.js";
+import { formatCosts, parseCosts, parseShard, runMutants, shardOf } from "./mutate-run.js";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -54,6 +59,11 @@ const vitest = (args: readonly string[], env: NodeJS.ProcessEnv) =>
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] ?? "" : null;
 const shardArg = process.argv.includes("--shard") ? process.argv[process.argv.indexOf("--shard") + 1] ?? "" : null;
 const shard = shardArg === null ? null : parseShard(shardArg);
+const costsOut = process.argv.includes("--costs-out") ? process.argv[process.argv.indexOf("--costs-out") + 1] ?? "" : null;
+if (costsOut === "") {
+  console.log("✗ refused: --costs-out takes a file");
+  process.exit(2);
+}
 if (shardArg !== null && shard === null) {
   console.log(`✗ refused: --shard takes <k>/<n> with 1 <= k <= n, not '${shardArg}'`);
   process.exit(2);
@@ -70,7 +80,7 @@ process.on("SIGINT", () => {
 // is first made UNMUTATED (scripts/mutate-run.ts): a red control is exit 2.
 // A shard is cut from the whole list, so a mutant's shard does not depend on
 // --only; an empty shard is a refusal, never a green job that judged nothing.
-const pool = shard === null ? MUTANTS : shardOf(MUTANTS, shard);
+const pool = shard === null ? MUTANTS : shardOf(MUTANTS, shard, parseCosts(readFileSync(join(ROOT, "scripts", "mutant-costs.tsv"), "utf8")), { tests: TESTS });
 const selected = pool.filter((m) => only === null || m.name.includes(only));
 if (shard !== null) {
   console.log(`  shard ${String(shard.index)}/${String(shard.count)}: ${String(selected.length)} of ${String(MUTANTS.length)} mutants`);
@@ -79,10 +89,13 @@ if (shard !== null) {
     process.exit(2);
   }
 }
+const measured = new Map<string, number>();
 const result = runMutants(selected, { file: FILE, tests: TESTS }, {
   run: (config, tests) => vitest([...(config === undefined ? [] : ["--config", config]), ...tests], config === undefined ? process.env : { ...process.env, VF_REQUIRE_DB: "1" }).status,
   read: (f) => readFileSync(f, "utf8"),
   write: (f, text) => writeFileSync(f, text),
   log: (line) => console.log(line),
+  cost: (name, seconds) => measured.set(name, seconds),
 }, originals);
+if (costsOut !== null) writeFileSync(costsOut, formatCosts(measured));
 process.exit(result.code);

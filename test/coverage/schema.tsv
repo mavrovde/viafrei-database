@@ -697,6 +697,11 @@ function	public.fuel_price_outliers(lo numeric, hi numeric, jump numeric, since 
 function	public.charging_status_runs_note()	test/derived-tables.db.test.ts > an insert notes one run per instant, feed, run and kind: the feed's time for a snapshot, the newest last_updated for a delta, never later than the tick, the confidential not counted; a second insert adds to it; a run older than 35 days goes
 trigger	public.charging_point_status.charging_status_runs_note	test/derived-tables.db.test.ts > an insert notes one run per instant, feed, run and kind: the feed's time for a snapshot, the newest last_updated for a delta, never later than the tick, the confidential not counted; a second insert adds to it; a run older than 35 days goes
 function	public.charging_status_runs_recompute()	test/derived-tables.db.test.ts > a delete or an update recomputes the runs it touched from the ticks left: fewer ticks, a moved run, none left is no row
+function	public.charging_twin_register_feeds()	test/charging-twin-pairs.db.test.ts > is a table of four keys, its primary key the pair, an index from the twin's side, fixed autovacuum thresholds
+function	public.refresh_charging_twin_pairs(p_feed text)	test/charging-twin-pairs.db.test.ts > a register refresh pairs each open register site with the open sites of other feeds within 150 m that share an operator token or a street
+function	public.refresh_charging_twin_pairs(p_feed text)	test/charging-twin-pairs.db.test.ts > a feed's refresh rebuilds only the pairs of its own sites: what went is deleted, what is new inserted, every other feed's pair left alone
+function	public.refresh_charging_twin_pairs(p_feed text)	test/charging-twin-pairs.db.test.ts > runs one refresh at a time: a second waits for the first's transaction, whatever the feed
+function	public.refresh_charging_twin_pairs(p_feed text)	test/charging-twin-pairs.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the pairs and not refresh them
 trigger	public.charging_point_status.charging_status_runs_forget	test/derived-tables.db.test.ts > a delete or an update recomputes the runs it touched from the ticks left: fewer ticks, a moved run, none left is no row
 trigger	public.charging_point_status.charging_status_runs_restate	test/derived-tables.db.test.ts > a delete or an update recomputes the runs it touched from the ticks left: fewer ticks, a moved run, none left is no row
 function	public.lez_zone_overlaps_refresh(p_feed text, p_zone text)	test/derived-tables.db.test.ts > an open zone overlapping an open zone of another feed is a pair both ways with the shared and the smaller area; the same feed, a touching edge, a road or a closed zone is none
@@ -1165,6 +1170,10 @@ grant	viafrei_mcp@public.charging_points_live	test/roles-grants.db.test.ts > via
 grant	viafrei_mcp@public.charging_points_live	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.charging_sites_live	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.charging_sites_live	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
+grant	viafrei_digest@public.charging_site_twin_pairs	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
+grant	viafrei_digest@public.charging_site_twin_pairs	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours
+grant	viafrei_mcp@public.charging_site_twin_pairs	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
+grant	viafrei_mcp@public.charging_site_twin_pairs	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.charging_status_runs	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.charging_status_runs	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.city_traffic_now_live	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
@@ -2707,6 +2716,8 @@ table	public.bw_detours	test/tables.db.test.ts > every table of schema public re
 table	public.charging_point_status	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
 table	public.charging_point_status	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
 table	public.charging_point_status	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_site_twin_pairs	test/charging-twin-pairs.db.test.ts > is a table of four keys, its primary key the pair, an index from the twin's side, fixed autovacuum thresholds
+table	public.charging_site_twin_pairs	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
 table	public.charging_points	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
 table	public.charging_points	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
 table	public.charging_points	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name

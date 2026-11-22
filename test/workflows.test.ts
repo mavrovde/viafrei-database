@@ -86,22 +86,24 @@ describe("an image only for a confirmed release", () => {
   });
 
   it("runs every mutant on the gate's commit before anything is built, and only here", () => {
+    const MATRIX = "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n";
+    expect(release).toContain(MATRIX);
     expect(mutantsFaults(release)).toEqual([]);
     expect(mutantsFaults(release.replace("    needs: [gate, mutants, snyk]\n", "    needs: [gate, snyk]\n"))).toEqual(["publish does not wait for the mutation check"]);
-    const run = '        run: npm run mutate -- --shard "$SHARD/4"\n';
-    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/4" --only lint\n'))).toEqual(["a shard does not run its whole slice"]);
+    const run = '        run: npm run mutate -- --shard "$SHARD/12" --costs-out "mutant-costs-$SHARD.tsv"\n';
+    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/12" --only lint --costs-out "mutant-costs-$SHARD.tsv"\n'))).toEqual(["a shard does not run its whole slice"]);
     expect(mutantsFaults(release.replace(run, "        run: npm run mutate\n"))).toEqual(["a shard does not run its whole slice"]);
-    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/5"\n'))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
-    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
-    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 4, 4]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace(run, '        run: npm run mutate -- --shard "$SHARD/13" --costs-out "mutant-costs-$SHARD.tsv"\n'))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace(MATRIX, "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(mutantsFaults(release.replace(MATRIX, "        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12]\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
     expect(mutantsFaults(release.replace(/(\n {2}mutant-shards:\n[^]*?)\n {4}if: needs\.gate\.outputs\.publish == 'true'\n/, "$1\n"))).toEqual(["the mutation check does not run on the gate's say-so"]);
     expect(mutantsFaults(release.replace("    if: ${{ !cancelled() && needs.gate.outputs.publish == 'true' }}\n", "    if: needs.gate.outputs.publish == 'true'\n"))).toEqual(["the fan-in does not run when a shard failed"]);
     expect(mutantsFaults(release.replace("    needs: [gate, mutant-shards]\n", "    needs: gate\n"))).toEqual(["the fan-in does not wait for the shards"]);
     expect(mutantsFaults(release.replace("[[ $SHARDS == success ]] ||", "[[ $SHARDS != failure ]] ||"))).toEqual(["the fan-in passes a shard that did not succeed"]);
-    expect(mutantsFaults(release.replace("    timeout-minutes: 120\n", "    timeout-minutes: 120\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
+    expect(mutantsFaults(release.replace(/(\n {2}mutant-shards:\n[^]*?\n {4}timeout-minutes: 15\n)/, "$1    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
     expect(mutantsFaults(release.replace("    timeout-minutes: 5\n", "    timeout-minutes: 5\n    continue-on-error: true\n"))).toEqual(["the mutation check may fail without failing the release"]);
-    expect(mutantsFaults(release.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3, 4]\n        include:\n          - shard: 5\n"))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
-    expect(job(release, "mutant-shards")).toContain("\n    timeout-minutes: 120\n");
+    expect(mutantsFaults(release.replace(MATRIX, `${MATRIX}        include:\n          - shard: 13\n`))).toEqual(["the matrix is not shards 1 to the count each shard is cut by"]);
+    expect(job(release, "mutant-shards")).toContain("\n    timeout-minutes: 15\n");
     // The full set runs in this file alone: no pull request, push or schedule runs it.
     for (const n of workflows.filter((w) => w !== "release.yml")) expect(readFileSync(join(WF, n), "utf8"), n).not.toContain("npm run mutate");
   });
@@ -253,6 +255,9 @@ describe("pins", () => {
     "sigstore/cosign-installer": "756fe2d284c7292c4e9b62c8a28f1e5629c59532",
     "actions/attest-build-provenance": "4d101475d8b20a2381f78447822ac1eab6504dd8",
     "anchore/sbom-action": "66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c",
+    // the shards' measured costs, joined by the fan-in into the next cost file.
+    "actions/upload-artifact": "cf430e030ddbb5b0abf93d22962f4752f3646cd9", // v7.0.2
+    "actions/download-artifact": "9000827ccba6bdab643e8b6fd33ac0654aef8333", // v8.0.2
   };
 
   it("every action in every workflow is pinned by a full commit SHA", () => {
@@ -296,7 +301,7 @@ export function mutantsFaults(release: string): string[] {
   const faults: string[] = [];
   if (!/\n {4}needs: \[gate, mutants(, snyk)?\]\n/.test(job(release, "publish"))) faults.push("publish does not wait for the mutation check");
   // Each shard runs its whole slice, k of n; the matrix is exactly 1..n, so the slices are the whole set (test/mutants.test.ts).
-  const run = /\n {6}- name: Every mutant of the shard\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {10}SHARD: \$\{\{ matrix\.shard \}\}\n {8}run: npm run mutate -- --shard "\$SHARD\/(\d+)"\n/.exec(shards);
+  const run = /\n {6}- name: Every mutant of the shard\n {8}env:\n {10}TEST_DATABASE_URL: \S+\n {10}SHARD: \$\{\{ matrix\.shard \}\}\n {8}run: npm run mutate -- --shard "\$SHARD\/(\d+)" --costs-out "mutant-costs-\$SHARD\.tsv"\n/.exec(shards);
   if (run === null) faults.push("a shard does not run its whole slice");
   const matrix = /\n {4}strategy:\n {6}fail-fast: false\n {6}matrix:\n {8}shard: \[([\d, ]+)\]\n(?! {8})/.exec(shards);
   const count = Number(run?.[1] ?? "0");
@@ -1010,5 +1015,41 @@ describe("Snyk: weekly on main and once per release, never on a pull request or 
       ["security.yml runs the Snyk CLI", plant("security.yml", "\njobs:\n", "\njobs:\n  x:\n    steps:\n      - run: ./snyk test\n")],
     ];
     for (const [want, f] of cases) expect(snykFaults(f).join("; "), want).toContain(want);
+  });
+});
+
+/**
+ * Every test pipeline within 15 minutes: the jobs of a
+ * workflow with no `timeout-minutes` of their own or one over 15, by id. A job
+ * that calls a reusable workflow (`uses:` at job level) cannot carry one; the
+ * called workflow's jobs are held to it instead.
+ */
+export function timeoutFaults(text: string, max = 15): string[] {
+  const faults: string[] = [];
+  for (const id of jobNamesById(text)) {
+    const body = job(text, id);
+    if (/\n {4}uses: /.test(body)) continue;
+    const m = /\n {4}timeout-minutes: (.+)\n/.exec(body);
+    if (m === null) faults.push(`${id}: no timeout-minutes`);
+    else if (!/^\d+$/.test(m[1] ?? "") || Number(m[1]) > max || Number(m[1]) < 1) faults.push(`${id}: timeout-minutes ${m[1] ?? ""}, not 1 to ${String(max)}`);
+  }
+  return faults;
+}
+
+describe("every job ends within 15 minutes", () => {
+  it("every job of every workflow carries timeout-minutes of at most 15", () => {
+    for (const n of workflows) expect(timeoutFaults(readFileSync(join(WF, n), "utf8")), n).toEqual([]);
+    // the gate reads every job: release.yml has eight, one of them a reusable call
+    expect(jobNamesById(release)).toHaveLength(8);
+  });
+
+  it("names a job with no timeout, one over 15 and one that is not a number, and passes a reusable call", () => {
+    const drop = release.replace(/(\n {2}publish:\n[^]*?)\n {4}timeout-minutes: 15\n/, "$1\n");
+    expect(timeoutFaults(drop)).toEqual(["publish: no timeout-minutes"]);
+    const long = release.replace(/(\n {2}mutant-shards:\n[^]*?\n {4}timeout-minutes: )15\n/, "$116\n");
+    expect(timeoutFaults(long)).toEqual(["mutant-shards: timeout-minutes 16, not 1 to 15"]);
+    const expr = release.replace(/(\n {2}tag:\n[^]*?\n {4}timeout-minutes: )\d+\n/, "$1${{ inputs.t }}\n");
+    expect(timeoutFaults(expr)).toEqual(["tag: timeout-minutes ${{ inputs.t }}, not 1 to 15"]);
+    expect(job(release, "snyk")).toContain("\n    uses: ./.github/workflows/snyk.yml\n");
   });
 });

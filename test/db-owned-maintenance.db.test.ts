@@ -199,7 +199,7 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
-    it("applies 0322 alone and ends with path 1's functions, grants and energy_page_keys parameters", async () => {
+    it("applies 0322 and every later migration, and ends with path 1's functions, grants and energy_page_keys parameters", async () => {
       const p = pool as pg.Pool;
       expect(await functions(p)).toEqual([]);
       expect(await energyOptions(p)).toEqual(["autovacuum_vacuum_scale_factor=0.05"]);
@@ -207,7 +207,10 @@ describe.skipIf(url === undefined)("0322 and the maintenance commands", () => {
       try {
         const run = await s.migrate("cli");
         expect(run.ok, run.lines.join("\n")).toBe(true);
-        expect(run.lines.filter((l) => l.startsWith("applying"))).toEqual(["applying 0322_db_owned_maintenance.sql"]);
+        // 0322 first, then every later migration: "to head" grows with each release, so the list is read, not written.
+        const after0321 = readdirSync(join(REPO, "db", "migrations")).filter((n) => /^\d{4}_.*\.sql$/.test(n) && Number(n.slice(0, 4)) > 321).sort();
+        expect(after0321[0]).toBe("0322_db_owned_maintenance.sql");
+        expect(run.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual(after0321);
       } finally {
         await endPool(s.pool, () => s.close());
       }

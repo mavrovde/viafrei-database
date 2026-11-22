@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { shardOf } from "../scripts/mutate-run.js";
-import { FILE, MUTANTS } from "../scripts/mutants.js";
+import { parseCosts, planShards, shardOf } from "../scripts/mutate-run.js";
+import { FILE, MUTANTS, TESTS } from "../scripts/mutants.js";
 import { REPO } from "./helpers.js";
 
 const MIGRATIONS = join(REPO, "db", "migrations");
@@ -126,12 +126,28 @@ describe("the mutant set", () => {
 
 describe("the release's shards of the set", () => {
   // The count release.yml's mutant-shards matrix runs (test/workflows.test.ts holds the workflow to it).
-  const COUNT = 4;
-  it("are disjoint, together the whole list, and none is empty", () => {
-    const shards = Array.from({ length: COUNT }, (_, k) => shardOf(MUTANTS, { index: k + 1, count: COUNT }));
-    const names = shards.flatMap((s) => s.map((m) => m.name));
+  const COUNT = 12;
+  // every job has 15 minutes; a shard plans 12 of them, one of which is its setup (checkout, npm ci, psql).
+  const BUDGET_S = 12 * 60;
+  const SETUP_S = 60;
+  const costs = parseCosts(readFileSync(join(REPO, "scripts", "mutant-costs.tsv"), "utf8"));
+  const shards = Array.from({ length: COUNT }, (_, k) => shardOf(MUTANTS, { index: k + 1, count: COUNT }, costs, { tests: TESTS }));
+
+  it("lose no mutant and count none twice: the union of the shards is the real list, and none is empty", () => {
+    const names = shards.flatMap((sh) => sh.map((m) => m.name));
+    expect(names.length).toBe(MUTANTS.length);
     expect(new Set(names).size).toBe(names.length);
-    expect(names.sort()).toEqual(MUTANTS.map((m) => m.name).sort());
-    for (const s of shards) expect(s.length).toBeGreaterThan(0);
+    expect([...names].sort()).toEqual(MUTANTS.map((m) => m.name).sort());
+    for (const sh of shards) expect(sh.length).toBeGreaterThan(0);
+  });
+
+  it("each plan fits the budget by the committed cost file: no shard over 12 of its 15 minutes", () => {
+    const { loads } = planShards(MUTANTS, COUNT, costs, { tests: TESTS });
+    expect(Math.max(...loads) + SETUP_S, loads.map((l) => Math.round(l)).join(" ")).toBeLessThanOrEqual(BUDGET_S);
+  });
+
+  it("the cost file names no mutant that is not in the list (a renamed one is measured afresh)", () => {
+    const listed = new Set(MUTANTS.map((m) => m.name));
+    expect([...costs.keys()].filter((n) => !listed.has(n))).toEqual([]);
   });
 });

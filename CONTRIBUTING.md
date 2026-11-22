@@ -111,10 +111,18 @@ replaced by a newer pending one, so start one release at a time.
 
 **The mutation tally.** The release workflow runs every mutant of
 `npm run mutate` on the tagged commit, after the gate and before anything is
-built, in four parallel Mutation shard jobs (`--shard k/4` takes the mutants at
-the positions p with p mod 4 = k - 1, so the four are disjoint and together the
-whole set; test/mutants.test.ts proves it), each with its own controls and a
-120-minute limit, gathered by the Mutation check job that the build waits for.
+built, in twelve parallel Mutation shard jobs (`--shard k/12`), gathered by the
+Mutation check job that the build waits for. The shards are cut by cost
+(scripts/mutate-run.ts planShards): scripts/mutant-costs.tsv holds the seconds
+each mutant took in a release, a mutant missing from it costs the median, and
+the mutants are dealt dearest first to the shard that ends cheapest, a shard
+paying a control run once per distinct run. test/mutants.test.ts proves the
+twelve are disjoint and together the whole set, and that by the committed file
+no shard plans more than 12 of the 15 minutes every job has (a minute of it
+setup). Each shard uploads the seconds it measured; the Mutation check joins
+them into the artifact `mutant-costs`. **After each release, commit that
+artifact as scripts/mutant-costs.tsv**; when the test says a shard is over
+budget, add shards to the matrix and the `--shard k/n` count together.
 A survivor in any shard, a shard that does not finish, a mutant whose pattern no longer matches
 or matches more than one place (test/mutants.test.ts refuses both first), or a unit or database run that fails before any mutant is planted (each
 distinct run is made once, unmutated, first) stops the release. That run is
@@ -131,10 +139,10 @@ which recovery applies depends on how far the release got:
   failed for a reason outside the tagged commit, such as a registry or runner
   outage): start the release again on its tag,
   `gh workflow run release.yml --ref vX.Y.Z`. The gate runs again in full. A
-  run on the same tag repeats the same time limit and the same four shards, so
-  a mutation shard that times out again on that commit needs a new patch
-  release with more shards or a higher `timeout-minutes`; a tag is never
-  reused.
+  run on the same tag repeats the same time limit and the same twelve shards,
+  so a mutation shard that times out again on that commit needs a new patch
+  release with more shards (never a `timeout-minutes` over 15, which
+  test/workflows.test.ts refuses); a tag is never reused.
 - **The image is tagged but the release page is not published** (the
   `release-page` job failed): re-run only the failed job of that run,
   `gh run rerun <run-id> --failed`. A new run would be refused, because

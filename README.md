@@ -118,6 +118,7 @@ The maintenance the applications ran after their bulk loads is part of the schem
 | `select gtfs_derived_refresh('gtfs_untimed_trips' \| 'gtfs_route_kreise' \| 'transit_stop_modes')` | `REFRESH MATERIALIZED VIEW CONCURRENTLY` of one view under its build session (serial, `hash_mem_multiplier` 1, `jit` off, `temp_file_limit` 6GB, `work_mem` 82/27/16 MB), restored when it returns; returns the statement and its settings. One call per view, each its own transaction, in this order, after a committed GTFS load; the caller sets `statement_timeout` (600s) |
 | `select osm_street_tiles_refresh('osm_street_tiles' \| 'osm_street_tiles_lo')` | The same for the street maps' cells, in this order after a streets load; the caller sets `statement_timeout` (300s) |
 | `select analyze_after_load('trips', 'stop_times', …)` | `ANALYZE` of the named tables in one statement, only from `gtfs_service_dates`, `routes`, `stops`, `trips`, `stop_times`, `osm_addresses`, `osm_pois`, `osm_streets`, `osm_speed_cameras`; any other name refuses the whole call. Usable inside the caller's transaction |
+| `select refresh_charging_twin_pairs(feed)` | Migration 0326. Rebuilds the `charging_site_twin_pairs` rows of one feed's sites: for a register feed (`charging_twin_register_feeds()`, today `bnetza_lsr`) its register side, for any other feed its twin side. A pair is a register site and a site of another feed, both open, within 150 m, sharing an operator token or a non-empty street key: a superset of what the register-twin rule accepts, which the reads still test on the live rows. Pairs that still hold are left in place. One refresh at a time (a transaction-scoped advisory lock). Every charging load calls it for its feed inside its own transaction, after its last write; returns the pairs inserted |
 
 `energy_page_keys` is vacuumed and analysed by autovacuum after every refresh of a
 kind (fixed thresholds of 5 000 changed or inserted rows, no scale factor, no cost
@@ -247,7 +248,7 @@ merge of the release pull request into main
   -> a draft GitHub release, then the annotated tag vX.Y.Z on that commit
      (CI and Security checked again first; an existing tag is refused)
   -> the release workflow, started on that tag:
-     gate, every mutant (npm run mutate, in four parallel shards), build,
+     gate, every mutant (npm run mutate, in twelve parallel shards), build,
      push by digest, sign,
      attest, verify, tag the image
   -> the draft release is published with the image digest and how to verify it
@@ -326,8 +327,8 @@ When each one runs, scheduled scans included: [SECURITY.md](SECURITY.md).
 | Scorecard | Scorecard analysis | the OpenSSF Scorecard of this repository; the exception to the sentence above, it runs weekly and on a branch-protection change only |
 | Snyk | Snyk (dependencies) | Snyk Open Source over the npm dependencies (high or critical fails); another exception, it runs weekly on `main` only, never on a pull request or a push |
 | Release | Release gate | a tag publishes an image only when it is an annotated `vX.Y.Z` on `main`, equals `package.json`, names the commit the run was started for, and its CI and Security workflows concluded successfully on that commit |
-| Release | Mutation shard | one of four parallel jobs (`npm run mutate -- --shard k/4`, the mutants at the positions p of `scripts/mutants.ts` with p mod 4 = k - 1), each against an empty PostGIS of its own, with its own unmutated control runs first and a 120-minute limit: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, a unit or database run that fails before any mutant is planted, or a shard that selects no mutant fails the shard. Together the four are the only run of the full set; no pull request or push runs it |
-| Release | Mutation check | the fan-in the build waits for: green only when every Mutation shard finished green, so a survivor in any shard, or a shard that failed, timed out or never started, stops the release before anything is built |
+| Release | Mutation shard | one of twelve parallel jobs (`npm run mutate -- --shard k/12`, the mutants cut by their cost in `scripts/mutant-costs.tsv` so no shard plans more than 12 of its 15 minutes), each against an empty PostGIS of its own, with its own unmutated control runs first and a 15-minute limit, uploading the seconds each mutant took: one surviving mutant, a mutant whose pattern no longer matches or matches more than one place, a unit or database run that fails before any mutant is planted, or a shard that selects no mutant fails the shard. Together the twelve are the only run of the full set; no pull request or push runs it |
+| Release | Mutation check | the fan-in the build waits for: green only when every Mutation shard finished green, so a survivor in any shard, or a shard that failed, timed out or never started, stops the release before anything is built; it joins the shards' measured seconds into the artifact `mutant-costs`, the next `scripts/mutant-costs.tsv` |
 | Release | Snyk (dependencies) | the same Snyk scan, called on that commit before anything is built: a high or critical advisory stops the release |
 
 What changed when: [CHANGELOG.md](CHANGELOG.md).
@@ -398,7 +399,7 @@ TEST_DATABASE_URL=postgresql://… npm run test:db     # empty PostGIS → head
 TEST_DATABASE_URL=postgresql://… npm run coverage    # both, with the coverage gate
 scripts/image-smoke.sh                               # build + harden + serve + probe
 TEST_DATABASE_URL=postgresql://… npm run mutate -- --only <text>   # the mutants whose name contains <text>; the full set is run by the release (below)
-TEST_DATABASE_URL=postgresql://… npm run mutate -- --shard 2/4     # one shard of the set, as one release job runs it
+TEST_DATABASE_URL=postgresql://… npm run mutate -- --shard 2/12    # one shard of the set, as one release job runs it
 TEST_DATABASE_URL=postgresql://… npm run coverage:schema   # every catalogue object has its test (or a gap row)
 npm run coverage:schema -- --gap                     # the uncovered objects, as gap.tsv rows
 ```
