@@ -1492,6 +1492,13 @@ public.charging_sites	index	charging_sites_geom_gist	CREATE INDEX charging_sites
 public.charging_sites	index	charging_sites_page_key	CREATE INDEX charging_sites_page_key ON public.charging_sites USING btree (public.vf_page_key(((('charging:'::text || source_feed) || ':'::text) || site_id)))
 public.charging_sites	index	charging_sites_pkey	CREATE UNIQUE INDEX charging_sites_pkey ON public.charging_sites USING btree (source_feed, site_id)
 public.charging_sites	index	charging_sites_withheld_site	CREATE INDEX charging_sites_withheld_site ON public.charging_sites USING btree (site_id) WHERE ((closed_at IS NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) <> 'noRestriction'::text))
+public.charging_site_twin_pairs	column	register_feed	text not null
+public.charging_site_twin_pairs	column	register_site_id	text not null
+public.charging_site_twin_pairs	column	twin_feed	text not null
+public.charging_site_twin_pairs	column	twin_site_id	text not null
+public.charging_site_twin_pairs	constraint	charging_site_twin_pairs_pkey	p PRIMARY KEY (register_feed, register_site_id, twin_feed, twin_site_id)
+public.charging_site_twin_pairs	index	charging_site_twin_pairs_pkey	CREATE UNIQUE INDEX charging_site_twin_pairs_pkey ON public.charging_site_twin_pairs USING btree (register_feed, register_site_id, twin_feed, twin_site_id)
+public.charging_site_twin_pairs	index	charging_site_twin_pairs_twin	CREATE INDEX charging_site_twin_pairs_twin ON public.charging_site_twin_pairs USING btree (twin_feed, twin_site_id)
 public.charging_status_runs	column	observed_at	timestamp with time zone not null
 public.charging_status_runs	column	source_feed	text not null
 public.charging_status_runs	column	source_run_id	bigint

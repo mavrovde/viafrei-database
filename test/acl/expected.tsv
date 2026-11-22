@@ -82,6 +82,7 @@ viafrei_digest	relation	public.bw_detours_live	SELECT
 viafrei_digest	relation	public.charging_feed_runs_live	SELECT
 viafrei_digest	relation	public.charging_point_status_live	SELECT
 viafrei_digest	relation	public.charging_points_live	SELECT
+viafrei_digest	relation	public.charging_site_twin_pairs	SELECT
 viafrei_digest	relation	public.charging_sites_live	SELECT
 viafrei_digest	relation	public.charging_status_runs	SELECT
 viafrei_digest	relation	public.city_traffic_now_live	SELECT
@@ -209,6 +210,7 @@ viafrei_ingestor	function	ingestor.taken_feed_keys(p_ids text[])	EXECUTE
 viafrei_ingestor	function	public.analyze_after_load(VARIADIC p_tables text[])	EXECUTE
 viafrei_ingestor	function	public.gtfs_derived_refresh(p_view text)	EXECUTE
 viafrei_ingestor	function	public.osm_street_tiles_refresh(p_view text)	EXECUTE
+viafrei_ingestor	function	public.refresh_charging_twin_pairs(p_feed text)	EXECUTE
 viafrei_ingestor	relation	domains.charging_point_status	INSERT,SELECT
 viafrei_ingestor	relation	domains.charging_points	INSERT,SELECT,UPDATE
 viafrei_ingestor	relation	domains.charging_points_merged	SELECT
@@ -473,6 +475,7 @@ viafrei_mcp	relation	public.bfrk_stops_live	SELECT
 viafrei_mcp	relation	public.bw_detours_live	SELECT
 viafrei_mcp	relation	public.charging_point_status	SELECT
 viafrei_mcp	relation	public.charging_points_live	SELECT
+viafrei_mcp	relation	public.charging_site_twin_pairs	SELECT
 viafrei_mcp	relation	public.charging_sites_live	SELECT
 viafrei_mcp	relation	public.charging_status_runs	SELECT
 viafrei_mcp	relation	public.city_traffic_now_live	SELECT
