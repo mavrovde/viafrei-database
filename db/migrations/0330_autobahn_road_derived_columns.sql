@@ -3,7 +3,7 @@
 --
 -- Autobahn GmbH rows (autobahn_events): the item's start and "future" flag, its site key (#505),
 -- its extent's end points, and the next instant its own validity windows can change
--- (autobahn_validity_next_change at observed_at) and whether it states any readable window at all
+-- (autobahn_validity_next_change at observed_at) with the answer there (validity_at_write), and whether it states any readable window at all
 -- (states_validity), so a reader runs autobahn_validity_overlaps only on rows that state one.
 --
 -- autobahn_validity_overlaps is re-created as ONE pass over the description: each line is read
@@ -39,7 +39,8 @@
 --   set lock_timeout = '3s';
 --   alter table public.autobahn_events drop column if exists derived_starts_at, drop column if exists derived_future,
 --     drop column if exists derived_site_key, drop column if exists derived_extent_ends,
---     drop column if exists validity_next_change, drop column if exists states_validity;
+--     drop column if exists validity_next_change, drop column if exists states_validity,
+--     drop column if exists validity_at_write;
 --   drop function if exists public.autobahn_validity_stated(jsonb);
 --   (autobahn_validity_overlaps: re-create the two-pass body of the 0293 baseline)
 --   drop function if exists public.autobahn_validity_next_change(jsonb, timestamptz);
@@ -59,7 +60,8 @@ alter table public.autobahn_events
   add column if not exists derived_site_key jsonb,
   add column if not exists derived_extent_ends geography(MultiPoint, 4326),
   add column if not exists validity_next_change timestamptz,
-  add column if not exists states_validity boolean;
+  add column if not exists states_validity boolean,
+  add column if not exists validity_at_write boolean;
 
 alter table public.road_events
   add column if not exists entry_static jsonb;
@@ -452,3 +454,5 @@ as $function$
 $function$;
 
 comment on function public.autobahn_validity_stated(jsonb) is 'True when autobahn_validity_overlaps(description, ...) is not NULL (any readable window stated); stored in autobahn_events.states_validity (0330).';
+
+comment on column public.autobahn_events.validity_at_write is 'autobahn_validity_overlaps(resolved payload description, observed_at, observed_at), stored by the writer (0330): the answer at every instant in [observed_at, validity_next_change); NULL when no window is stated or the row was not written by a writer that fills it.';
