@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.4.2](https://github.com/mavrovde/viafrei-database/compare/v0.4.1...v0.4.2) (2026-11-22)
+
+
+### Build and CI
+
+* **release:** twenty mutation shards, each planning 8 of its 15 minutes ([#82](https://github.com/mavrovde/viafrei-database/issues/82)) ([ec4ffbd](https://github.com/mavrovde/viafrei-database/commit/ec4ffbdadf26e81817f7fec195a040f337f74239))
+
 ## [0.4.1](https://github.com/mavrovde/viafrei-database/compare/v0.4.0...v0.4.1) (2026-11-22)
 
 
