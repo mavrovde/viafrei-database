@@ -1506,6 +1506,21 @@ public.charging_site_twin_pairs	column	twin_site_id	text not null
 public.charging_site_twin_pairs	constraint	charging_site_twin_pairs_pkey	p PRIMARY KEY (register_feed, register_site_id, twin_feed, twin_site_id)
 public.charging_site_twin_pairs	index	charging_site_twin_pairs_pkey	CREATE UNIQUE INDEX charging_site_twin_pairs_pkey ON public.charging_site_twin_pairs USING btree (register_feed, register_site_id, twin_feed, twin_site_id)
 public.charging_site_twin_pairs	index	charging_site_twin_pairs_twin	CREATE INDEX charging_site_twin_pairs_twin ON public.charging_site_twin_pairs USING btree (twin_feed, twin_site_id)
+public.charging_point_copies	column	source_feed	text not null
+public.charging_point_copies	column	point_key	text not null
+public.charging_point_copies	column	kind	text not null
+public.charging_point_copies	column	copy_feed	text not null
+public.charging_point_copies	column	copy_point_key	text not null
+public.charging_point_copies	column	copy_site_id	text not null
+public.charging_point_copies	constraint	charging_point_copies_pkey	p PRIMARY KEY (source_feed, point_key, kind, copy_feed, copy_point_key)
+public.charging_point_copies	index	charging_point_copies_copy	CREATE INDEX charging_point_copies_copy ON public.charging_point_copies USING btree (copy_feed, copy_point_key)
+public.charging_point_copies	index	charging_point_copies_pkey	CREATE UNIQUE INDEX charging_point_copies_pkey ON public.charging_point_copies USING btree (source_feed, point_key, kind, copy_feed, copy_point_key)
+public.charging_site_twin_claims	column	register_feed	text not null
+public.charging_site_twin_claims	column	register_site_id	text not null
+public.charging_site_twin_claims	column	twin_feed	text not null
+public.charging_site_twin_claims	column	twin_site_id	text not null
+public.charging_site_twin_claims	constraint	charging_site_twin_claims_pkey	p PRIMARY KEY (register_feed, register_site_id, twin_feed, twin_site_id)
+public.charging_site_twin_claims	index	charging_site_twin_claims_pkey	CREATE UNIQUE INDEX charging_site_twin_claims_pkey ON public.charging_site_twin_claims USING btree (register_feed, register_site_id, twin_feed, twin_site_id)
 public.charging_status_runs	column	observed_at	timestamp with time zone not null
 public.charging_status_runs	column	source_feed	text not null
 public.charging_status_runs	column	source_run_id	bigint
