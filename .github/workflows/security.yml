@@ -24,7 +24,7 @@ jobs:
   codeql:
     name: CodeQL (TypeScript)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -74,7 +74,7 @@ jobs:
   zap:
     name: DAST (OWASP ZAP against the container)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write # uploads the ZAP SARIF to code scanning
