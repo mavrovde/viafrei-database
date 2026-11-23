@@ -3820,3 +3820,6 @@ grant	viafrei_mcp@public.charging_site_twin_claims	test/charging-stored-referenc
 grant	viafrei_mcp@public.charging_site_twin_claims	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > is one table keyed by its references, with fixed autovacuum thresholds
 table	public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > equal today's rule over six seeded neighbourhoods, each with something to compare; the first fill's one pass equals the per-feed refreshes
+view	public.traffic_count_sites_live	test/plan-estimates-0332.db.test.ts > traffic_count_sites_live is the open sites' id, section and position, nothing more
+grant	viafrei_digest@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
+grant	viafrei_digest@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours

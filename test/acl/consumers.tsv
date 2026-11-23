@@ -103,6 +103,7 @@ viafrei_digest	public.city_traffic_pulls_live	select	digest: declared reads
 viafrei_digest	public.city_traffic_segments_live	select	digest: declared reads
 viafrei_digest	public.traffic_count_now_live	select	digest: declared reads
 viafrei_digest	public.traffic_count_profiles_live	select	digest: declared reads
+viafrei_digest	public.traffic_count_sites_live	select	digest: declared reads
 viafrei_digest	public.place_websites	select	digest: declared reads
 viafrei_digest	public.station_index_live	select	digest: declared reads
 viafrei_digest	public.station_slugs	select	digest: declared reads
