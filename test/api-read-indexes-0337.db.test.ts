@@ -39,17 +39,36 @@ const DEFS = {
     "CREATE INDEX weather_warnings_area_desc ON public.weather_warnings USING btree (area_desc) WHERE (deleted_at IS NULL)",
 } as const;
 
-/** The API's statements (viafrei-api, store), their source-rule part cut to the families given. */
+/** The API's statements (viafrei-api, store): the place coverage verbatim, the others their predicates on the indexed table. */
 const READS = [
   {
     name: "coverage",
     types: "text[]",
-    sql: `select x.extract_date from (select distinct land from osm_addresses where closed_at is null) l
-      cross join lateral (select a.extract_date from osm_addresses a
-        where a.land = l.land and a.closed_at is null and a.geom is not null and a.source_id = any((select $1::text[])::text[])
-        order by a.extract_date desc nulls last limit 1) x`,
+    // api_coverage_addresses as viafrei-api's store (coverage.go) prepares it.
+    sql: `with recursive fam as (select coalesce(array_agg(x.f), '{}') f from unnest((select $1::text[])) x(f) where coalesce((select not coalesce(k.excluded, false) and coalesce(k.display_class, 'open') <> 'withhold'
+      and (coalesce(k.audience, 'public') = 'public' or current_setting('viafrei_api.own_key', true) = 'on')
+    from contract_source_rules k where x.f ~ k.pattern order by k.priority limit 1), true)),
+lands(land) as (
+  (select a.land from osm_addresses a, fam
+    where a.land is not null and a.closed_at is null and a.geom is not null and a.source_id = any(fam.f) order by 1 limit 1)
+  union all
+  select (select a.land from osm_addresses a, fam
+           where a.land > l.land and a.closed_at is null and a.geom is not null and a.source_id = any(fam.f) order by 1 limit 1)
+    from lands l where l.land is not null)
+select l.land, x.extract_date, x.source_id
+from lands l
+cross join lateral (select a.extract_date, a.source_id from osm_addresses a, fam
+                     where a.land = l.land and a.closed_at is null and a.geom is not null and a.source_id = any(fam.f)
+                     order by a.extract_date desc nulls last limit 1) x
+where l.land is not null
+union all
+select null, x.extract_date, x.source_id
+from (select a.extract_date, a.source_id from osm_addresses a, fam
+       where a.land is null and a.closed_at is null and a.geom is not null and a.source_id = any(fam.f)
+       order by a.extract_date desc nulls last limit 1) x
+order by 1 nulls last`,
     args: "('{osm}')",
-    index: /Index Scan using osm_addresses_open_land_extract on osm_addresses a\b/,
+    index: /Index Scan using osm_addresses_open_land_extract on osm_addresses a\n[^]*Index Scan using osm_addresses_open_land_extract on osm_addresses a_1\n/,
   },
   {
     name: "named",

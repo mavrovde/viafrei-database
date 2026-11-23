@@ -36,6 +36,18 @@
 --
 -- A concurrent build holds SHARE UPDATE EXCLUSIVE, which blocks no writer.
 --
+-- Production, read only, 2026-11-23: osm_addresses 5476 MB of heap (19.6 M
+-- open rows), osm_pois 433 MB, weather_warnings 427 MB. The server's
+-- maintenance_work_mem is 256 MB and max_parallel_maintenance_workers 0; this
+-- file sets 64 MB and 0 for its own session, as 0334 does, so each build is
+-- one worker. The migrating role (viafrei) has no role-level
+-- statement_timeout (the service roles have one; api_reader's is 2 s), so no
+-- build is cut off. A concurrent build reads the heap twice (the build, then
+-- the validation scan). The osm_addresses build, timed on a test database
+-- (326 MB of heap, 2 M rows: 3.5 s at 64 MB, 4.0 s at 256 MB) and scaled to
+-- 5.5 GB, is about one minute; a heap not in cache and the server's load can
+-- make it several. The other two are seconds.
+--
 -- rollback:
 --   set lock_timeout = '5s';
 --   drop index concurrently if exists public.osm_addresses_open_land_extract;
