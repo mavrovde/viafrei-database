@@ -658,6 +658,7 @@ function	public.road_events_note_suspended()	test/road-functions.db.test.ts > th
 trigger	public.road_events.road_events_suspended	test/road-functions.db.test.ts > the suspended flag is derived from the payload on insert and on a payload update, whatever the writer sets
 view	public.road_events_current	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 view	public.road_events_current	test/replays.db.test.ts > road_events_current withholds a row marked anything but noRestriction, and keeps an absent and a free one
+view	public.road_events_current	test/current-road-events-0335.db.test.ts > road_events_current is road_events_live's columns, in its order, entry_static too, over the same rows
 view	public.road_event_locations_live	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 function	public.ops_audit_append_only()	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
 trigger	public.ops_audit.ops_audit_append_only	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
@@ -1353,6 +1354,8 @@ grant	viafrei_mcp@public.traffic_count_now_live	test/roles-grants.db.test.ts > v
 grant	viafrei_mcp@public.traffic_count_now_live	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.traffic_count_profiles_live	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.traffic_count_profiles_live	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
+grant	viafrei_mcp@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
+grant	viafrei_mcp@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.transit_delays	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.transit_delays	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
 grant	viafrei_mcp@public.transit_delays_live	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held

@@ -262,6 +262,7 @@ viafrei_mcp	public.stop_times_live	select	mcp: declared reads
 viafrei_mcp	public.stops_live	select	mcp: declared reads
 viafrei_mcp	public.traffic_count_now_live	select	mcp: declared reads
 viafrei_mcp	public.traffic_count_profiles_live	select	mcp: declared reads
+viafrei_mcp	public.traffic_count_sites_live	select	mcp: declared reads
 viafrei_mcp	public.transit_delays	select	mcp: declared reads
 viafrei_mcp	public.transit_delays_live	select	mcp: declared reads
 viafrei_mcp	public.connect_transit_delays_live	select	mcp: declared reads
