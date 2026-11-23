@@ -31,8 +31,13 @@
 --   road_events: 64 276 rows (none soft-deleted), 16 002 open, 921 without a
 --     geom. This file fills them: CALL public.refresh_event_land(2000), chunks of
 --     2 000 rows in id order, each its own transaction under lock_timeout 5s (a
---     chunk takes the row locks of its rows only; the loader's upsert of the same
---     row waits for one chunk at most). About 64 000 lookups: tens of seconds.
+--     chunk takes the row locks of its rows only, in id order; the loader's
+--     upsert locks the rows it writes in its own order, so the two can deadlock
+--     (40P01, one of them cancelled). migrate retries a lock timeout (55P03)
+--     only; any other failure, a deadlock included, fails the run and the
+--     service's boot loop runs it again, from the top: the file is idempotent
+--     and the fill skips the rows already filled). About 64 000 lookups: tens of
+--     seconds.
 --   autobahn_events: 1 767 172 rows (day partitions 2026-11-22: 952 535,
 --     2026-11-23: 814 639). A tick table, and ticks are append-only: nothing is
 --     written back. The relation reads only the newest sweep of each road and
@@ -42,8 +47,13 @@
 --
 -- THE GAZETTEER. The expression reads gazetteer_places, so a load of it can move
 -- a stored Land. public.refresh_event_land(p_batch) recomputes road_events and
--- writes only the rows whose Land changed; the gazetteer load calls it after it
--- commits (outside a transaction block: the procedure commits each chunk).
+-- writes only the rows whose Land changed, called outside a transaction block
+-- (it commits each chunk). The gazetteer load does NOT call it yet (its wiring
+-- is a follow-up of the loader's own repository). Until it does, the drift is
+-- bounded: the DATEX II loader rewrites geom on every pull of an open
+-- situation, so the trigger takes the new gazetteer on the next pull; only rows
+-- no longer pulled (closed, or gone from their feed) keep the Land of the
+-- gazetteer they were last written under, until refresh_event_land runs.
 -- autobahn_events rows are not rewritten (append-only): a sweep after the load
 -- carries the new Land, so an event read from a sweep older than the load holds
 -- the Land of the gazetteer it was written under, for as long as its sweep stays
@@ -244,7 +254,7 @@ create or replace view public.road_events_current as
     and public.road_event_in_force_known(e.overall_start, e.overall_end, e.suspended, e.payload, e.valid_windows, now())
     and coalesce(e.confidentiality, 'noRestriction') = 'noRestriction';
 
-comment on column public.road_events.land_code is 'The Land (two AGS digits) of the event: contract_junction_land(st_pointonsurface(geom)::geometry(Point,4326)::geography), the traffic event relation''s expression, stored by road_events_land at write time and by refresh_event_land after a gazetteer load (0338); NULL when no Gemeinde is within 20 km or the row has no geom.';
+comment on column public.road_events.land_code is 'The Land (two AGS digits) of the event: contract_junction_land(st_pointonsurface(geom)::geometry(Point,4326)::geography), the traffic event relation''s expression, stored by road_events_land at write time and by refresh_event_land, which the gazetteer load does not call yet (0338): a row the loader no longer pulls keeps the Land of the gazetteer it was written under; NULL when no Gemeinde is within 20 km or the row has no geom.';
 comment on column public.autobahn_events.land_code is 'The Land (two AGS digits) of the event: contract_junction_land(st_pointonsurface(geom::geometry)::geometry(Point,4326)::geography), the traffic event relation''s expression, stored by autobahn_events_land at write time (0338); never rewritten (ticks are append-only). NULL also on a row written before 0338: read coalesce(land_code, the expression).';
 comment on procedure public.refresh_event_land(integer) is 'Recomputes road_events.land_code in chunks of p_batch rows, one transaction a chunk, writing only rows whose Land changed (0338); CALL it outside a transaction block, after a gazetteer load.';
 

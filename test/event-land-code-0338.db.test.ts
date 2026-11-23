@@ -78,6 +78,10 @@ const GEOMS = [
   "st_geomfromtext('POLYGON((6.9 50.9, 7.0 50.9, 7.0 51.0, 6.9 51.0, 6.9 50.9))', 4326)",
   "st_geomfromtext('MULTIPOINT((9.25 48.75), (9.3 48.75))', 4326)",
   "st_setsrid(st_makepoint(13.4, 52.5), 4326)",
+  // one point near S (08), one near K (05): st_pointonsurface takes one of them,
+  // K's (05); their centroid lies between them, more than 20 km from every
+  // Gemeinde (none): a centroid in place of the point on the surface fails
+  "st_geomfromtext('MULTIPOINT((9.19 48.79), (6.97 50.95))', 4326)",
   "null::geometry",
 ];
 const WANT_ROAD = "public.contract_junction_land(st_pointonsurface(geom)::geometry(Point,4326)::geography)";
@@ -105,7 +109,7 @@ describe.skipIf(url === undefined)("0338 the Land of a road event, stored at wri
       `select count(*)::text n, count(*) filter (where land_code is distinct from ${WANT_ROAD})::text differ,
               array_agg(coalesce(land_code, '-') order by publication_id) lands from road_events where publication_id like 'r%'`,
     );
-    expect(road).toEqual([{ n: String(GEOMS.length), differ: "0", lands: ["08", "09", "08", "05", "08", "-", "-"] }]);
+    expect(road).toEqual([{ n: String(GEOMS.length), differ: "0", lands: ["08", "09", "08", "05", "08", "-", "05", "-"] }]);
     const ab = await q<{ n: string; differ: string; filled: string }>(
       `select count(*)::text n, count(*) filter (where land_code is distinct from ${WANT_AUTOBAHN})::text differ,
               count(land_code)::text filled from autobahn_events where ext_id like 'a%'`,
