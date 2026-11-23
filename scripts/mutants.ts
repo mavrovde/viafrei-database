@@ -24,6 +24,7 @@ const HAND_TESTS = ["test/hand-changes-1119.db.test.ts"];
 const TWIN_TESTS = ["test/charging-twin-pairs.db.test.ts"];
 const CONNECT_TESTS = ["test/stops-geom-connect.db.test.ts"];
 const HAND_1122E_TESTS = ["test/prod-fixes-1122-evening.db.test.ts"];
+const READER_BASE_TESTS = ["test/api-reader-base-tables-0336.db.test.ts"];
 export const MUTANTS: readonly Mutant[] = [
   { name: "an unreadable ledger counts as ready", from: 'if (state === null) return { ready: false, reason: "no-ledger"', to: 'if (state === null) return { ready: true, reason: "at-head", head: 0 }; if (Math.random() < 0) return { ready: false, reason: "no-ledger"' },
   { name: "an image without migrations is ready", from: "if (state.imageHead === 0)", to: "if (state.imageHead < 0)" },
@@ -292,6 +293,10 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0329 sets every tick table's partitions", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "  if parent is distinct from 'public.autobahn_events'::regclass then", to: "  if parent is null then" },
   { name: "db: 0329 sets a partition again and again", config: DB, file: at("db", "migrations", "0329_autobahn_events_analyze.sql"), tests: HAND_1122E_TESTS, from: "  if (select coalesce(c.reloptions, '{}') @> want from pg_class c where c.oid = part) then", to: "  if false then" },
   { name: "db: 0327 adopts an index of another definition under the name", config: DB, file: at("db", "migrations", "0327_stops_geom_connect.sql"), tests: CONNECT_TESTS, from: "  if found_def is distinct from expected then\n", to: "  if false then\n" },
+  // 0336 (api_reader reads the platform relations the contract views read): a missing table, a missing schema, a table too many.
+  { name: "db: 0336 leaves a base table of the views ungranted", config: DB, file: at("db", "migrations", "0336_api_reader_base_tables.sql"), tests: READER_BASE_TESTS, from: "grant select on public.stop_times to api_reader;\n", to: "" },
+  { name: "db: 0336 grants no usage on domains", config: DB, file: at("db", "migrations", "0336_api_reader_base_tables.sql"), tests: READER_BASE_TESTS, from: "grant usage on schema control, domains to api_reader;\n", to: "grant usage on schema control to api_reader;\n" },
+  { name: "db: 0336 grants a table under an owner-rights view", config: DB, file: at("db", "migrations", "0336_api_reader_base_tables.sql"), tests: READER_BASE_TESTS, from: "grant select on public.feeds to api_reader;\n", to: "grant select on public.feeds to api_reader;\ngrant select on public.feed_catalog to api_reader;\n" },
   { name: "0321 and settings.sql disagree on the digest's work_mem", file: at("db", "migrations", "0321_role_memory_k3s.sql"), tests: ["test/roles.test.ts"], from: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''64MB''", to: "ALTER ROLE viafrei_digest IN DATABASE %I SET work_mem TO ''16MB''" },
   { name: "settings.sql leaves out 0321's owner work_mem, so a re-run keeps the baseline's", file: at("db", "roles", "settings.sql"), tests: ["test/roles.test.ts", "test/memory-bound.test.ts"], from: "DO $$ BEGIN EXECUTE format('ALTER ROLE CURRENT_USER IN DATABASE %I SET work_mem TO ''32MB''', current_database()); END $$;\n", to: "" },
   { name: "roles: api_reader's password is fatal", file: at("src", "roles.ts"), tests: ["test/roles.test.ts"], from: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: false }', to: '{ role: "api_reader", sqlFile: "api-reader-role-password.sql", fatal: true }' },
