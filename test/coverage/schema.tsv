@@ -3747,6 +3747,7 @@ grant	viafrei_live_ingestor@domains.train_board_departures	test/train-board.db.t
 grant	api_reader@contract.train_board	test/api-schemas.db.test.ts > api_reader reads every contract view and writes none
 grant	api_reader@contract.train_board	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
 grant	api_reader@control.data_status	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
+grant	api_reader@control.data_status	test/api-read-indexes-0337.db.test.ts > lets api_reader read control.data_status
 grant	api_reader@control.data_status	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@domains.train_board_departures	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@domains.train_board_departures	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
