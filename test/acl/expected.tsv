@@ -566,6 +566,7 @@ viafrei_mcp	relation	public.stops_live	SELECT
 viafrei_mcp	relation	public.street_bays_live	SELECT
 viafrei_mcp	relation	public.traffic_count_now_live	SELECT
 viafrei_mcp	relation	public.traffic_count_profiles_live	SELECT
+viafrei_mcp	relation	public.traffic_count_sites_live	SELECT
 viafrei_mcp	relation	public.transit_delays	SELECT
 viafrei_mcp	relation	public.transit_delays_live	SELECT
 viafrei_mcp	relation	public.transit_departures_odbl_live	SELECT
