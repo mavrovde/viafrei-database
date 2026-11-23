@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.4.5](https://github.com/mavrovde/viafrei-database/compare/v0.4.4...v0.4.5) (2026-11-23)
+
+
+### Fixed
+
+* **db:** 0335 lets viafrei_mcp read traffic_count_sites_live and gives road_events_current entry_static ([#99](https://github.com/mavrovde/viafrei-database/issues/99)) ([e338b4b](https://github.com/mavrovde/viafrei-database/commit/e338b4b1d3881ab5e60d4b6de7f207808c99e1d3))
+
 ## [0.4.4](https://github.com/mavrovde/viafrei-database/compare/v0.4.3...v0.4.4) (2026-11-23)
 
 
