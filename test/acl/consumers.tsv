@@ -11,6 +11,7 @@ viafrei_digest	control.data_status	select	digest: declared reads
 viafrei_digest	public.db_facilities_live	select	digest: declared reads
 viafrei_digest	public.charging_points_live	select	digest: declared reads
 viafrei_digest	public.charging_sites_live	select	digest: declared reads
+viafrei_digest	public.charging_site_twin_claims	select	digest: declared reads
 viafrei_digest	public.charging_site_twin_pairs	select	digest: declared reads
 viafrei_digest	public.parking_facilities_live	select	digest: declared reads
 viafrei_digest	public.fuel_price_latest_live	select	digest: declared reads
@@ -102,6 +103,7 @@ viafrei_digest	public.city_traffic_pulls_live	select	digest: declared reads
 viafrei_digest	public.city_traffic_segments_live	select	digest: declared reads
 viafrei_digest	public.traffic_count_now_live	select	digest: declared reads
 viafrei_digest	public.traffic_count_profiles_live	select	digest: declared reads
+viafrei_digest	public.traffic_count_sites_live	select	digest: declared reads
 viafrei_digest	public.place_websites	select	digest: declared reads
 viafrei_digest	public.station_index_live	select	digest: declared reads
 viafrei_digest	public.station_slugs	select	digest: declared reads
@@ -176,6 +178,7 @@ viafrei_mcp	public.bw_detours_live	select	mcp: declared reads
 viafrei_mcp	public.charging_point_status	select	mcp: declared reads
 viafrei_mcp	public.charging_points_live	select	mcp: declared reads
 viafrei_mcp	public.charging_sites_live	select	mcp: declared reads
+viafrei_mcp	public.charging_site_twin_claims	select	mcp: declared reads
 viafrei_mcp	public.charging_site_twin_pairs	select	mcp: declared reads
 viafrei_mcp	public.charging_status_runs	select	mcp: declared reads
 viafrei_mcp	public.feed_run_extents	select	mcp: declared reads
@@ -259,6 +262,7 @@ viafrei_mcp	public.stop_times_live	select	mcp: declared reads
 viafrei_mcp	public.stops_live	select	mcp: declared reads
 viafrei_mcp	public.traffic_count_now_live	select	mcp: declared reads
 viafrei_mcp	public.traffic_count_profiles_live	select	mcp: declared reads
+viafrei_mcp	public.traffic_count_sites_live	select	mcp: declared reads
 viafrei_mcp	public.transit_delays	select	mcp: declared reads
 viafrei_mcp	public.transit_delays_live	select	mcp: declared reads
 viafrei_mcp	public.connect_transit_delays_live	select	mcp: declared reads

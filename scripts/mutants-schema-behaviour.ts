@@ -184,9 +184,6 @@ const road: SchemaMutant[] = [
   { name: "road: the suspended trigger keeps the writer's flag", from: "  new.suspended := road_event_suspended(new.payload);", to: "  new.suspended := coalesce(new.suspended, road_event_suspended(new.payload));" },
   { name: "road: the suspended trigger misses a payload update", from: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE OF payload ON public.road_events", to: "CREATE TRIGGER road_events_suspended BEFORE INSERT ON public.road_events" },
   { name: "road: the suspended trigger fires on every update", from: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE OF payload ON public.road_events", to: "CREATE TRIGGER road_events_suspended BEFORE INSERT OR UPDATE ON public.road_events" },
-  { name: "road: road_events_current shows the closed", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE (public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));" },
-  { name: "road: road_events_current shows the not in force", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE ((closed_at IS NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));" },
-  { name: "road: road_events_current shows the confidential", from: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text));", to: "  WHERE ((closed_at IS NULL) AND public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now()));" },
   { name: "road: road_event_locations_live shows a deleted location", from: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));", to: "  WHERE ((EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));" },
   { name: "road: road_event_locations_live shows a deleted event's location", from: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id) AND (e.deleted_at IS NULL)))));", to: "  WHERE ((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n           FROM public.road_events e\n          WHERE ((e.id = l.road_event_id)))));" },
 ].map((m) => ({ ...m, file: BASELINE, tests: ROAD }));
@@ -306,15 +303,27 @@ const derived0330: SchemaMutant[] = [
   { name: "road: validity_overlaps says false when nothing is stated", from: "return case when stated then false else null end;", to: "return false;" },
   { name: "road: validity_overlaps reads an object as lines", from: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or jsonb_typeof(description) <> 'array' or description::text not like '%Zeiträumen gültig%' then", to: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or description::text not like '%Zeiträumen gültig%' then" },
 ].map((m) => ({ ...m, file: M0330, tests: ROAD }));
+/**
+ * 0338 defines road_events_live and road_events_current again (with land_code), so no migrated database carries
+ * 0330's or 0335's: their mutants are planted in 0338's text, under the names they had, each change the same.
+ */
+const M0338 = join(ROOT, "db", "migrations", "0338_event_land_code.sql");
 const views0330: SchemaMutant[] = (() => {
-  const sql = readFileSync(M0330, "utf8");
+  const sql = readFileSync(M0338, "utf8");
   const start = sql.indexOf("create or replace view public.road_events_live as\n");
   const end = sql.indexOf(";\n", start);
-  if (start < 0 || end < 0) throw new Error("no road_events_live in 0330");
+  if (start < 0 || end < 0) throw new Error("no road_events_live in 0338");
   const block = sql.slice(start, end + 1);
   const where = block.lastIndexOf("\n  where ");
   return [{ name: "views: public.road_events_live shows what it should leave out", from: block, to: `${block.slice(0, where)}\n  where not ${block.slice(where + "\n  where ".length)}` }];
-})().map((m) => ({ ...m, file: M0330, tests: VIEWS }));
+})().map((m) => ({ ...m, file: M0338, tests: VIEWS }));
+
+/** road_events_current's mutants, planted in 0338's text (it defines the view again after 0335), under the names they had. */
+const current0335: SchemaMutant[] = [
+  { name: "road: road_events_current shows the closed", from: "  where e.closed_at is null\n    and public.road_event_in_force_known(", to: "  where true\n    and public.road_event_in_force_known(" },
+  { name: "road: road_events_current shows the not in force", from: "    and public.road_event_in_force_known(e.overall_start, e.overall_end, e.suspended, e.payload, e.valid_windows, now())\n", to: "    and true\n" },
+  { name: "road: road_events_current shows the confidential", from: "    and coalesce(e.confidentiality, 'noRestriction') = 'noRestriction';", to: "    and true;" },
+].map((m) => ({ ...m, file: M0338, tests: ROAD }));
 
 const COMPLEX = ["test/views-complex.db.test.ts"];
 
@@ -519,4 +528,4 @@ const maintenance0322: SchemaMutant[] = [
   { name: "0322: energy_page_keys vacuums on a share of the table again", from: "  autovacuum_vacuum_scale_factor = 0,", to: "  autovacuum_vacuum_scale_factor = 0.05," },
 ].map((m) => ({ ...m, file: M0322, tests: ["test/db-owned-maintenance.db.test.ts"] }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322, ...derived0330, ...views0330];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322, ...derived0330, ...views0330, ...current0335];
