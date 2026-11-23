@@ -3979,6 +3979,11 @@ function	public.autobahn_events_fill_land()	test/event-land-code-0338.db.test.ts
 function	public.refresh_event_land(IN p_batch integer)	test/event-land-code-0338.db.test.ts > refresh_event_land fills the unfilled, rewrites only the rows whose Land moved, in chunks, and refuses a batch below 1
 function	public.road_events_fill_land()	test/event-land-code-0338.db.test.ts > stores the relation's expression on insert, for every geometry kind, near, far and none
 function	public.road_events_fill_land()	test/event-land-code-0338.db.test.ts > follows an update of geom and leaves a write of another column alone
+function	public.autobahn_events_fill_land()	test/pinned-search-path-0339.db.test.ts > restores an archived autobahn_events day, the COPY firing autobahn_events_land under search_path ''
+function	public.road_events_fill_land()	test/pinned-search-path-0339.db.test.ts > stores road_events' Land on an insert and an update of geom under search_path '', and refresh_event_land runs there
+function	public.refresh_event_land(IN p_batch integer)	test/pinned-search-path-0339.db.test.ts > stores road_events' Land on an insert and an update of geom under search_path '', and refresh_event_land runs there
+trigger	public.autobahn_events.autobahn_events_land	test/pinned-search-path-0339.db.test.ts > restores an archived autobahn_events day, the COPY firing autobahn_events_land under search_path ''
+trigger	public.road_events.road_events_land	test/pinned-search-path-0339.db.test.ts > stores road_events' Land on an insert and an update of geom under search_path '', and refresh_event_land runs there
 grant	viafrei_digest@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
 grant	viafrei_digest@public.charging_site_twin_claims	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
