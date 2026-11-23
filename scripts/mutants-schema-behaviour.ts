@@ -72,6 +72,8 @@ const LEDGERS = ["test/feed-state.db.test.ts"];
 /** Migration 0306 redefines these two functions, so their mutants are planted in its text: the baseline's copy is replaced at migrate time and a fault there could not be seen. */
 const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_finished_change.sql");
 const REDEFINED_BY_0306 = ["CREATE FUNCTION control.feed_state_after_change()", "CREATE FUNCTION control.recompute_feed_state("];
+/** The baseline views 0330 defines again (their mutants are planted in 0330, below). */
+const REDEFINED_BY_0330: readonly string[] = ["public.road_events_live"];
 const liveFile = (from: string): string => {
   const base = readFileSync(BASELINE, "utf8");
   const at = base.indexOf(from);
@@ -164,17 +166,6 @@ const road: SchemaMutant[] = [
   { name: "road: validity_time refuses 24:00", from: "  if h::int = 24 and mi::int = 0 then return make_time(24, 0, 0); end if;", to: "" },
   { name: "road: validity_time takes a minute of 60", from: "  if h::int > 23 or mi::int > 59 then return null; end if;", to: "  if h::int > 23 or mi::int > 60 then return null; end if;" },
   { name: "road: validity_time takes a one-digit minute", from: "  if h !~ '^[0-9]{1,2}$' or mi !~ '^[0-9]{2}$' then return null; end if;", to: "  if h !~ '^[0-9]{1,2}$' or mi !~ '^[0-9]{1,2}$' then return null; end if;" },
-  { name: "road: validity_overlaps forgets the excepted days", from: "        if dd is not null then except_days := except_days || dd; end if;", to: "        perform 1;" },
-  { name: "road: validity_overlaps ignores the weekday", from: "          if extract(isodow from dd)::int = any(dows) and not (dd = any(except_days)) then", to: "          if not (dd = any(except_days)) then" },
-  { name: "road: validity_overlaps reads Tag as no day", from: "        if m[1] ~* '^Tag$' then\n          dows := array[1, 2, 3, 4, 5, 6, 7];", to: "        if m[1] ~* '^Tag$' then\n          dows := '{}';" },
-  { name: "road: validity_overlaps ends the weekly window past the last date", from: "        while dd <= least(d2, to_day) loop", to: "        while dd <= to_day loop" },
-  { name: "road: validity_overlaps reads Berlin time as UTC", from: "          w_start := (dd + t1) at time zone 'Europe/Berlin';\n          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;", to: "          w_start := (dd + t1) at time zone 'UTC';\n          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'UTC';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;" },
-  { name: "road: validity_overlaps ends an overnight day window the same day", from: "          w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;", to: "          w_end := (dd + t2) at time zone 'Europe/Berlin';\n          if w_start <= to_at and w_end > from_at then return true; end if;\n        end if;" },
-  { name: "road: validity_overlaps starts the weekly days on the first asked day", from: "        dd := greatest(d1, from_day - 1);", to: "        dd := greatest(d1, from_day);" },
-  { name: "road: validity_overlaps touches a span at its end", from: "        stated := true;\n        if w_start <= to_at and w_end > from_at then return true; end if;", to: "        stated := true;\n        if w_start <= to_at and w_end >= from_at then return true; end if;" },
-  { name: "road: validity_overlaps says false when nothing is stated", from: "  return case when stated then false else null end;", to: "  return false;" },
-  // the 'Zeiträumen gültig' guard is a fast path: without it no line opens a list and the answer is the same null
-  { name: "road: validity_overlaps reads an object as lines", from: "  if description is null or jsonb_typeof(description) <> 'array' or description::text not like '%Zeiträumen gültig%' then", to: "  if description is null or description::text not like '%Zeiträumen gültig%' then" },
   { name: "road: suspended when any status is suspended", from: "  select exists (select 1 from st)\n     and not exists (select 1 from st where status is distinct from 'suspended')", to: "  select exists (select 1 from st where status = 'suspended')" },
   { name: "road: suspended with no status at all", from: "  select exists (select 1 from st)\n     and not exists", to: "  select true\n     and not exists" },
   { name: "road: in force before its start", from: "    when overall_start is not null and overall_start > at then false\n    when overall_end   is not null and overall_end   < at then false\n    else not road_event_suspended(payload)", to: "    when overall_end   is not null and overall_end   < at then false\n    else not road_event_suspended(payload)" },
@@ -282,7 +273,7 @@ function viewBlock(sql: string, view: string): string {
 /** Per filter view: its WHERE negated (or, for a projection, a WHERE false), and each `drops` snippet replaced by true. */
 const views: SchemaMutant[] = (() => {
   const sql = readFileSync(BASELINE, "utf8");
-  return VIEW_CASES.flatMap((k) => {
+  return VIEW_CASES.filter((k) => !REDEFINED_BY_0330.includes(k.view)).flatMap((k) => {
     const block = viewBlock(sql, k.view);
     const where = block.lastIndexOf("\n  WHERE ");
     const negated =
@@ -296,6 +287,34 @@ const views: SchemaMutant[] = (() => {
     return [negated, ...drops];
   });
 })().map((m) => ({ ...m, file: BASELINE, tests: VIEWS }));
+
+/**
+ * 0330 defines autobahn_validity_overlaps again (one pass over the description) and road_events_live again (with
+ * entry_static), so no migrated database carries the baseline's: their mutants are planted in 0330's text, under
+ * the names they had, each change the same as on the baseline body.
+ */
+const M0330 = join(ROOT, "db", "migrations", "0330_autobahn_road_derived_columns.sql");
+const derived0330: SchemaMutant[] = [
+  { name: "road: validity_overlaps forgets the excepted days", from: "    elsif in_except then\n      for m in select regexp_matches(l, '([0-9]{1,2})\\.([0-9]{1,2})\\.([0-9]{2,4})', 'g') loop\n        dd := autobahn_validity_date(m[1], m[2], m[3]);\n        if dd is not null then except_days := except_days || dd; end if;", to: "    elsif in_except then\n      for m in select regexp_matches(l, '([0-9]{1,2})\\.([0-9]{1,2})\\.([0-9]{2,4})', 'g') loop\n        dd := autobahn_validity_date(m[1], m[2], m[3]);\n        perform 1;" },
+  { name: "road: validity_overlaps ignores the weekday", from: "      while dd <= least(d2, to_day) loop\n        if extract(isodow from dd)::int = any(dows) and not (dd = any(except_days)) then", to: "      while dd <= least(d2, to_day) loop\n        if not (dd = any(except_days)) then" },
+  { name: "road: validity_overlaps reads Tag as no day", from: "      if m[1] ~* '^Tag$' then\n        dows := array[1, 2, 3, 4, 5, 6, 7];", to: "      if m[1] ~* '^Tag$' then\n        dows := '{}';" },
+  { name: "road: validity_overlaps ends the weekly window past the last date", from: "      while dd <= least(d2, to_day) loop", to: "      while dd <= to_day loop" },
+  { name: "road: validity_overlaps reads Berlin time as UTC", from: "        w_start := (dd + t1) at time zone 'Europe/Berlin';\n        w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n        if w_start <= to_at and w_end > from_at then return true; end if;\n      end if;", to: "        w_start := (dd + t1) at time zone 'UTC';\n        w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'UTC';\n        if w_start <= to_at and w_end > from_at then return true; end if;\n      end if;" },
+  { name: "road: validity_overlaps ends an overnight day window the same day", from: "        w_end := (case when t2 <= t1 then dd + 1 else dd end + t2) at time zone 'Europe/Berlin';\n        if w_start <= to_at and w_end > from_at then return true; end if;\n      end if;", to: "        w_end := (dd + t2) at time zone 'Europe/Berlin';\n        if w_start <= to_at and w_end > from_at then return true; end if;\n      end if;" },
+  { name: "road: validity_overlaps starts the weekly days on the first asked day", from: "      dd := greatest(d1, from_day - 1);", to: "      dd := greatest(d1, from_day);" },
+  { name: "road: validity_overlaps touches a span at its end", from: "      stated := true;\n      if w_start <= to_at and w_end > from_at then return true; end if;", to: "      stated := true;\n      if w_start <= to_at and w_end >= from_at then return true; end if;" },
+  { name: "road: validity_overlaps says false when nothing is stated", from: "return case when stated then false else null end;", to: "return false;" },
+  { name: "road: validity_overlaps reads an object as lines", from: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or jsonb_typeof(description) <> 'array' or description::text not like '%Zeiträumen gültig%' then", to: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or description::text not like '%Zeiträumen gültig%' then" },
+].map((m) => ({ ...m, file: M0330, tests: ROAD }));
+const views0330: SchemaMutant[] = (() => {
+  const sql = readFileSync(M0330, "utf8");
+  const start = sql.indexOf("create or replace view public.road_events_live as\n");
+  const end = sql.indexOf(";\n", start);
+  if (start < 0 || end < 0) throw new Error("no road_events_live in 0330");
+  const block = sql.slice(start, end + 1);
+  const where = block.lastIndexOf("\n  where ");
+  return [{ name: "views: public.road_events_live shows what it should leave out", from: block, to: `${block.slice(0, where)}\n  where not ${block.slice(where + "\n  where ".length)}` }];
+})().map((m) => ({ ...m, file: M0330, tests: VIEWS }));
 
 const COMPLEX = ["test/views-complex.db.test.ts"];
 
@@ -500,4 +519,4 @@ const maintenance0322: SchemaMutant[] = [
   { name: "0322: energy_page_keys vacuums on a share of the table again", from: "  autovacuum_vacuum_scale_factor = 0,", to: "  autovacuum_vacuum_scale_factor = 0.05," },
 ].map((m) => ({ ...m, file: M0322, tests: ["test/db-owned-maintenance.db.test.ts"] }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322];
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322, ...derived0330, ...views0330];
