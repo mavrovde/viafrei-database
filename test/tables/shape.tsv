@@ -3016,6 +3016,7 @@ public.osm_addresses	constraint	osm_addresses_osm_type_osm_id_key	u UNIQUE (osm_
 public.osm_addresses	constraint	osm_addresses_pkey	p PRIMARY KEY (id)
 public.osm_addresses	index	osm_addresses_geom_gist	CREATE INDEX osm_addresses_geom_gist ON public.osm_addresses USING gist (geom) WHERE (closed_at IS NULL)
 public.osm_addresses	index	osm_addresses_open_land	CREATE INDEX osm_addresses_open_land ON public.osm_addresses USING btree (land, last_seen_at) WHERE (closed_at IS NULL)
+public.osm_addresses	index	osm_addresses_open_land_extract	CREATE INDEX osm_addresses_open_land_extract ON public.osm_addresses USING btree (land, extract_date DESC NULLS LAST) WHERE (closed_at IS NULL)
 public.osm_addresses	index	osm_addresses_osm_type_osm_id_key	CREATE UNIQUE INDEX osm_addresses_osm_type_osm_id_key ON public.osm_addresses USING btree (osm_type, osm_id)
 public.osm_addresses	index	osm_addresses_pkey	CREATE UNIQUE INDEX osm_addresses_pkey ON public.osm_addresses USING btree (id)
 public.osm_addresses	index	osm_addresses_postcode	CREATE INDEX osm_addresses_postcode ON public.osm_addresses USING btree (postcode) WHERE (closed_at IS NULL)
@@ -3060,6 +3061,7 @@ public.osm_pois	column	land	text
 public.osm_pois	column	access	text
 public.osm_pois	constraint	osm_pois_osm_type_osm_id_key	u UNIQUE (osm_type, osm_id)
 public.osm_pois	constraint	osm_pois_pkey	p PRIMARY KEY (id)
+public.osm_pois	index	osm_pois_brand_lower_trgm	CREATE INDEX osm_pois_brand_lower_trgm ON public.osm_pois USING gin (lower(brand) public.gin_trgm_ops) WHERE (brand IS NOT NULL)
 public.osm_pois	index	osm_pois_brand_trgm	CREATE INDEX osm_pois_brand_trgm ON public.osm_pois USING gin (brand public.gin_trgm_ops) WHERE (brand IS NOT NULL)
 public.osm_pois	index	osm_pois_everyday_geom	CREATE INDEX osm_pois_everyday_geom ON public.osm_pois USING gist (geom) WHERE ((closed_at IS NULL) AND (((category || '='::text) || category_value) = ANY (ARRAY['amenity=pharmacy'::text, 'healthcare=pharmacy'::text, 'amenity=hospital'::text, 'amenity=clinic'::text, 'amenity=doctors'::text, 'healthcare=hospital'::text, 'healthcare=clinic'::text, 'healthcare=doctor'::text, 'building=hospital'::text, 'shop=supermarket'::text, 'building=supermarket'::text, 'amenity=atm'::text, 'amenity=bank'::text, 'amenity=police'::text, 'amenity=toilets'::text, 'amenity=post_office'::text])))
 public.osm_pois	index	osm_pois_fuel_geom	CREATE INDEX osm_pois_fuel_geom ON public.osm_pois USING gist (geom) WHERE ((closed_at IS NULL) AND (category = 'amenity'::text) AND (category_value = 'fuel'::text))
@@ -4317,6 +4319,7 @@ public.weather_warnings	column	deleted_reason	text
 public.weather_warnings	column	deleted_run_id	bigint
 public.weather_warnings	constraint	weather_warnings_pkey	p PRIMARY KEY (id)
 public.weather_warnings	constraint	weather_warnings_version_key	u UNIQUE (source_feed, identifier, warncell_id, version)
+public.weather_warnings	index	weather_warnings_area_desc	CREATE INDEX weather_warnings_area_desc ON public.weather_warnings USING btree (area_desc) WHERE (deleted_at IS NULL)
 public.weather_warnings	index	weather_warnings_area_gist	CREATE INDEX weather_warnings_area_gist ON public.weather_warnings USING gist (area)
 public.weather_warnings	index	weather_warnings_deleted	CREATE INDEX weather_warnings_deleted ON public.weather_warnings USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.weather_warnings	index	weather_warnings_live_area_geom	CREATE INDEX weather_warnings_live_area_geom ON public.weather_warnings USING gist (((area)::public.geometry)) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
