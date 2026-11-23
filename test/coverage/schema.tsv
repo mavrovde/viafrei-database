@@ -659,6 +659,7 @@ trigger	public.road_events.road_events_suspended	test/road-functions.db.test.ts 
 view	public.road_events_current	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 view	public.road_events_current	test/replays.db.test.ts > road_events_current withholds a row marked anything but noRestriction, and keeps an absent and a free one
 view	public.road_events_current	test/current-road-events-0335.db.test.ts > road_events_current is road_events_live's columns, in its order, entry_static too, over the same rows
+view	public.road_events_current	test/event-land-code-0338.db.test.ts > road_events_live and road_events_current end with land_code, with their grants and rows
 view	public.road_event_locations_live	test/road-functions.db.test.ts > road_events_live drops the deleted; road_events_current also the closed, the not in force and the confidential
 function	public.ops_audit_append_only()	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
 trigger	public.ops_audit.ops_audit_append_only	test/ops-functions.db.test.ts > is append-only: an update or a delete is refused, except clearing the address of a row older than twelve months and nothing else
@@ -746,6 +747,7 @@ view	public.parking_facilities_odbl_live	test/views-filter.db.test.ts > public.p
 view	public.parking_forecast_profiles_live	test/views-filter.db.test.ts > public.parking_forecast_profiles_live: returns the row it is for and none it leaves out
 view	public.parking_sites_live	test/views-filter.db.test.ts > public.parking_sites_live: returns the row it is for and none it leaves out
 view	public.road_events_live	test/views-filter.db.test.ts > public.road_events_live: returns the row it is for and none it leaves out
+view	public.road_events_live	test/event-land-code-0338.db.test.ts > road_events_live and road_events_current end with land_code, with their grants and rows
 view	public.routes_live	test/views-filter.db.test.ts > public.routes_live: returns the row it is for and none it leaves out
 view	public.speed_enforcement_live	test/views-filter.db.test.ts > public.speed_enforcement_live: returns the row it is for and none it leaves out
 view	public.station_accessibility_live	test/views-filter.db.test.ts > public.station_accessibility_live: returns the row it is for and none it leaves out
@@ -3953,6 +3955,10 @@ table	live.refresh_requests	test/live-refresh.db.test.ts > holds one open reques
 table	live.refresh_requests	test/live-refresh.db.test.ts > api_access records a request and its asker and reads them, and changes or removes neither
 trigger	live.refresh_requests.refresh_requests_notify	test/live-refresh.db.test.ts > notifies the ingestor on insert with the source, and the API's waiters on settle with the id
 trigger	live.refresh_requests.refresh_requests_transition	test/live-refresh.db.test.ts > viafrei_live_ingestor claims, sweeps and settles with the protocol's statements, and changes nothing else, inserts and removes none
+trigger	public.autobahn_events.autobahn_events_land	test/event-land-code-0338.db.test.ts > stores the relation's expression on insert, for every geometry kind, near, far and none
+trigger	public.autobahn_events.autobahn_events_land	test/event-land-code-0338.db.test.ts > follows an update of geom and leaves a write of another column alone
+trigger	public.road_events.road_events_land	test/event-land-code-0338.db.test.ts > stores the relation's expression on insert, for every geometry kind, near, far and none
+trigger	public.road_events.road_events_land	test/event-land-code-0338.db.test.ts > follows an update of geom and leaves a write of another column alone
 function	public.contract_stop_place_of(ref text)	test/contract-mapping.db.test.ts > station_facility: the stop place lookup reads the stops under the DHID through the id-prefix index, not every stop (#49)
 view	contract.road	test/contract-mapping.db.test.ts > road: a read of no shape column draws no shape, and a read of one road draws that road's alone (#49)
 view	public.weather_warnings_area_live_de	test/prod-fixes-1122-evening.db.test.ts > weather_warnings_area_live_de returns area_live's rows minus the English, and never calls weather_warning_english()
@@ -3968,6 +3974,11 @@ function	public.refresh_charging_derived(p_feed text)	test/charging-stored-refer
 function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > refuses a refresh that names no feed
 function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > a refresh that finds nothing changed writes no row; one that finds a change counts what it deleted and inserted
 function	public.refresh_charging_derived(p_feed text)	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
+function	public.autobahn_events_fill_land()	test/event-land-code-0338.db.test.ts > stores the relation's expression on insert, for every geometry kind, near, far and none
+function	public.autobahn_events_fill_land()	test/event-land-code-0338.db.test.ts > follows an update of geom and leaves a write of another column alone
+function	public.refresh_event_land(IN p_batch integer)	test/event-land-code-0338.db.test.ts > refresh_event_land fills the unfilled, rewrites only the rows whose Land moved, in chunks, and refuses a batch below 1
+function	public.road_events_fill_land()	test/event-land-code-0338.db.test.ts > stores the relation's expression on insert, for every geometry kind, near, far and none
+function	public.road_events_fill_land()	test/event-land-code-0338.db.test.ts > follows an update of geom and leaves a write of another column alone
 grant	viafrei_digest@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them
 grant	viafrei_digest@public.charging_site_twin_claims	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.charging_site_twin_claims	test/charging-stored-references.db.test.ts > the ingestor role runs the refresh as the owner; the readers may read the claims and not refresh them

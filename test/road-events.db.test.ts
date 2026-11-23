@@ -270,8 +270,9 @@ describe.skipIf(url === undefined)("domains.road_events", () => {
   });
 
   it("leaves the old tables as the baseline made them: the same columns and constraints, plus what a later migration names", async () => {
-    // 0330 appends road_events.entry_static (the clock-free entry facts, filled at write time); nothing else changes.
-    const added: Readonly<Record<string, readonly string[]>> = { road_events: ["entry_static"] };
+    // 0330 appends road_events.entry_static (the clock-free entry facts, filled at write time) and 0338
+    // road_events.land_code (the event's Land, filled at write time); nothing else changes.
+    const added: Readonly<Record<string, readonly string[]>> = { road_events: ["entry_static", "land_code"] };
     for (const table of ["road_events", "road_event_locations", "road_event_ticks", "road_event_record_types", "road_event_twins"]) {
       const a = await t.baselineAgreement(table);
       expect(a.baseline.columns.length, table).toBeGreaterThan(4);
