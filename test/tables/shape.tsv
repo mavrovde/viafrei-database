@@ -3359,6 +3359,7 @@ public.parking_occupancy_sid	column	confidentiality	text
 public.parking_occupancy_sid	column	implausible_fields	text[]
 public.parking_occupancy_sid	constraint	parking_occupancy_sid_pkey	p PRIMARY KEY (facility_id, observed_at)
 public.parking_occupancy_sid	index	parking_occupancy_sid_brin	CREATE INDEX parking_occupancy_sid_brin ON ONLY public.parking_occupancy_sid USING brin (observed_at)
+public.parking_occupancy_sid	index	parking_occupancy_sid_contract_key	CREATE INDEX parking_occupancy_sid_contract_key ON ONLY public.parking_occupancy_sid USING btree ((('sid:'::text || facility_id)), observed_at)
 public.parking_occupancy_sid	index	parking_occupancy_sid_pkey	CREATE UNIQUE INDEX parking_occupancy_sid_pkey ON ONLY public.parking_occupancy_sid USING btree (facility_id, observed_at)
 public.parking_sites	column	site_id	text not null
 public.parking_sites	column	source_version	text
