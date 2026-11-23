@@ -1308,6 +1308,7 @@ public.autobahn_events	column	derived_extent_ends	public.geography(MultiPoint,43
 public.autobahn_events	column	validity_next_change	timestamp with time zone
 public.autobahn_events	column	states_validity	boolean
 public.autobahn_events	column	validity_at_write	boolean
+public.autobahn_events	column	land_code	text
 public.autobahn_events	index	autobahn_events_brin	CREATE INDEX autobahn_events_brin ON ONLY public.autobahn_events USING brin (observed_at)
 public.autobahn_events	index	autobahn_events_geom_gist	CREATE INDEX autobahn_events_geom_gist ON ONLY public.autobahn_events USING gist (((geom)::public.geometry))
 public.autobahn_events	index	autobahn_events_raw_dedup	CREATE INDEX autobahn_events_raw_dedup ON ONLY public.autobahn_events USING btree (ext_id, observed_at DESC) WHERE ((raw IS NOT NULL) AND (raw_hash IS NOT NULL))
@@ -1452,6 +1453,7 @@ public.charging_points	column	extras	jsonb
 public.charging_points	column	price_adhoc_zero	boolean
 public.charging_points	constraint	charging_points_pkey	p PRIMARY KEY (source_feed, point_key)
 public.charging_points	constraint	charging_points_source_feed_site_id_fkey	f FOREIGN KEY (source_feed, site_id) REFERENCES public.charging_sites(source_feed, site_id)
+public.charging_points	index	charging_points_contract_count	CREATE INDEX charging_points_contract_count ON public.charging_points USING btree (source_feed, site_id) INCLUDE (evse_id, point_key) WHERE ((deleted_at IS NULL) AND (site_id IS NOT NULL) AND (COALESCE(confidentiality, 'noRestriction'::text) = 'noRestriction'::text))
 public.charging_points	index	charging_points_contract_site	CREATE INDEX charging_points_contract_site ON public.charging_points USING btree ((((source_feed || ':'::text) || site_id))) WHERE (deleted_at IS NULL)
 public.charging_points	index	charging_points_deleted	CREATE INDEX charging_points_deleted ON public.charging_points USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.charging_points	index	charging_points_evse	CREATE INDEX charging_points_evse ON public.charging_points USING btree (evse_id) WHERE (evse_id IS NOT NULL)
@@ -3557,6 +3559,7 @@ public.road_events	column	closure_ends_at	timestamp with time zone
 public.road_events	column	valid_windows	tstzmultirange
 public.road_events	column	suspended	boolean
 public.road_events	column	entry_static	jsonb
+public.road_events	column	land_code	text
 public.road_events	constraint	road_events_pkey	p PRIMARY KEY (id)
 public.road_events	constraint	road_events_source_id_publication_id_key	u UNIQUE (source_id, publication_id)
 public.road_events	index	road_events_contract_event_id	CREATE INDEX road_events_contract_event_id ON public.road_events USING btree ((((('datex:'::text || source_id) || ':'::text) || publication_id))) WHERE (deleted_at IS NULL)
@@ -3566,6 +3569,7 @@ public.road_events	index	road_events_entry_static_unfilled	CREATE INDEX road_eve
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)
 public.road_events	index	road_events_open_feed	CREATE INDEX road_events_open_feed ON public.road_events USING btree (feed_key) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
+public.road_events	index	road_events_open_land	CREATE INDEX road_events_open_land ON public.road_events USING btree (land_code) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_pkey	CREATE UNIQUE INDEX road_events_pkey ON public.road_events USING btree (id)
 public.road_events	index	road_events_ref_key	CREATE INDEX road_events_ref_key ON public.road_events USING btree (public.road_ref_key(road_number), feed_key) WHERE (road_number IS NOT NULL)
 public.road_events	index	road_events_source_id_publication_id_key	CREATE UNIQUE INDEX road_events_source_id_publication_id_key ON public.road_events USING btree (source_id, publication_id)
