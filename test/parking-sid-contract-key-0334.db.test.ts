@@ -51,47 +51,57 @@ describe.skipIf(url === undefined)("0334 parking_occupancy_sid contract key", ()
     expect(parts.rows[0]!.keyed).toBe(parts.rows[0]!.parts);
   });
 
-  it("the API's newest-report read for one facility is an index probe of each partition, and answers the view's own row", async () => {
-    const c = await t.pool.connect();
-    try {
-      await c.query("begin");
-      await c.query(
-        `insert into public.parking_occupancy_sid (observed_at, facility_id, source_feed, raw, spaces_free, spaces_total, status)
-         select ts, f, 'truckpark_sid_dyn', '{}', (f + extract(minute from ts)::int) % 40, 40, 'free'
-           from generate_series(1, 200) f,
-                generate_series(date_trunc('day', now()) - interval '2 days', now(), interval '30 minutes') ts`,
-      );
-      await c.query("analyze public.parking_occupancy_sid");
-      const params = ["sid:17", ["truckpark_sid_dyn"], new Date()];
-      const plan = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${NEWEST}`, params)).rows.map((r) => r["QUERY PLAN"]).join("\n");
-      // every day partition that holds reports is probed by the name, none of them read whole
-      const held = (await c.query<{ p: string }>("select distinct tableoid::regclass::text as p from public.parking_occupancy_sid order by 1")).rows.map((r) => r.p);
-      expect(held.length).toBeGreaterThan(1);
-      for (const p of held) {
-        expect(plan).not.toMatch(new RegExp(`Seq Scan on ${p} `));
-        expect(plan).toMatch(new RegExp(`Index Scan on ${p}_\\S+\\n\\s+Index Cond: \\(\\(\\('sid:'::text \\|\\| \\(facility_id\\)::text\\) = 'sid:17'::text\\)`));
+  // Three fixed days of their own, so the check does not depend on the clock: two full days of reports every 30
+  // minutes for 200 facilities, and the first tick of the third, as production holds just after midnight UTC.
+  const DAYS = ["2031-03-01", "2031-03-02", "2031-03-03"] as const;
+  const FULL = ["parking_occupancy_sid_20310301", "parking_occupancy_sid_20310302"] as const;
+
+  for (const at of ["2031-03-03T00:01:00Z", "2031-03-02T23:52:00Z"]) {
+    it(`the API's newest-report read for one facility is an index probe of each full day partition, and answers the view's own row (asked at ${at})`, async () => {
+      const c = await t.pool.connect();
+      try {
+        await c.query("begin");
+        for (const [i, d] of DAYS.entries()) {
+          const next = i + 1 < DAYS.length ? DAYS[i + 1]! : "2031-03-04";
+          await c.query(`create table public.parking_occupancy_sid_${d.replaceAll("-", "")} partition of public.parking_occupancy_sid for values from ('${d}T00:00:00Z') to ('${next}T00:00:00Z')`);
+        }
+        await c.query(
+          `insert into public.parking_occupancy_sid (observed_at, facility_id, source_feed, raw, spaces_free, spaces_total, status)
+           select ts, f, 'truckpark_sid_dyn', '{}', (f + extract(minute from ts)::int) % 40, 40, 'free'
+             from generate_series(1, 200) f,
+                  generate_series(timestamptz '2031-03-01T00:00:00Z', timestamptz '2031-03-03T00:00:00Z', interval '30 minutes') ts`,
+        );
+        await c.query("analyze public.parking_occupancy_sid");
+        const params = ["sid:17", ["truckpark_sid_dyn"], new Date(at)];
+        const plan = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${NEWEST}`, params)).rows.map((r) => r["QUERY PLAN"]).join("\n");
+        // every full day partition is probed by the name, none read whole
+        for (const p of FULL) {
+          expect(plan).not.toMatch(new RegExp(`Seq Scan on ${p} `));
+          expect(plan).toMatch(new RegExp(`Index Scan on ${p}_\\S+\\n\\s+Index Cond: \\(\\(\\('sid:'::text \\|\\| \\(facility_id\\)::text\\) = 'sid:17'::text\\)`));
+        }
+        // a name the SID branch cannot hold finds nothing, through the index as well
+        const other = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${NEWEST}`, ["p:17", ["truckpark_sid_dyn"], new Date(at)])).rows.map((r) => r["QUERY PLAN"]).join("\n");
+        for (const p of FULL) expect(other).not.toMatch(new RegExp(`Seq Scan on ${p} `));
+        const got = await c.query(NEWEST, params);
+        // the same read with no index scan of any kind: a plan that cannot touch the new index
+        const FENCED = `select free_spaces, total_spaces, occupancy_status, observed_at, source_ref
+             from (select * from contract.occupancy_observation o where o.facility_id = $1 and o.source_ref = any($2::text[]) and o.observed_at <= $3::timestamptz offset 0) o
+            order by o.observed_at desc limit 1`;
+        await c.query("set local enable_indexscan = off");
+        await c.query("set local enable_bitmapscan = off");
+        await c.query("set local enable_indexonlyscan = off");
+        const fencedPlan = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${FENCED}`, params)).rows.map((r) => r["QUERY PLAN"]).join("\n");
+        expect(fencedPlan).not.toMatch(/expr_observed_at_idx|contract_key|Index/);
+        const want = await c.query(FENCED, params);
+        expect(got.rows).toHaveLength(1);
+        expect(got.rows).toEqual(want.rows);
+      } finally {
+        await c.query("rollback");
+        c.release();
       }
-      // a name the SID branch cannot hold finds nothing, through the index as well
-      const other = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${NEWEST}`, ["p:17", ["truckpark_sid_dyn"], new Date()])).rows.map((r) => r["QUERY PLAN"]).join("\n");
-      for (const p of held) expect(other).not.toMatch(new RegExp(`Seq Scan on ${p} `));
-      const got = await c.query(NEWEST, params);
-      // the same read with no index scan of any kind: a plan that cannot touch the new index
-      const FENCED = `select free_spaces, total_spaces, occupancy_status, observed_at, source_ref
-           from (select * from contract.occupancy_observation o where o.facility_id = $1 and o.source_ref = any($2::text[]) and o.observed_at <= $3::timestamptz offset 0) o
-          order by o.observed_at desc limit 1`;
-      await c.query("set local enable_indexscan = off");
-      await c.query("set local enable_bitmapscan = off");
-      await c.query("set local enable_indexonlyscan = off");
-      const fencedPlan = (await c.query<{ "QUERY PLAN": string }>(`explain (costs off) ${FENCED}`, params)).rows.map((r) => r["QUERY PLAN"]).join("\n");
-      expect(fencedPlan).not.toMatch(/expr_observed_at_idx|contract_key|Index/);
-      const want = await c.query(FENCED, params);
-      expect(got.rows).toHaveLength(1);
-      expect(got.rows).toEqual(want.rows);
-    } finally {
-      await c.query("rollback");
-      c.release();
-    }
-  });
+    });
+  }
+
   it("re-applies where a part was made by hand: a partition's index built under another name is attached, a failed build rebuilt", async () => {
     const parts = (await t.pool.query<{ p: string }>("select inhrelid::regclass::text as p from pg_inherits where inhparent = 'public.parking_occupancy_sid'::regclass order by 1")).rows.map((r) => r.p);
     expect(parts.length).toBeGreaterThan(1);
