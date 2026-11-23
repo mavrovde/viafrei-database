@@ -17,4 +17,4 @@ export const API_READER_BASE: readonly string[] = [
     "street_bays", "tmc_locations", "transit_delays", "transit_delays_live", "transit_punctuality_area_live", "transit_stop_modes", "trips",
     "weather_warnings",
   ].map((t) => `public.${t}`),
-].sort();
+].sort((a, b) => a.localeCompare(b));

@@ -82,7 +82,7 @@ describe.skipIf(url === undefined)("0336 api_reader base tables", () => {
         where v.relnamespace = 'contract'::regnamespace and v.relkind = 'v' and d.refobjid <> v.oid and b.relnamespace <> 'contract'::regnamespace
         order by 1`,
     );
-    const qualified = r.rows.map((x) => (x.n.includes(".") ? x.n : `public.${x.n}`)).sort();
+    const qualified = r.rows.map((x) => (x.n.includes(".") ? x.n : `public.${x.n}`)).sort((a, b) => a.localeCompare(b));
     expect(qualified).toEqual(API_READER_BASE);
   });
 
