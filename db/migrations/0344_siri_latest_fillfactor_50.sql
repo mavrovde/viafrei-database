@@ -15,5 +15,12 @@
 --
 -- A storage parameter only: share update exclusive lock, readers and the
 -- upsert go on. The table's autovacuum settings stay as they are. Applied
--- again it is a no-op. Applied by hand on production 2026-11-24 18:21Z.
+-- again it is a no-op. Applied by hand on production 2026-11-24 18:21Z. The
+-- lock waits at most 5 s (an hourly REINDEX CONCURRENTLY or an autovacuum of
+-- the table holds it); migrate retries a lock timeout.
+--
+-- rollback:
+--   alter table public.delfi_siri_et_calls_latest set (fillfactor = 70);
+--   delete from schema_migrations where version = 344;
+set local lock_timeout = '5s';
 alter table public.delfi_siri_et_calls_latest set (fillfactor = 50);
