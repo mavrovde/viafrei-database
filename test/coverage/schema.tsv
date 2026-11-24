@@ -3809,6 +3809,8 @@ grant	api_reader@public.gbfs_vehicles	test/api-reader-base-tables-0336.db.test.t
 grant	api_reader@public.gbfs_vehicles	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.gtfs_service_dates	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.gtfs_service_dates	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.gtfs_untimed_trips	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.gtfs_untimed_trips	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.hh_cameras	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.hh_cameras	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.hydrogen_stations	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
@@ -3859,6 +3861,10 @@ grant	api_reader@public.road_event_ticks	test/api-reader-base-tables-0336.db.tes
 grant	api_reader@public.road_event_ticks	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.road_events	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.road_events	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.road_weather_forecast	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.road_weather_forecast	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.road_weather_stations	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.road_weather_stations	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.routes	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.routes	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.source_register	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
@@ -3897,8 +3903,16 @@ grant	api_reader@public.transit_stop_modes	test/api-reader-base-tables-0336.db.t
 grant	api_reader@public.transit_stop_modes	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.trips	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.trips	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.vbb_transit_delays	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.vbb_transit_delays	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.vbn_transit_delays	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.vbn_transit_delays	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.vrn_transit_delays	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.vrn_transit_delays	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.weather_warnings	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.weather_warnings	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.weather_warnings_en_live	test/api-reader-parity-0345.db.test.ts > api_reader reads every one of them, as itself, and runs the function
+grant	api_reader@public.weather_warnings_en_live	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 partitioned	domains.train_board_departures	test/train-board.db.test.ts > is a tick table on the daily schedule: partitioned by day on observed_at, with a retention row and no default partition
 policy	domains.train_board_departures.train_board_departures_live_insert	test/train-board.db.test.ts > viafrei_live_ingestor (0315) appends a board of db_timetables with the fixed attribution and licence, and can read, change or remove none; api_access and viafrei_ingestor append none
 policy	domains.train_board_departures.train_board_departures_read	test/train-board.db.test.ts > contract.train_board serves each station's newest fetch only, to api_reader
