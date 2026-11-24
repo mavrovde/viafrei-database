@@ -11,6 +11,18 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.6.0](https://github.com/mavrovde/viafrei-database/compare/v0.5.3...v0.6.0) (2026-11-24)
+
+
+### Added
+
+* **grants:** api_reader reads the seven relations and the function today's MCP answers use (0345) ([#115](https://github.com/mavrovde/viafrei-database/issues/115)) ([4fe1028](https://github.com/mavrovde/viafrei-database/commit/4fe1028b2ee9b208fdb85aa244ce8be6fa3908c8))
+
+
+### Fixed
+
+* **db:** the SIRI latest table keeps half of every page free, so a delay update stays HOT (0344) ([#113](https://github.com/mavrovde/viafrei-database/issues/113)) ([dea6c17](https://github.com/mavrovde/viafrei-database/commit/dea6c1750b31e8e79e71291d025ab1edab4e38a8))
+
 ## [0.5.3](https://github.com/mavrovde/viafrei-database/compare/v0.5.2...v0.5.3) (2026-11-24)
 
 
