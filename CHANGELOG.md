@@ -11,6 +11,40 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.5.3](https://github.com/mavrovde/viafrei-database/compare/v0.5.2...v0.5.3) (2026-11-24)
+
+
+### Fixed
+
+* **db:** register rows for hydrogen, Flix and city roads feeds; Trip Updates in transit (0342, 0343) ([#111](https://github.com/mavrovde/viafrei-database/issues/111)) ([da49361](https://github.com/mavrovde/viafrei-database/commit/da49361d9948909ce406ee7b1f718bfa7ee38579))
+
+## [0.5.2](https://github.com/mavrovde/viafrei-database/compare/v0.5.1...v0.5.2) (2026-11-24)
+
+
+### Changed
+
+* **db:** 0340 drops the SIRI ET latest _next index, 0341 builds stop_times_stop again ([#107](https://github.com/mavrovde/viafrei-database/issues/107)) ([8be8ecb](https://github.com/mavrovde/viafrei-database/commit/8be8ecbe02ec69d49f2edd3800cc53aeac705558))
+
+## [0.5.1](https://github.com/mavrovde/viafrei-database/compare/v0.5.0...v0.5.1) (2026-11-24)
+
+
+### Fixed
+
+* **0339:** every SECURITY DEFINER and trigger function pins a search_path naming pg_temp; archived autobahn_events days restore again ([#105](https://github.com/mavrovde/viafrei-database/issues/105)) ([2b29aad](https://github.com/mavrovde/viafrei-database/commit/2b29aad23d43fcc7edfacfa88282e1258ad27006))
+
+## [0.5.0](https://github.com/mavrovde/viafrei-database/compare/v0.4.5...v0.5.0) (2026-11-23)
+
+
+### Added
+
+* **db:** 0336 grants api_reader the base tables the contract views read ([#101](https://github.com/mavrovde/viafrei-database/issues/101)) ([f55a088](https://github.com/mavrovde/viafrei-database/commit/f55a0880b948294a46074a164589ce23ab8400be))
+
+
+### Changed
+
+* **api:** 0337 the indexes of the API's reads on the platform's tables, and api_reader's data_status read ([#103](https://github.com/mavrovde/viafrei-database/issues/103)) ([d922963](https://github.com/mavrovde/viafrei-database/commit/d9229635c7ccd51fb1e9ba869db537912294aba7))
+* **api:** 0338 stores a road event's Land at write time, and indexes the energy summary's point count ([#104](https://github.com/mavrovde/viafrei-database/issues/104)) ([11542e6](https://github.com/mavrovde/viafrei-database/commit/11542e6d6325c09adbe8e5f5c10bdc04d63d9472))
+
 ## [0.4.5](https://github.com/mavrovde/viafrei-database/compare/v0.4.4...v0.4.5) (2026-11-23)
 
 

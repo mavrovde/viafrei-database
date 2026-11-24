@@ -10,7 +10,9 @@
  *         definition) with an error, never dropping it;
  *   0324  stop_times' autovacuum settings (scale factor 0.1, cost limit 1000);
  *   0325  the four unused indexes production dropped by hand, dropped here too;
- *         energy_page_keys_feed, which a read needs, is kept.
+ *         energy_page_keys_feed, which a read needs, is kept. 0341 builds
+ *         stop_times_stop again (the stop_tod indexes are partial and cannot
+ *         answer its reads), so at head it is there.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
  *
@@ -154,8 +156,8 @@ describe.skipIf(url === undefined)("0323-0324 hand changes of 2026-11-22", () =>
       )
     ).rows.map((r) => r.n);
 
-  it("0325 drops the four unused indexes and keeps energy_page_keys_feed and the stop reads' indexes", async () => {
-    expect(await present(DROPPED)).toEqual([]);
+  it("0325 drops the four unused indexes and keeps energy_page_keys_feed and the stop reads' indexes; 0341 builds stop_times_stop again", async () => {
+    expect(await present(DROPPED)).toEqual(["stop_times_stop"]);
     expect(await present(["energy_page_keys_feed", "stop_times_stop_arr_tod", "stop_times_stop_tod", "trips_pkey"])).toEqual([
       "energy_page_keys_feed",
       "stop_times_stop_arr_tod",

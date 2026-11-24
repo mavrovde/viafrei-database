@@ -7,3 +7,4 @@ dist/
 reports/
 zap-report/
 sarif/
+.vitest/

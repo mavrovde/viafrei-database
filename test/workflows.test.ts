@@ -506,18 +506,42 @@ export function actionlintFaults(ci: string): string[] {
   return [];
 }
 
-/** The coverage steps of the Integration tests (PostGIS) job, as CI must run them. */
+/** The coverage steps of the Coverage shard jobs and of their fan-in, Integration tests (PostGIS), as CI must run them. */
 export function coverageFaults(ci: string): string[] {
   const faults: string[] = [];
+  const shards = job(ci, "coverage-shards");
   const integ = job(ci, "integration");
-  if (!integ.includes("\n        run: npm run coverage\n")) faults.push("the integration job does not run npm run coverage");
-  if (integ.includes("\n        run: npm run test:db\n")) faults.push("the integration job still runs plain test:db");
-  if (/\n {10}POSTGRES_DB:/.test(integ)) faults.push("the integration database is the image's POSTGRES_DB, not a plain create database");
-  if (!integ.includes("-c 'create database viafrei_empty'\n")) faults.push("the integration job does not make its database with a plain create database");
-  if (!integ.includes('VF_REQUIRE_DB: "1"')) faults.push("the coverage run may skip the database (no VF_REQUIRE_DB)");
+  if (!shards.includes("\n        shard: [1, 2, 3, 4]\n")) faults.push("the coverage shards are not the four of the matrix");
+  if (!shards.includes("\n    timeout-minutes: 15\n")) faults.push("a coverage shard may run past 15 minutes");
+  if (!shards.includes('\n        run: npm run coverage:shard -- --shard "$SHARD/4"\n')) faults.push("the shard job does not run its shard of npm run coverage:shard");
+  if (shards.includes("\n        run: npm run test:db\n") || integ.includes("\n        run: npm run test:db\n")) faults.push("the coverage jobs still run plain test:db");
+  if (/\n {10}POSTGRES_DB:/.test(shards)) faults.push("the shard database is the image's POSTGRES_DB, not a plain create database");
+  if (!shards.includes("-c 'create database viafrei_empty'\n")) faults.push("the shard job does not make its database with a plain create database");
+  if (!shards.includes('VF_REQUIRE_DB: "1"')) faults.push("the coverage run may skip the database (no VF_REQUIRE_DB)");
+  if (!/uses: actions\/upload-artifact@[0-9a-f]{40} # v\S+\n {8}with:\n {10}name: coverage-blob-\$\{\{ matrix\.shard \}\}\n {10}path: \.vitest\/blob\/\n {10}include-hidden-files: true\n {10}if-no-files-found: error\n/.test(shards)) faults.push("a shard's blob is not uploaded");
+  if (!integ.includes("\n    needs: coverage-shards\n    if: ${{ always() }}\n")) faults.push("the fan-in can be skipped when a shard fails or the run is cancelled");
+  if (!integ.includes("\n          SHARDS: ${{ needs.coverage-shards.result }}\n") || !integ.includes("[[ $SHARDS == success ]] ||")) faults.push("the fan-in does not fail on a shard that did not finish green");
+  if (!integ.includes("\n          pattern: coverage-blob-*\n          path: .vitest/blob\n          merge-multiple: true\n")) faults.push("the fan-in does not download every shard's blob");
+  if (!integ.includes("(( n == 4 ))")) faults.push("the fan-in does not count the four blobs");
+  if (!integ.includes("\n        run: npm run coverage:merge\n")) faults.push("the integration job does not run npm run coverage:merge");
+  if (!integ.includes("\n        run: npm run coverage:schema\n")) faults.push("the integration job does not run the schema coverage gate");
   if (!integ.includes('node scripts/coverage-summary.ts coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"')) faults.push("no coverage summary in the job summary");
   if (!integ.includes("\n        run: node scripts/coverage-summary.ts --check-badge README.md coverage/coverage-summary.json\n")) faults.push("the coverage badge is not compared with the measurement");
   if (!/uses: actions\/upload-artifact@[0-9a-f]{40} # v\S+\n {8}with:\n {10}name: coverage\n {10}path: coverage\/\n/.test(integ)) faults.push("the coverage directory is not uploaded");
+  return faults;
+}
+
+/**
+ * The shard and merge scripts: a shard is the coverage run with every threshold
+ * set to zero and a blob written, so the gate is the merged figure; the merge
+ * reads the config's thresholds unchanged.
+ */
+export function shardScriptFaults(scripts: Record<string, string>): string[] {
+  const faults: string[] = [];
+  const base = "vitest run --config vitest.coverage.config.ts --coverage";
+  const zero = ["lines", "functions", "branches", "statements"].map((k) => `--coverage.thresholds.${k}=0`).join(" ");
+  if (scripts["coverage:shard"] !== `${base} ${zero} --reporter=default --reporter=blob`) faults.push("coverage:shard is not the coverage run with a blob and no threshold of its own");
+  if (scripts["coverage:merge"] !== `${base} --merge-reports`) faults.push("coverage:merge does not merge the blobs under the config's thresholds");
   return faults;
 }
 
@@ -700,6 +724,7 @@ describe("the checks the README names", () => {
       "CI | Lint",
       "CI | Unit tests",
       "CI | Migration lint",
+      "CI | Coverage shard",
       "CI | Integration tests (PostGIS)",
       "CI | Image (build, scan, healthz)",
       "Security | CodeQL (TypeScript)",
@@ -723,7 +748,7 @@ describe("the checks the README names", () => {
   it("a renamed job makes the README stale (the comparison can say no)", () => {
     const renamed = read("ci.yml").replace("    name: Unit tests\n", "    name: Unit\n");
     expect(jobNames(renamed)).toContain("Unit");
-    expect(readmeChecks(readme).slice(0, 5)).not.toEqual(jobNames(renamed).map((j) => `CI | ${j}`));
+    expect(readmeChecks(readme).slice(0, 6)).not.toEqual(jobNames(renamed).map((j) => `CI | ${j}`));
   });
 
   it("the README names the coverage thresholds the config enforces", () => {
@@ -759,6 +784,7 @@ describe("the coverage gate", () => {
   it("the package runs both layers through the coverage config", () => {
     const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")) as { scripts: Record<string, string>; devDependencies: Record<string, string> };
     expect(pkg.scripts["coverage"]).toBe("vitest run --config vitest.coverage.config.ts --coverage");
+    expect(shardScriptFaults(pkg.scripts)).toEqual([]);
     expect(pkg.devDependencies["@vitest/coverage-v8"]).toMatch(/^\d+\.\d+\.\d+$/);
     expect(config).toContain('{ extends: "./vitest.config.ts", test: { name: "unit" } }');
     expect(config).toContain('{ extends: "./vitest.db.config.ts", test: { name: "db" } }');
@@ -766,20 +792,33 @@ describe("the coverage gate", () => {
   });
 
   it("a planted removal goes red", () => {
-    expect(coverageFaults(ci.replace("        run: npm run coverage\n", "        run: npm run test:db\n"))).toEqual([
-      "the integration job does not run npm run coverage",
-      "the integration job still runs plain test:db",
+    expect(coverageFaults(ci.replace('        run: npm run coverage:shard -- --shard "$SHARD/4"\n', "        run: npm run test:db\n"))).toEqual([
+      "the shard job does not run its shard of npm run coverage:shard",
+      "the coverage jobs still run plain test:db",
     ]);
+    expect(coverageFaults(ci.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3]\n"))).toEqual(["the coverage shards are not the four of the matrix"]);
+    expect(coverageFaults(ci.replace(/(\n {2}coverage-shards:\n[^]*?)\n {4}timeout-minutes: 15\n/, "$1\n    timeout-minutes: 30\n"))).toEqual(["a coverage shard may run past 15 minutes"]);
+    expect(coverageFaults(ci.replace("          include-hidden-files: true\n", ""))).toEqual(["a shard's blob is not uploaded"]);
+    expect(coverageFaults(ci.replace("    needs: coverage-shards\n    if: ${{ always() }}\n", "    needs: coverage-shards\n"))).toEqual(["the fan-in can be skipped when a shard fails or the run is cancelled"]);
+    expect(coverageFaults(ci.replace("    needs: coverage-shards\n    if: ${{ always() }}\n", "    needs: coverage-shards\n    if: ${{ !cancelled() }}\n"))).toEqual(["the fan-in can be skipped when a shard fails or the run is cancelled"]);
+    expect(coverageFaults(ci.replace("[[ $SHARDS == success ]] ||", "true ||"))).toEqual(["the fan-in does not fail on a shard that did not finish green"]);
+    expect(coverageFaults(ci.replace("          merge-multiple: true\n", ""))).toEqual(["the fan-in does not download every shard's blob"]);
+    expect(coverageFaults(ci.replace("(( n == 4 ))", "(( n > 0 ))"))).toEqual(["the fan-in does not count the four blobs"]);
+    expect(coverageFaults(ci.replace("        run: npm run coverage:merge\n", "        run: npm run coverage\n"))).toEqual(["the integration job does not run npm run coverage:merge"]);
+    expect(coverageFaults(ci.replace("        run: npm run coverage:schema\n", "        run: true\n"))).toEqual(["the integration job does not run the schema coverage gate"]);
     expect(coverageFaults(ci.replace(/ {6}- name: Upload the coverage report\n[^]*?retention-days: 14\n/, ""))).toEqual(["the coverage directory is not uploaded"]);
     expect(coverageFaults(ci.replace("          POSTGRES_PASSWORD: ci\n", "          POSTGRES_PASSWORD: ci\n          POSTGRES_DB: viafrei_empty\n").replace(/ {6}- name: An empty database\n[^]*?create database viafrei_empty'\n/, ""))).toEqual([
-      "the integration database is the image's POSTGRES_DB, not a plain create database",
-      "the integration job does not make its database with a plain create database",
+      "the shard database is the image's POSTGRES_DB, not a plain create database",
+      "the shard job does not make its database with a plain create database",
     ]);
     expect(coverageFaults(ci.replace(/ {6}- name: Coverage summary\n[^]*?GITHUB_STEP_SUMMARY"\n/, ""))).toEqual(["no coverage summary in the job summary"]);
     expect(thresholdFaults(config.replace(/\n\s+branches: [\d.]+,\n/, "\n"))).toEqual(["branches: no threshold"]);
     expect(thresholdFaults(config.replace(/(\n\s+lines: )[\d.]+,/, "$10,"))).toEqual(["lines: threshold 0 is not above zero"]);
     expect(thresholdFaults(config.replace("thresholds:", "limits:"))).toHaveLength(4);
     expect(coverageFaults(ci.replace(/ {6}- name: Coverage badge matches the measurement\n[^]*?coverage-summary\.json\n/, ""))).toEqual(["the coverage badge is not compared with the measurement"]);
+    const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")) as { scripts: Record<string, string> };
+    expect(shardScriptFaults({ ...pkg.scripts, "coverage:shard": pkg.scripts["coverage:shard"]?.replace(" --reporter=blob", "") ?? "" })).toEqual(["coverage:shard is not the coverage run with a blob and no threshold of its own"]);
+    expect(shardScriptFaults({ ...pkg.scripts, "coverage:merge": `${pkg.scripts["coverage:merge"] ?? ""} --coverage.thresholds.lines=0` })).toEqual(["coverage:merge does not merge the blobs under the config's thresholds"]);
   });
 
   it("every coverage ignore in src carries its reason on the line above", () => {

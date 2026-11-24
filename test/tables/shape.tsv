@@ -1774,7 +1774,6 @@ public.delfi_siri_et_calls_latest	column	journey_cancelled	boolean not null
 public.delfi_siri_et_calls_latest	constraint	delfi_siri_et_calls_latest_pkey	p PRIMARY KEY (stop_ref, service_day, journey_ref, visit, source_feed)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_contract_ref_aimed	CREATE INDEX delfi_siri_et_calls_latest_contract_ref_aimed ON public.delfi_siri_et_calls_latest USING btree (stop_ref, aimed_dep)
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_departed	CREATE INDEX delfi_siri_et_calls_latest_departed ON public.delfi_siri_et_calls_latest USING btree (aimed_dep)
-public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_next	CREATE INDEX delfi_siri_et_calls_latest_next ON public.delfi_siri_et_calls_latest USING btree (stop_ref, COALESCE(expected_dep, aimed_dep))
 public.delfi_siri_et_calls_latest	index	delfi_siri_et_calls_latest_pkey	CREATE UNIQUE INDEX delfi_siri_et_calls_latest_pkey ON public.delfi_siri_et_calls_latest USING btree (stop_ref, service_day, journey_ref, visit, source_feed)
 public.delfi_siri_et_stop_pairs	column	eva	text not null
 public.delfi_siri_et_stop_pairs	column	dhid	text not null
@@ -3985,6 +3984,7 @@ public.stop_times	column	deleted_reason	text
 public.stop_times	constraint	stop_times_pkey	p PRIMARY KEY (gtfs_feed_key, trip_id, stop_sequence)
 public.stop_times	index	stop_times_deleted	CREATE INDEX stop_times_deleted ON public.stop_times USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 public.stop_times	index	stop_times_pkey	CREATE UNIQUE INDEX stop_times_pkey ON public.stop_times USING btree (gtfs_feed_key, trip_id, stop_sequence)
+public.stop_times	index	stop_times_stop	CREATE INDEX stop_times_stop ON public.stop_times USING btree (gtfs_feed_key, stop_id, trip_id)
 public.stop_times	index	stop_times_stop_arr_tod	CREATE INDEX stop_times_stop_arr_tod ON public.stop_times USING btree (gtfs_feed_key, stop_id, mod((date_part('epoch'::text, arrival))::bigint, (86400)::bigint)) INCLUDE (arrival, trip_id, stop_sequence, drop_off_type) WHERE ((deleted_at IS NULL) AND (arrival IS NOT NULL))
 public.stop_times	index	stop_times_stop_tod	CREATE INDEX stop_times_stop_tod ON public.stop_times USING btree (gtfs_feed_key, stop_id, mod((date_part('epoch'::text, departure))::bigint, (86400)::bigint)) INCLUDE (departure, trip_id, stop_sequence, pickup_type) WHERE ((deleted_at IS NULL) AND (departure IS NOT NULL))
 public.stops	column	deleted_at	timestamp with time zone
