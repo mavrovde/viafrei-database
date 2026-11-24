@@ -17,6 +17,20 @@
 -- rollback:
 --   drop index concurrently if exists public.stop_times_stop;
 --   delete from schema_migrations where version = 341;
+-- An INVALID index under the name (a build that timed out, here or by hand)
+-- is dropped first; 'if not exists' would otherwise keep it and the ledger
+-- would record the file as applied.
+set max_parallel_maintenance_workers = 0;
+set maintenance_work_mem = '256MB';
+select format('drop index concurrently if exists public.%I', i.relname)
+  from pg_class i
+  join pg_index x on x.indexrelid = i.oid
+ where i.relnamespace = 'public'::regnamespace
+   and not x.indisvalid
+   and i.relname = 'stop_times_stop'
+\gexec
 set lock_timeout = '30s';
 create index concurrently if not exists stop_times_stop on public.stop_times using btree (gtfs_feed_key, stop_id, trip_id);
 reset lock_timeout;
+reset maintenance_work_mem;
+reset max_parallel_maintenance_workers;

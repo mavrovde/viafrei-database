@@ -17,7 +17,7 @@
 -- CONCURRENTLY, 3.9 GB after) and the upsert was the database's costliest
 -- statement (442 k calls, 98.5 ms each).
 --
--- No reader needs it. Each bounds aimed_dep, so the
+-- No reader that filters on stop_ref needs it. Each bounds aimed_dep, so the
 -- delfi_siri_et_calls_latest_contract_ref_aimed (stop_ref, aimed_dep) index
 -- answers it, with the same rows:
 --   - the platform's departures read (live-departures, SIRI_ET_AT_REFS_SQL,
@@ -41,4 +41,8 @@
 --   create index concurrently if not exists delfi_siri_et_calls_latest_next
 --     on public.delfi_siri_et_calls_latest (stop_ref, coalesce(expected_dep, aimed_dep));
 --   delete from schema_migrations where version = 340;
+-- lock_timeout bounds the drop's wait behind the upserts' transactions; a drop
+-- that waits longer fails with 55P03 and migrate retries the file (if exists).
+set lock_timeout = '5s';
 drop index concurrently if exists public.delfi_siri_et_calls_latest_next;
+reset lock_timeout;

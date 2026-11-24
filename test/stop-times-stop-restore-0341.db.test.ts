@@ -5,6 +5,7 @@
  *  - the index is there, VALID, with its definition;
  *  - a stop_id read with no predicate on departure or arrival plans through
  *    it; the partial stop_tod indexes cannot answer it;
+ *  - an INVALID index under the name is dropped and built again VALID;
  *  - the file run again (production built the index by hand first) is a
  *    no-op that applies outside a transaction.
  *
@@ -48,6 +49,14 @@ describe.skipIf(url === undefined)("0341 stop_times_stop restored", () => {
       await c.query("reset enable_seqscan");
       c.release();
     }
+  });
+
+  it("run again over an INVALID index under the name (a build that timed out) builds it VALID, never keeps the leftover", async () => {
+    await t.pool.query("update pg_index set indisvalid = false where indexrelid = 'public.stop_times_stop'::regclass");
+    expect((await t.pool.query<{ def: string; valid: boolean }>(INDEX)).rows[0]?.valid).toBe(false);
+    await reapply(t, service(), FILE);
+    const { rows } = await t.pool.query<{ def: string; valid: boolean }>(INDEX);
+    expect(rows).toEqual([{ def: DEF, valid: true }]);
   });
 
   it("run again where the index is already there (production built it by hand) is a no-op, outside a transaction", async () => {
