@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.5.2](https://github.com/mavrovde/viafrei-database/compare/v0.5.1...v0.5.2) (2026-11-24)
+
+
+### Changed
+
+* **db:** 0340 drops the SIRI ET latest _next index, 0341 builds stop_times_stop again ([#107](https://github.com/mavrovde/viafrei-database/issues/107)) ([8be8ecb](https://github.com/mavrovde/viafrei-database/commit/8be8ecbe02ec69d49f2edd3800cc53aeac705558))
+
 ## [0.5.1](https://github.com/mavrovde/viafrei-database/compare/v0.5.0...v0.5.1) (2026-11-24)
 
 
