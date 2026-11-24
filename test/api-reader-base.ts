@@ -18,3 +18,12 @@ export const API_READER_BASE: readonly string[] = [
     "weather_warnings",
   ].map((t) => `public.${t}`),
 ].sort((a, b) => a.localeCompare(b));
+
+/** The relations 0345 grants api_reader beside 0336's, read by viafrei_mcp for the answers viafrei-api reproduces. */
+export const API_READER_0345: readonly string[] = [
+  "gtfs_untimed_trips", "road_weather_forecast", "road_weather_stations", "vbb_transit_delays", "vbn_transit_delays", "vrn_transit_delays",
+  "weather_warnings_en_live",
+].map((t) => `public.${t}`);
+
+/** Every relation outside contract that api_reader reads: 0336's and 0345's. */
+export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345].sort((a, b) => a.localeCompare(b));
