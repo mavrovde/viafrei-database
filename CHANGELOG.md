@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.5.3](https://github.com/mavrovde/viafrei-database/compare/v0.5.2...v0.5.3) (2026-11-24)
+
+
+### Fixed
+
+* **db:** register rows for hydrogen, Flix and city roads feeds; Trip Updates in transit (0342, 0343) ([#111](https://github.com/mavrovde/viafrei-database/issues/111)) ([da49361](https://github.com/mavrovde/viafrei-database/commit/da49361d9948909ce406ee7b1f718bfa7ee38579))
+
 ## [0.5.2](https://github.com/mavrovde/viafrei-database/compare/v0.5.1...v0.5.2) (2026-11-24)
 
 
