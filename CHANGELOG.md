@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.5.1](https://github.com/mavrovde/viafrei-database/compare/v0.5.0...v0.5.1) (2026-11-24)
+
+
+### Fixed
+
+* **0339:** every SECURITY DEFINER and trigger function pins a search_path naming pg_temp; archived autobahn_events days restore again ([#105](https://github.com/mavrovde/viafrei-database/issues/105)) ([2b29aad](https://github.com/mavrovde/viafrei-database/commit/2b29aad23d43fcc7edfacfa88282e1258ad27006))
+
 ## [0.5.0](https://github.com/mavrovde/viafrei-database/compare/v0.4.5...v0.5.0) (2026-11-23)
 
 
