@@ -528,4 +528,23 @@ const maintenance0322: SchemaMutant[] = [
   { name: "0322: energy_page_keys vacuums on a share of the table again", from: "  autovacuum_vacuum_scale_factor = 0,", to: "  autovacuum_vacuum_scale_factor = 0.05," },
 ].map((m) => ({ ...m, file: M0322, tests: ["test/db-owned-maintenance.db.test.ts"] }));
 
-export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322, ...derived0330, ...views0330, ...current0335];
+/**
+ * 0339 defines again, verbatim with a pinned search_path, every baseline function a mutant here plants
+ * its fault in and that sets no search_path or one without pg_temp; no migrated database carries the
+ * baseline's copy, so such a mutant is planted in 0339's text. A function counts as 0339's when 0339
+ * holds `CREATE OR REPLACE FUNCTION <its name>(`.
+ */
+const M0339 = join(ROOT, "db", "migrations", "0339_pinned_search_path.sql");
+const carried = (m: SchemaMutant): SchemaMutant => {
+  if (m.file !== BASELINE) return m;
+  const base = readFileSync(BASELINE, "utf8");
+  const at = base.indexOf(m.from);
+  const fn = base.lastIndexOf("CREATE FUNCTION ", at);
+  const head = /^CREATE FUNCTION ([\w.]+)\(/.exec(base.slice(fn));
+  if (at < 0 || fn < 0 || head === null) return m;
+  const end = base.indexOf("$$;\n", base.indexOf("AS $$", fn) + 5);
+  if (end < 0 || at > end) return m;
+  return readFileSync(M0339, "utf8").includes(`CREATE OR REPLACE FUNCTION ${head[1] ?? ""}(`) ? { ...m, file: M0339 } : m;
+};
+
+export const SCHEMA_BEHAVIOUR_MUTANTS: readonly SchemaMutant[] = [...control, ...ledgers, ...road, ...ops, ...text, ...fuel, ...derived, ...loads, ...merged, ...views, ...complex, ...fold0306, ...maintenance0322, ...derived0330, ...views0330, ...current0335].map(carried);
