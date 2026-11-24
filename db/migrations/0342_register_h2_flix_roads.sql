@@ -41,18 +41,33 @@
 --    A new row is a feed's own: it is not listed again as a register-only
 --    source (the third branch); flix_transit, shared by seven feeds, stays
 --    as it was.
+--    Where each ruling is written down: flix_transit (0309) and
+--    bonn_messorte are in the platform's register as well; the rulings of
+--    bochum_baustellen, rostock_baustellen, norderstedt_baustellen,
+--    hannover_routenempfehlungen and stuttgart_strategisches_routing are
+--    only in the ingestor's source files, and this migration is their
+--    first copy in the database.
+--    Conditions of the rulings, which no column of source_register holds:
+--      hannover_routenempfehlungen: "§ 4.6 export before any public use;
+--        merge never; only current noRestriction rows".
+--      bonn_messorte: the notice of § 23 Abs. 1c StVO on every rendering.
+--    Any API route serving these data must carry those conditions.
 --
 -- Idempotent: the inserts skip a row already there, the views are replaced.
 -- create or replace view takes an ACCESS EXCLUSIVE lock on the view; the
 -- readers hold it for one statement, lock_timeout bounds the wait.
 --
 -- rollback:
+--   (after 0343, roll 0343 back first)
 --   re-run the create view statements of 0312 for public.contract_source_domains
 --   and public.contract_sources as create or replace view;
 --   delete from public.source_register where source_id in ('bochum_baustellen',
 --     'rostock_baustellen', 'bonn_messorte', 'norderstedt_baustellen',
 --     'hannover_routenempfehlungen', 'stuttgart_strategisches_routing');
 --   delete from schema_migrations where version = 342;
+--   (a production applied by hand, as production was on 2026-11-24, has no
+--   schema_migrations row 342 until the release migrator runs and records it;
+--   there the delete finds nothing.)
 set local lock_timeout = '5s';
 
 insert into public.source_register (source_id, attribution_text, source_url, licence_label, share_alike, share_alike_database, changes_statement, use_classes, consumer_answers_only, no_redistribution, verified_on, register_version) values

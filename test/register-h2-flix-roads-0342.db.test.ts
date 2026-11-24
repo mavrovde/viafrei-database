@@ -10,6 +10,8 @@
  *  - the six new register rows and flix_transit carry their licence's terms:
  *    CC0 and dl-de/by-2-0 all three classes and no share-alike, ODbL all
  *    three with share-alike on the database, exactly as the OSM rows;
+ *  - the six new rows carry their attribution verbatim, their dataset or
+ *    offer page as source URL and the change marker the attribution states;
  *  - the file applied again is a no-op.
  *
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/empty npm run test:db
@@ -175,6 +177,41 @@ describe.skipIf(url === undefined)("0342 register: h2_mobility, flix and road fe
       ["osm", "ODbL 1.0", true, true, ALL, false, false],
       ["rostock_baustellen", "CC0 1.0", false, false, ALL, false, false],
       ["stuttgart_strategisches_routing", "dl-de/by-2-0", false, false, ALL, false, false],
+    ]);
+  });
+
+  it("the six new rows carry their attribution verbatim, their source page and their change marker", async () => {
+    const { rows } = await t.pool.query<{ source_id: string; attribution_text: string; source_url: string; changes_statement: string | null }>(
+      "select source_id, attribution_text, source_url, changes_statement from public.source_register where source_id = any($1) order by 1",
+      [NEW_ROWS],
+    );
+    expect(rows.map((r) => [r.source_id, r.attribution_text, r.source_url, r.changes_statement])).toEqual([
+      ["bochum_baustellen", "Baustellen: Stadt Bochum, CC0 1.0 (https://opendata.ruhr/dataset/bochum-baustellen)", "https://opendata.ruhr/dataset/bochum-baustellen", null],
+      [
+        "bonn_messorte",
+        "Messorte der Geschwindigkeitsüberwachung Bonn, abgeleitet aus „Bußgelder fließender Verkehr 2024“: Datenquelle: Open Data Stadt Bonn (Eigene Berechnungen eingefügt), CC0 1.0",
+        "https://opendata.bonn.de/dataset/bu%C3%9Fgelder-flie%C3%9Fender-verkehr-2024",
+        "Eigene Berechnungen eingefügt",
+      ],
+      [
+        "hannover_routenempfehlungen",
+        "Routenempfehlungen Hannover: Landeshauptstadt Hannover – Fachbereich Tiefbau – Sachgebiet Verkehrsmanagement via Mobilithek — enthält Daten aus „Routenempfehlungen der Verkehrsmanagement-Zentrale Hannover“, Open Database License 1.0 (opendatacommons.org/licenses/odbl/1-0/), bearbeitet",
+        "https://mobilithek.info/offers/1014168549190426624",
+        "bearbeitet",
+      ],
+      [
+        "norderstedt_baustellen",
+        "Baustellen: Herausgeber: Stadtverwaltung Norderstedt, Datenlizenz Deutschland – Namensnennung – Version 2.0 (www.govdata.de/dl-de/by-2-0), bearbeitet (https://www.govdata.de/daten/-/details/baustelleninformation)",
+        "https://www.govdata.de/daten/-/details/baustelleninformation",
+        "bearbeitet",
+      ],
+      ["rostock_baustellen", "Baustellen: Hanse- und Universitätsstadt Rostock, CC0 1.0 (https://www.opendata-hro.de/dataset/baustellen)", "https://www.opendata-hro.de/dataset/baustellen", null],
+      [
+        "stuttgart_strategisches_routing",
+        "Strategisches Routing Region Stuttgart: D BW Verband Region Stuttgart via Mobilithek, Datenlizenz Deutschland – Namensnennung – Version 2.0 (www.govdata.de/dl-de/by-2-0), Strategisches Routing in Region Stuttgart (MDM ID 616604813439705088), Daten verändert",
+        "https://mobilithek.info/offers/616604813439705088",
+        "Daten verändert",
+      ],
     ]);
   });
 
