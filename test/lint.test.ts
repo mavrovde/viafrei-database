@@ -49,6 +49,7 @@ const cases: [string, Record<string, string>, readonly string[]][] = [
   ["one idempotent drop does not cover a bare one", { "0001_a.sql": ok(1, "-- no-transaction: why\ndrop index concurrently if exists a;\ndrop index concurrently b;\n") }, ["0001_a.sql: is marked '-- no-transaction:' and so can half-apply"]],
   ["a bare build beside an idempotent drop is not idempotent", { "0001_a.sql": ok(1, "-- no-transaction: why\ndrop index concurrently if exists a;\ncreate index concurrently b on t (c);\n") }, ["0001_a.sql: is marked '-- no-transaction:' and so can half-apply"]],
   ["a drop built as text for \\gexec is not a statement of the file", { "0001_a.sql": ok(1, "-- no-transaction: why\nselect 'drop index concurrently ' || 'x'\n\\gexec\ncreate index concurrently if not exists b on t (c);\n") }, []],
+  ["a marked reindex, with no build or drop to check by statement, is still held to the file's idempotence", { "0001_a.sql": ok(1, "-- no-transaction: why\nreindex index concurrently i;\n") }, ["0001_a.sql: is marked '-- no-transaction:' and so can half-apply"]],
   ["a version note on the next line is not a ledger line (grep is line-based)", { "0001_a.sql": "x;\n-- rollback: delete from schema_migrations where\n-- version = 7;\n" }, ["0001_a.sql: the rollback note never says how to delete its own ledger row"]],
 ];
 
