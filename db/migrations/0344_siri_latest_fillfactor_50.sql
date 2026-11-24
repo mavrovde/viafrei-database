@@ -1,0 +1,19 @@
+-- delfi_siri_et_calls_latest keeps half of every page free (fillfactor 50, was
+-- 70), so a row's next version fits on its own page and the update is a HOT
+-- one: no new entry in any of the table's three indexes.
+--
+-- 0340 dropped the index on the expected time, the column an upsert changes
+-- with every delay. What still makes an update non-HOT is page space: the
+-- calls of a pull land on the same pages and change together, and 30 % free
+-- room holds fewer new versions than a page's calls need. Production, read
+-- only, 2026-11-24 18:21Z: 245.0 M updates since the statistics reset, 46.0 M
+-- of them HOT; between 0340's reading (223.5 M / 35.2 M) and this one, 50.5 %
+-- were HOT. The three indexes regrew by 400-800 MB between hourly REINDEX
+-- CONCURRENTLY rounds; the table holds 8.1 M rows and turns over in about a
+-- day (111 M deletes since the reset), so new pages take the setting without
+-- a rewrite.
+--
+-- A storage parameter only: share update exclusive lock, readers and the
+-- upsert go on. The table's autovacuum settings stay as they are. Applied
+-- again it is a no-op. Applied by hand on production 2026-11-24 18:21Z.
+alter table public.delfi_siri_et_calls_latest set (fillfactor = 50);
