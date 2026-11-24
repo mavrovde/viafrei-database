@@ -43,6 +43,8 @@ const cases: [string, Record<string, string>, readonly string[]][] = [
   ["an indented marker", { "0001_a.sql": ok(1, " -- no-transaction: indented\ncreate index concurrently if not exists i on a(id);\n") }, ["0001_a.sql: runs something 'concurrently'"]],
   ["a marker on a file that needs nothing, but idempotent", { "0001_a.sql": ok(1, "-- no-transaction: why\ncreate table if not exists z(id int);\n") }, ["0001_a.sql: is marked '-- no-transaction:' but runs nothing that needs it"]],
   ["a marked file that is not idempotent", { "0001_a.sql": ok(1, "-- no-transaction: why\ncreate index concurrently i on a(id);\n") }, ["0001_a.sql: is marked '-- no-transaction:' and so can half-apply"]],
+  ["a marked drop with if exists is idempotent", { "0001_a.sql": ok(1, "-- no-transaction: why\ndrop index concurrently if exists i;\n") }, []],
+  ["a marked drop without if exists is not", { "0001_a.sql": ok(1, "-- no-transaction: why\ndrop index concurrently i;\n") }, ["0001_a.sql: is marked '-- no-transaction:' and so can half-apply"]],
   ["a version note on the next line is not a ledger line (grep is line-based)", { "0001_a.sql": "x;\n-- rollback: delete from schema_migrations where\n-- version = 7;\n" }, ["0001_a.sql: the rollback note never says how to delete its own ledger row"]],
 ];
 

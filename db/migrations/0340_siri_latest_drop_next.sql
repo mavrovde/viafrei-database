@@ -1,0 +1,44 @@
+-- no-transaction: drops an index with drop index concurrently, which
+-- PostgreSQL refuses inside a transaction block. Idempotent: if exists, so a
+-- database where the index is already gone (dropped by hand on production)
+-- is left as it is.
+--
+-- delfi_siri_et_calls_latest_next (stop_ref, coalesce(expected_dep, aimed_dep))
+-- goes. The table is the newest SIRI ET row of every call per feed, upserted on
+-- every pull, and an upsert changes expected_dep whenever a delay changes. A
+-- column an index reads, changed, makes the update a non-HOT one: a new
+-- entry in every index of the table. Production, read only, 2026-11-24:
+-- 223.5 M updates, 35.2 M of them HOT (15.8 %), 15.1 M moved to a new page
+-- (6.8 %), and the other 173 M (77 %) stayed on their page and were still not
+-- HOT: the index, not the page space (fillfactor 70). The other three indexes
+-- read only stop_ref, service_day, journey_ref, visit, source_feed and
+-- aimed_dep, which an upsert does not change. The indexes swelled by about
+-- 40 % between rebuilds (4.6 GB table and indexes before a REINDEX
+-- CONCURRENTLY, 3.9 GB after) and the upsert was the database's costliest
+-- statement (442 k calls, 98.5 ms each).
+--
+-- No reader needs it. Each bounds aimed_dep, so the
+-- delfi_siri_et_calls_latest_contract_ref_aimed (stop_ref, aimed_dep) index
+-- answers it, with the same rows:
+--   - the platform's departures read (live-departures, SIRI_ET_AT_REFS_SQL,
+--     platform 2.6.46) bounds aimed_dep from below by the parser's delay bound
+--     (six hours; the parser drops a call past it), so the bound removes no row;
+--   - the platform's station board block bounds aimed_dep to the hour;
+--   - viafrei-api's departure relation matches a call aimed within a minute of
+--     the planned departure, and its station board block the hour.
+-- Production, read only, 2026-11-24, each reader with the expected-time
+-- predicate made unusable for the index: the departures read 3.2 ms with the
+-- index and 3.6 ms without (median of 24 stops; p95 6.7 and 7.4 ms); the API's
+-- departure board 47-246 ms with it and 48-184 ms without (median of 8
+-- stations). No call still to come was aimed more than six hours before it is
+-- expected (the latest: 3.6 hours).
+--
+-- The contract views of 0312 still name the expression; they read the table
+-- through (stop_ref, aimed_dep) after this, and no release of the platform or
+-- the API reads them any more.
+--
+-- rollback:
+--   create index concurrently if not exists delfi_siri_et_calls_latest_next
+--     on public.delfi_siri_et_calls_latest (stop_ref, coalesce(expected_dep, aimed_dep));
+--   delete from schema_migrations where version = 340;
+drop index concurrently if exists public.delfi_siri_et_calls_latest_next;

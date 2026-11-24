@@ -264,7 +264,7 @@ export function lint(io: LintIo): LintResult {
         fail(`${name}: has a '-- no-transaction:' note, but not as a line of its own within the first 20 lines — the migrate step would wrap it in a transaction anyway and 'create index concurrently' would fail in production`);
       }
       if (!/concurrently/i.test(text)) fail(`${name}: is marked '-- no-transaction:' but runs nothing that needs it — the marker costs atomicity, so it is only for statements PostgreSQL refuses inside a transaction`);
-      if (!/if not exists|or replace/i.test(text)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace')`);
+      if (!/if not exists|or replace|\bdrop\s+index\s+concurrently\s+if\s+exists\b/i.test(text)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace' / 'drop index concurrently if exists')`);
     }
     if (num >= LOCK_RULE_FROM) {
       const code = stripComments(text);
