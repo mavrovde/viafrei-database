@@ -20,6 +20,7 @@
 -- An INVALID index under the name (a build that timed out, here or by hand)
 -- is dropped first; 'if not exists' would otherwise keep it and the ledger
 -- would record the file as applied.
+set lock_timeout = '30s';
 set max_parallel_maintenance_workers = 0;
 set maintenance_work_mem = '256MB';
 select format('drop index concurrently if exists public.%I', i.relname)
@@ -29,7 +30,6 @@ select format('drop index concurrently if exists public.%I', i.relname)
    and not x.indisvalid
    and i.relname = 'stop_times_stop'
 \gexec
-set lock_timeout = '30s';
 create index concurrently if not exists stop_times_stop on public.stop_times using btree (gtfs_feed_key, stop_id, trip_id);
 reset lock_timeout;
 reset maintenance_work_mem;
