@@ -215,6 +215,10 @@ describe.skipIf(url === undefined)("0342 register: h2_mobility, flix and road fe
     ]);
   });
 
+  // Checks 0342's own rows: its register rows and the families the gate reads.
+  // In the migration order 0343 then replaces the domain view again (its own
+  // test, tripupdates-transit-0343). Here 0342 alone runs again, so the
+  // database ends with 0342's domain view; no seeded feed is tripupdates.
   it("the file applied again is a no-op", async () => {
     const families = await gate(t.pool);
     const register = (await t.pool.query<{ n: string }>("select count(*) as n from public.source_register")).rows[0]?.n;

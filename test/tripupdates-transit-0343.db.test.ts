@@ -133,6 +133,11 @@ describe.skipIf(url === undefined)("0343 tripupdates answers for transit", () =>
     expect(await at0342(shape)).toEqual(now);
     expect(now.cols).toEqual(["priority:integer", "pattern:text", "domain:text"]);
     expect(now.comment).toMatch(/domain of each contract source/);
+    // The owner is the one of contract_sources, which 0343 leaves alone; the API's reader keeps its select.
+    const other = (await t.pool.query<{ owner: string }>("select relowner::regrole::text as owner from pg_class where oid = 'public.contract_sources'::regclass")).rows[0]?.owner;
+    expect(now.owner).toBe(other);
+    const reader = (await t.pool.query("select from pg_roles where rolname = 'api_reader'")).rowCount === 1;
+    if (reader) expect(now.acl ?? "").toContain("api_reader=r");
   });
 
   it("the file applied again is a no-op", async () => {
