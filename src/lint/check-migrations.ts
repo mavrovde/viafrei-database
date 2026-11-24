@@ -264,7 +264,14 @@ export function lint(io: LintIo): LintResult {
         fail(`${name}: has a '-- no-transaction:' note, but not as a line of its own within the first 20 lines — the migrate step would wrap it in a transaction anyway and 'create index concurrently' would fail in production`);
       }
       if (!/concurrently/i.test(text)) fail(`${name}: is marked '-- no-transaction:' but runs nothing that needs it — the marker costs atomicity, so it is only for statements PostgreSQL refuses inside a transaction`);
-      if (!/if not exists|or replace/i.test(text)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace')`);
+      // Statements only: a string literal (a drop built for \gexec) is not one.
+      const code = stripComments(text).replace(/'(?:[^']|'')*'/g, "''");
+      const bareBuild = /\bcreate\s+(?:unique\s+)?index\s+concurrently\s+(?!if\s+not\s+exists\b)/i.exec(code);
+      const bareDrop = /\bdrop\s+index\s+concurrently\s+(?!if\s+exists\b)/i.exec(code);
+      const bare = bareBuild ?? bareDrop;
+      if (bare !== null)
+        fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — '${bare[0].trim()}' must carry '${bareBuild !== null ? "if not exists" : "if exists"}'`);
+      else if (!/if not exists|or replace|\bdrop\s+index\s+concurrently\s+if\s+exists\b/i.test(code)) fail(`${name}: is marked '-- no-transaction:' and so can half-apply and be retried from the top — every statement in it must be idempotent ('if not exists' / 'or replace' / 'drop index concurrently if exists')`);
     }
     if (num >= LOCK_RULE_FROM) {
       const code = stripComments(text);
