@@ -17,6 +17,7 @@ api_access	relation	live.refresh_requests	INSERT,SELECT
 api_access	schema	access	USAGE
 api_access	schema	live	USAGE
 api_reader	function	public.contract_stop_place_of(ref text)	EXECUTE
+api_reader	function	public.weather_warning_english(german_id bigint)	EXECUTE
 api_reader	relation	contract.address	SELECT
 api_reader	relation	contract.admin_region	SELECT
 api_reader	relation	contract.call_observation	SELECT
@@ -97,6 +98,7 @@ api_reader	relation	public.gbfs_stations	SELECT
 api_reader	relation	public.gbfs_systems	SELECT
 api_reader	relation	public.gbfs_vehicles	SELECT
 api_reader	relation	public.gtfs_service_dates	SELECT
+api_reader	relation	public.gtfs_untimed_trips	SELECT
 api_reader	relation	public.hh_cameras	SELECT
 api_reader	relation	public.hydrogen_stations	SELECT
 api_reader	relation	public.lez_feed_places	SELECT
@@ -122,6 +124,8 @@ api_reader	relation	public.parking_occupancy_odbl	SELECT
 api_reader	relation	public.parking_occupancy_sid	SELECT
 api_reader	relation	public.road_event_ticks	SELECT
 api_reader	relation	public.road_events	SELECT
+api_reader	relation	public.road_weather_forecast	SELECT
+api_reader	relation	public.road_weather_stations	SELECT
 api_reader	relation	public.routes	SELECT
 api_reader	relation	public.source_register	SELECT
 api_reader	relation	public.source_register_notes	SELECT
@@ -141,7 +145,11 @@ api_reader	relation	public.transit_delays_live	SELECT
 api_reader	relation	public.transit_punctuality_area_live	SELECT
 api_reader	relation	public.transit_stop_modes	SELECT
 api_reader	relation	public.trips	SELECT
+api_reader	relation	public.vbb_transit_delays	SELECT
+api_reader	relation	public.vbn_transit_delays	SELECT
+api_reader	relation	public.vrn_transit_delays	SELECT
 api_reader	relation	public.weather_warnings	SELECT
+api_reader	relation	public.weather_warnings_en_live	SELECT
 api_reader	schema	contract	USAGE
 api_reader	schema	control	USAGE
 api_reader	schema	domains	USAGE

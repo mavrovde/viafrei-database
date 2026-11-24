@@ -26,7 +26,7 @@ if (url === undefined && required) {
 }
 
 
-/** Relations api_reader must still not read: the access store, the tables under its owner-rights views, the ledger. */
+/** Relations api_reader must still not read: the access store, the tables under its owner-rights views, the ledger. (gtfs_untimed_trips, under transit_punctuality_area_live, is granted by 0345.) */
 const FORBIDDEN: readonly string[] = [
   "access.api_key",
   "access.audit",
@@ -46,7 +46,6 @@ const FORBIDDEN: readonly string[] = [
   "control.refusals",
   "public.lez_zones",
   "public.station_slugs",
-  "public.gtfs_untimed_trips",
   "public.schema_migrations",
 ];
 
