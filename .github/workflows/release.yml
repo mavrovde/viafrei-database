@@ -225,7 +225,7 @@ jobs:
           node-version: 26.13.0
       - name: psql 16
         run: sudo apt-get install -y --no-install-recommends postgresql-client-16 && psql --version
-      # A plain create database (from template1), as in ci.yml's Integration job.
+      # A plain create database (from template1), as in ci.yml's Coverage shard jobs.
       - name: An empty database
         run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
       - run: npm ci --ignore-scripts

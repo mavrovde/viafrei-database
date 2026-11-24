@@ -519,7 +519,7 @@ export function coverageFaults(ci: string): string[] {
   if (!shards.includes("-c 'create database viafrei_empty'\n")) faults.push("the shard job does not make its database with a plain create database");
   if (!shards.includes('VF_REQUIRE_DB: "1"')) faults.push("the coverage run may skip the database (no VF_REQUIRE_DB)");
   if (!/uses: actions\/upload-artifact@[0-9a-f]{40} # v\S+\n {8}with:\n {10}name: coverage-blob-\$\{\{ matrix\.shard \}\}\n {10}path: \.vitest\/blob\/\n {10}include-hidden-files: true\n {10}if-no-files-found: error\n/.test(shards)) faults.push("a shard's blob is not uploaded");
-  if (!integ.includes("\n    needs: coverage-shards\n    if: ${{ !cancelled() }}\n")) faults.push("the fan-in can be skipped when a shard fails");
+  if (!integ.includes("\n    needs: coverage-shards\n    if: ${{ always() }}\n")) faults.push("the fan-in can be skipped when a shard fails or the run is cancelled");
   if (!integ.includes("\n          SHARDS: ${{ needs.coverage-shards.result }}\n") || !integ.includes("[[ $SHARDS == success ]] ||")) faults.push("the fan-in does not fail on a shard that did not finish green");
   if (!integ.includes("\n          pattern: coverage-blob-*\n          path: .vitest/blob\n          merge-multiple: true\n")) faults.push("the fan-in does not download every shard's blob");
   if (!integ.includes("(( n == 4 ))")) faults.push("the fan-in does not count the four blobs");
@@ -799,7 +799,8 @@ describe("the coverage gate", () => {
     expect(coverageFaults(ci.replace("        shard: [1, 2, 3, 4]\n", "        shard: [1, 2, 3]\n"))).toEqual(["the coverage shards are not the four of the matrix"]);
     expect(coverageFaults(ci.replace(/(\n {2}coverage-shards:\n[^]*?)\n {4}timeout-minutes: 15\n/, "$1\n    timeout-minutes: 30\n"))).toEqual(["a coverage shard may run past 15 minutes"]);
     expect(coverageFaults(ci.replace("          include-hidden-files: true\n", ""))).toEqual(["a shard's blob is not uploaded"]);
-    expect(coverageFaults(ci.replace("    if: ${{ !cancelled() }}\n", ""))).toEqual(["the fan-in can be skipped when a shard fails"]);
+    expect(coverageFaults(ci.replace("    needs: coverage-shards\n    if: ${{ always() }}\n", "    needs: coverage-shards\n"))).toEqual(["the fan-in can be skipped when a shard fails or the run is cancelled"]);
+    expect(coverageFaults(ci.replace("    needs: coverage-shards\n    if: ${{ always() }}\n", "    needs: coverage-shards\n    if: ${{ !cancelled() }}\n"))).toEqual(["the fan-in can be skipped when a shard fails or the run is cancelled"]);
     expect(coverageFaults(ci.replace("[[ $SHARDS == success ]] ||", "true ||"))).toEqual(["the fan-in does not fail on a shard that did not finish green"]);
     expect(coverageFaults(ci.replace("          merge-multiple: true\n", ""))).toEqual(["the fan-in does not download every shard's blob"]);
     expect(coverageFaults(ci.replace("(( n == 4 ))", "(( n > 0 ))"))).toEqual(["the fan-in does not count the four blobs"]);

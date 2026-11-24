@@ -126,13 +126,14 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # The fan-in branch protection requires by name. It runs unless the run was
-  # cancelled, so a shard that failed, timed out or never started fails this
-  # job instead of skipping it (a skipped required check reads as passed).
+  # The fan-in branch protection requires by name. It runs always, even when
+  # the run is cancelled, and then fails: a shard that failed, timed out, was
+  # cancelled or never started fails this job instead of skipping it (a
+  # skipped required check reads as passed).
   integration:
     name: Integration tests (PostGIS)
     needs: coverage-shards
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
