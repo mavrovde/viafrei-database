@@ -72,10 +72,20 @@ jobs:
         run: test -n "$(find db/baseline db/migrations -maxdepth 1 -name '[0-9][0-9][0-9][0-9]_*.sql' -print -quit 2>/dev/null)"
       - run: npm run lint:migrations
 
-  integration:
-    name: Integration tests (PostGIS)
+  # The coverage run, cut into four parallel shards (vitest --shard k/4, by
+  # file; each database test file migrates a database of its own, so a shard
+  # needs no other). One run grew past the 15-minute limit (12 min of tests on
+  # main, 2026-11-24); a shard runs about a quarter of it. A shard writes its
+  # results and raw coverage as a blob and holds no threshold of its own: the
+  # gate is the merged figure, in Integration tests (PostGIS) below.
+  coverage-shards:
+    name: Coverage shard
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgis:
         image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
@@ -99,13 +109,73 @@ jobs:
       - name: An empty database
         run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
       - run: npm ci --ignore-scripts
-      # Unit and database tests in one coverage run (vitest.coverage.config.ts):
-      # the from-empty migration counts, and a figure below a threshold fails.
-      - name: Coverage (unit and from an empty database to head)
+      # Unit and database tests of this shard (vitest.coverage.config.ts); a
+      # failing test fails the shard, the thresholds wait for the merge.
+      - name: Coverage (unit and from an empty database to head, one shard)
         env:
           TEST_DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/viafrei_empty
           VF_REQUIRE_DB: "1"
-        run: npm run coverage
+          SHARD: ${{ matrix.shard }}
+        run: npm run coverage:shard -- --shard "$SHARD/4"
+      - name: Upload the shard's blob
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-blob-${{ matrix.shard }}
+          path: .vitest/blob/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  # The fan-in branch protection requires by name. It runs always, even when
+  # the run is cancelled, and then fails: a shard that failed, timed out, was
+  # cancelled or never started fails this job instead of skipping it (a
+  # skipped required check reads as passed).
+  integration:
+    name: Integration tests (PostGIS)
+    needs: coverage-shards
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - name: Every coverage shard finished green
+        env:
+          SHARDS: ${{ needs.coverage-shards.result }}
+        run: |
+          [[ $SHARDS == success ]] || { echo "::error::the coverage shards ended '$SHARDS', not success: a failing test or a shard that did not finish (see the Coverage shard jobs)"; exit 1; }
+          echo "every coverage shard finished green"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+          cache: npm
+      - name: psql 16
+        run: sudo apt-get install -y --no-install-recommends postgresql-client-16 && psql --version
+      - name: An empty database
+        run: PGPASSWORD=ci psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c 'create database viafrei_empty'
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: coverage-blob-*
+          path: .vitest/blob
+          merge-multiple: true
+      - name: Four shard blobs
+        run: |
+          n=$(find .vitest/blob -maxdepth 1 -name 'blob-*-4.json' | wc -l)
+          (( n == 4 )) || { echo "::error::expected 4 shard blobs, found $n"; exit 1; }
+      # The shards' coverage merged into one report (vitest.coverage.config.ts):
+      # the from-empty migration counts, and a figure below a threshold fails.
+      - name: Coverage (the shards merged)
+        run: npm run coverage:merge
       # Every function, trigger, view, check, policy, grant, role and partitioned
       # table of a database migrated to head has a manifest row naming its test,
       # or a gap row (test/coverage/; the gap only shrinks).
