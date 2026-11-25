@@ -304,26 +304,27 @@ const derived0330: SchemaMutant[] = [
   { name: "road: validity_overlaps reads an object as lines", from: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or jsonb_typeof(description) <> 'array' or description::text not like '%Zeiträumen gültig%' then", to: "  to_day date := (to_at at time zone 'Europe/Berlin')::date;\n  d1 date;\n  d2 date;\n  dd date;\n  t1 time;\n  t2 time;\n  w_start timestamptz;\n  w_end timestamptz;\n  dows int[];\n  word text;\nbegin\n  if description is null or description::text not like '%Zeiträumen gültig%' then" },
 ].map((m) => ({ ...m, file: M0330, tests: ROAD }));
 /**
- * 0338 defines road_events_live and road_events_current again (with land_code), so no migrated database carries
- * 0330's or 0335's: their mutants are planted in 0338's text, under the names they had, each change the same.
+ * 0338 defined road_events_live and road_events_current again (with land_code), and 0351 again (with entry_records),
+ * so no migrated database carries 0330's, 0335's or 0338's: their mutants are planted in 0351's text, under the
+ * names they had, each change the same.
  */
-const M0338 = join(ROOT, "db", "migrations", "0338_event_land_code.sql");
+const M0351 = join(ROOT, "db", "migrations", "0351_road_event_entry_records.sql");
 const views0330: SchemaMutant[] = (() => {
-  const sql = readFileSync(M0338, "utf8");
+  const sql = readFileSync(M0351, "utf8");
   const start = sql.indexOf("create or replace view public.road_events_live as\n");
   const end = sql.indexOf(";\n", start);
-  if (start < 0 || end < 0) throw new Error("no road_events_live in 0338");
+  if (start < 0 || end < 0) throw new Error("no road_events_live in 0351");
   const block = sql.slice(start, end + 1);
   const where = block.lastIndexOf("\n  where ");
   return [{ name: "views: public.road_events_live shows what it should leave out", from: block, to: `${block.slice(0, where)}\n  where not ${block.slice(where + "\n  where ".length)}` }];
-})().map((m) => ({ ...m, file: M0338, tests: VIEWS }));
+})().map((m) => ({ ...m, file: M0351, tests: VIEWS }));
 
-/** road_events_current's mutants, planted in 0338's text (it defines the view again after 0335), under the names they had. */
+/** road_events_current's mutants, planted in 0351's text (it defines the view again after 0335 and 0338), under the names they had. */
 const current0335: SchemaMutant[] = [
-  { name: "road: road_events_current shows the closed", from: "  where e.closed_at is null\n    and public.road_event_in_force_known(", to: "  where true\n    and public.road_event_in_force_known(" },
-  { name: "road: road_events_current shows the not in force", from: "    and public.road_event_in_force_known(e.overall_start, e.overall_end, e.suspended, e.payload, e.valid_windows, now())\n", to: "    and true\n" },
-  { name: "road: road_events_current shows the confidential", from: "    and coalesce(e.confidentiality, 'noRestriction') = 'noRestriction';", to: "    and true;" },
-].map((m) => ({ ...m, file: M0338, tests: ROAD }));
+  { name: "road: road_events_current shows the closed", from: "  where closed_at is null\n    and public.road_event_in_force_known(", to: "  where true\n    and public.road_event_in_force_known(" },
+  { name: "road: road_events_current shows the not in force", from: "    and public.road_event_in_force_known(overall_start, overall_end, suspended, payload, valid_windows, now())\n", to: "    and true\n" },
+  { name: "road: road_events_current shows the confidential", from: "    and coalesce(confidentiality, 'noRestriction'::text) = 'noRestriction'::text;", to: "    and true;" },
+].map((m) => ({ ...m, file: M0351, tests: ROAD }));
 
 const COMPLEX = ["test/views-complex.db.test.ts"];
 
