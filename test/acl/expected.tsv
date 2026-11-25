@@ -183,6 +183,7 @@ api_reader	relation	public.weather_warnings_en_live	SELECT
 api_reader	schema	contract	USAGE
 api_reader	schema	control	USAGE
 api_reader	schema	domains	USAGE
+api_reader	schema	ingestor	USAGE
 viafrei_digest	column	control.budgets.budget_key	SELECT
 viafrei_digest	column	control.budgets.spacing_ms	SELECT
 viafrei_digest	column	control.shares.budget_key	SELECT

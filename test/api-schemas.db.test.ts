@@ -153,7 +153,7 @@ describe("contract (0307)", () => {
     expect(r.rows.filter((x) => !x.sel || x.ins || x.upd || x.del)).toEqual([]);
   });
 
-  it("api_reader reads, outside contract, only the relations 0336, 0345 and 0347 name, uses no schema but contract, control, domains and public, creates nothing, and owns nothing", async () => {
+  it("api_reader reads, outside contract, only the relations 0336, 0345 and 0347 name, uses no schema but contract, control, domains, ingestor (0348: row versions only) and public, creates nothing, and owns nothing", async () => {
     const rel = await db.pool.query<{ n: string }>(
       `select n.nspname || '.' || c.relname as n from pg_class c join pg_namespace n on n.oid = c.relnamespace
         cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
@@ -167,7 +167,7 @@ describe("contract (0307)", () => {
       `select nspname || ' ' || p as s from pg_namespace cross join unnest(array['USAGE', 'CREATE']) p
         where nspname not like 'pg\\_%' and nspname <> 'information_schema' and has_schema_privilege('api_reader', oid, p) order by 1`,
     );
-    expect(sch.rows.map((x) => x.s)).toEqual(["contract USAGE", "control USAGE", "domains USAGE", "public USAGE"]);
+    expect(sch.rows.map((x) => x.s)).toEqual(["contract USAGE", "control USAGE", "domains USAGE", "ingestor USAGE", "public USAGE"]);
     const owns = await db.pool.query("select 1 from pg_class where relowner = 'api_reader'::regrole union all select 1 from pg_namespace where nspowner = 'api_reader'::regrole");
     expect(owns.rows).toEqual([]);
   });
