@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.6.1](https://github.com/mavrovde/viafrei-database/compare/v0.6.0...v0.6.1) (2026-11-25)
+
+
+### Changed
+
+* **index:** road_events_open_geom, a GiST index on the open road events (0346) ([#116](https://github.com/mavrovde/viafrei-database/issues/116)) ([e610575](https://github.com/mavrovde/viafrei-database/commit/e610575020351fdf4c0fb31a6ca7096fc832f2c4))
+
 ## [0.6.0](https://github.com/mavrovde/viafrei-database/compare/v0.5.3...v0.6.0) (2026-11-24)
 
 
