@@ -1,0 +1,104 @@
+-- no-transaction: builds each day partition's index with create index concurrently,
+-- which PostgreSQL refuses inside a transaction block. Idempotent and safe to run
+-- again from the top: an INVALID partition index a failed build left is dropped
+-- first, every build is if not exists, a partition whose index is already
+-- attached is skipped, and attaching an attached index is a no-op. A database
+-- that already holds the index keeps it as it is: production, where it was
+-- built by hand with these statements on 2026-11-21 and reads (2026-11-25)
+--   CREATE INDEX vbb_transit_delays_feed_ts ON ONLY public.vbb_transit_delays USING btree (feed_ts)
+-- with every partition's index attached, applies this file as a no-op.
+--
+-- The digest's VBB freshness probe reads, many times a minute,
+--   select max(feed_ts) as newest from vbb_transit_delays_live where observed_at >= $1 and feed_ts >= $1
+-- 0318 gave vrn_transit_delays btree (feed_ts) and left vbb_transit_delays
+-- without it on purpose: the VBB probe then carried no feed_ts bound
+-- (observed_at >= $1 alone), and with the index production planned it as a
+-- backward feed_ts walk filtering every row on observed_at, 380 ms a call
+-- instead of 8 ms. The probe now carries the "and feed_ts >= $1" bound VRN's
+-- and VBN's do (main repository), so that walk starts at the newest
+-- tick and stops at the bound, and the reason to hold the index back is gone.
+--
+-- Without it the probe stays what 0318 found on VRN: no index leads on feed_ts,
+-- the max is a bitmap scan over observed_at in every partition the bound keeps,
+-- the generic plan is costed over every partition, and the plan cache never
+-- takes it (production 2026-11-20: 6-15 ms of planning a call, the generic plan
+-- 0 of 9 times; VRN with 0318's index: 4 of 9, planning 7-23 ms -> 0.05 ms).
+-- This file gives vbb_transit_delays the same index, named the same way.
+--
+-- A partitioned parent cannot take create index concurrently, so the index is
+-- made in three steps, none of which blocks a writer for longer than a
+-- catalogue update:
+--   1. the parent's index ON ONLY the parent: catalogue only, INVALID until
+--      every partition has its index attached;
+--   2. each partition's index built concurrently (SHARE UPDATE EXCLUSIVE,
+--      blocks no writer), named as PostgreSQL names the one it clones;
+--   3. each attached to the parent's index; with the last, the parent's index
+--      turns VALID.
+-- A day partition ensure_daily_partitions makes later (create table ... like,
+-- then attach partition) gets the index cloned from the parent's at attach,
+-- from step 1 on, so none is left without it.
+--
+-- rollback:
+--   drop index if exists public.vbb_transit_delays_feed_ts;  -- drops every attached partition index with it
+--   delete from schema_migrations where version = 352;
+
+set max_parallel_maintenance_workers = 0;
+set maintenance_work_mem = '64MB';
+
+-- A partition index a failed concurrent build left INVALID (never attached: step 3 runs after it).
+select format('drop index concurrently if exists %I.%I', n.nspname, i.relname)
+  from pg_inherits h
+  join pg_index x on x.indrelid = h.inhrelid
+  join pg_class i on i.oid = x.indexrelid
+  join pg_namespace n on n.oid = i.relnamespace
+ where h.inhparent = 'public.vbb_transit_delays'::regclass
+   and not x.indisvalid
+   and i.relname = (select p.relname from pg_class p where p.oid = h.inhrelid) || '_feed_ts_idx'
+\gexec
+
+-- 1. The parent's index, catalogue only.
+begin;
+set local lock_timeout = '5s';
+create index if not exists vbb_transit_delays_feed_ts on only public.vbb_transit_delays (feed_ts);
+commit;
+
+-- 2. Each partition without an index attached to the parent's: built concurrently.
+select format('create index concurrently if not exists %I on %I.%I (feed_ts)', p.relname || '_feed_ts_idx', n.nspname, p.relname)
+  from (values ('public.vbb_transit_delays'::regclass, 'public.vbb_transit_delays_feed_ts'::regclass)) t (parent, ix)
+  join pg_inherits h on h.inhparent = t.parent
+  join pg_class p on p.oid = h.inhrelid
+  join pg_namespace n on n.oid = p.relnamespace
+ where not exists (
+         select 1 from pg_index x join pg_inherits a on a.inhrelid = x.indexrelid
+          where x.indrelid = p.oid and a.inhparent = t.ix)
+ order by p.relname
+\gexec
+
+-- 3. Each attached, one statement (and one short lock) per partition; the parent's index turns VALID with the last.
+set lock_timeout = '5s';
+select format('alter index %s attach partition %I.%I', t.ix, n.nspname, p.relname || '_feed_ts_idx')
+  from (values ('public.vbb_transit_delays'::regclass, 'public.vbb_transit_delays_feed_ts'::regclass)) t (parent, ix)
+  join pg_inherits h on h.inhparent = t.parent
+  join pg_class p on p.oid = h.inhrelid
+  join pg_namespace n on n.oid = p.relnamespace
+ where not exists (
+         select 1 from pg_index x join pg_inherits a on a.inhrelid = x.indexrelid
+          where x.indrelid = p.oid and a.inhparent = t.ix)
+ order by p.relname
+\gexec
+reset lock_timeout;
+
+-- The parent's index VALID, or the file fails and is retried from the top.
+do $$
+declare
+  bad text;
+begin
+  select string_agg(c.relname, ', ') into bad
+    from pg_class c join pg_index x on x.indexrelid = c.oid
+   where c.oid = 'public.vbb_transit_delays_feed_ts'::regclass
+     and not x.indisvalid;
+  if bad is not null then
+    raise exception 'vbb_transit_delays feed_ts: % still INVALID — a partition index is missing or not attached', bad;
+  end if;
+end
+$$;

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PsqlResult, PsqlRunner } from "../src/psql.js";
 import { applyRolePasswords, applyRoleSettings, passwordUsable, roleScript, ROLES, SETTINGS_FILE, type RoleSpec } from "../src/roles.js";
 import { REPO } from "./helpers.js";
-import { byRole, databaseSettings, inForce, parseSettings, prodSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
+import { allDatabaseSettings, byRole, databaseSettings, inForce, parseSettings, prodSettings, schemaAllDatabaseSettings, schemaSettingStatements, settingsFile, settingStatements } from "./role-settings.js";
 
 const PW = "a3f9c2e1b4d5a6f7c8e9d0b1";
 const specs: RoleSpec[] = [
@@ -174,7 +174,7 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
 
   it("holds production's settings: every role's, value for value, and the database-wide search_path of database viafrei", () => {
     const prod = prodSettings();
-    expect(prod).toHaveLength(50);
+    expect(prod).toHaveLength(51);
     const norm = (x: string): string => {
       const [n = "", ...v] = x.split("=");
       return `${n.toLowerCase()}=${v.join("=").toLowerCase()}`;
@@ -183,7 +183,7 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     // equal production's in database viafrei, where every role setting is held since 2026-11-19.
     const ours = [...byRole(parseSettings(settingsFile()), "viafrei")].flatMap(([role, s]) => s.map((x) => `${role}|${norm(x)}`)).sort();
     const theirs = prod.filter((p) => p.database === "viafrei" && p.role !== "(all roles)").map((p) => `${p.role}|${norm(p.setting)}`).sort();
-    expect(prod.filter((p) => p.database === "(all dbs)")).toEqual([]);
+    expect(prod.filter((p) => p.database === "(all dbs)")).toEqual([{ role: "viafrei_digest", database: "(all dbs)", setting: "random_page_cost=1.1" }]);
     expect(ours).toEqual(theirs);
     expect(ours.filter((x) => /\|(work_mem|hash_mem_multiplier|maintenance_work_mem|effective_cache_size)=/.test(x))).toEqual([
       "viafrei_digest|effective_cache_size=40gb",
@@ -200,6 +200,20 @@ describe("db/roles/settings.sql is the schema's role settings", () => {
     expect(databaseSettings(settingsFile())).toEqual(prod.filter((p) => p.role === "(all roles)" && p.database === "viafrei").map((p) => p.setting));
     expect(databaseSettings(settingsFile())).toEqual(['search_path="$user", public, topology, tiger']);
     expect(() => databaseSettings("DO $$ BEGIN EXECUTE 'ALTER DATABASE x SET a = 1'; END $$;")).toThrow(/a shape this reader does not know/);
+  });
+
+  it("the migrations carry production's settings in every database, value for value, each guarded on its role; settings.sql none of them", () => {
+    const theirs = prodSettings()
+      .filter((p) => p.database === "(all dbs)")
+      .map((p) => `${p.role}|${p.setting.toLowerCase()}`);
+    const ours = inForce(schemaAllDatabaseSettings()).map((x) => `${x.role}|${x.name}=${x.value.toLowerCase()}`);
+    expect(ours).toEqual(theirs);
+    expect(ours).toEqual(["viafrei_digest|random_page_cost=1.1"]);
+    expect(allDatabaseSettings(settingsFile())).toEqual([]);
+    expect(() => allDatabaseSettings("ALTER ROLE viafrei_digest SET random_page_cost TO '1.1';")).toThrow(/a shape this reader does not know/);
+    expect(() =>
+      allDatabaseSettings("DO $$ BEGIN IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'a') THEN EXECUTE 'ALTER ROLE b SET x TO ''1'''; END IF; END $$;"),
+    ).toThrow(/a shape this reader does not know/);
   });
 
   it("a later statement of a role's setting supersedes an earlier one in place, as pg_db_role_setting keeps it; other roles and settings untouched", () => {

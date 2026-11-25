@@ -19,7 +19,7 @@ const GATE_TESTS = ["test/coverage-schema.test.ts"];
 const API_TESTS = ["test/api-schemas.db.test.ts"];
 const MAP_TESTS = ["test/contract-mapping.db.test.ts"];
 const HOT_TESTS = ["test/hot-path-indexes.db.test.ts"];
-const FEEDTS_TESTS = ["test/vrn-transit-delays-feed-ts.db.test.ts"];
+const FEEDTS_TESTS = ["test/transit-delays-feed-ts.db.test.ts"];
 const HAND_TESTS = ["test/hand-changes-1119.db.test.ts"];
 const TWIN_TESTS = ["test/charging-twin-pairs.db.test.ts"];
 const CONNECT_TESTS = ["test/stops-geom-connect.db.test.ts"];
@@ -284,6 +284,15 @@ export const MUTANTS: readonly Mutant[] = [
   { name: "db: 0318 builds each partition's index by observed_at", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "%I.%I (feed_ts)'", to: "%I.%I (observed_at)'" },
   { name: "db: 0318 never attaches the partitions' indexes", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "\\gexec\nreset lock_timeout;", to: ";\nreset lock_timeout;" },
   { name: "db: 0318 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0318_vrn_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  // 0352 (feed_ts on vbb transit delays): the same four.
+  { name: "db: 0352 keeps an INVALID leftover", config: DB, file: at("db", "migrations", "0352_vbb_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "   and not x.indisvalid\n", to: "   and false\n" },
+  { name: "db: 0352 indexes vbb's parent by observed_at, not feed_ts", config: DB, file: at("db", "migrations", "0352_vbb_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "on only public.vbb_transit_delays (feed_ts);", to: "on only public.vbb_transit_delays (observed_at);" },
+  { name: "db: 0352 builds each partition's index by observed_at", config: DB, file: at("db", "migrations", "0352_vbb_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "%I.%I (feed_ts)'", to: "%I.%I (observed_at)'" },
+  { name: "db: 0352 never attaches the partitions' indexes", config: DB, file: at("db", "migrations", "0352_vbb_transit_delays_feed_ts.sql"), tests: FEEDTS_TESTS, from: "\\gexec\nreset lock_timeout;", to: ";\nreset lock_timeout;" },
+  // 0353 (viafrei_digest random_page_cost in every database): production's value and scope, guarded on the role.
+  { name: "db: 0353 sets another random_page_cost than production holds", file: at("db", "migrations", "0353_digest_random_page_cost.sql"), tests: ["test/roles.test.ts"], from: "SET random_page_cost TO ''1.1''", to: "SET random_page_cost TO ''4''" },
+  { name: "db: 0353 sets it without the role's guard", config: DB, file: at("db", "migrations", "0353_digest_random_page_cost.sql"), tests: ["test/digest-random-page-cost-0353.db.test.ts"], from: "BEGIN IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'viafrei_digest') THEN", to: "BEGIN IF true THEN" },
+  { name: "db: 0353 sets it in this database only", config: DB, file: at("db", "migrations", "0353_digest_random_page_cost.sql"), tests: ["test/digest-random-page-cost-0353.db.test.ts"], from: "EXECUTE 'ALTER ROLE viafrei_digest SET random_page_cost TO ''1.1''';", to: "EXECUTE format('ALTER ROLE viafrei_digest IN DATABASE %I SET random_page_cost TO ''1.1''', current_database());" },
   // 0319-0321 (production's hand changes of 2026-11-19): built on an empty database, adopted over production's state.
   { name: "db: 0319 indexes the geography, not the geometry the box reads test", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "on only public.autobahn_events using gist ((geom::geometry));", to: "on only public.autobahn_events using gist (geom);" },
   { name: "db: 0319 builds a second index where a matching one waits to be adopted", config: DB, file: at("db", "migrations", "0319_autobahn_events_geom_gist.sql"), tests: HAND_TESTS, from: "x.indisvalid\n            and not x.indisunique and x.indpred is null\n            and split_part(pg_get_indexdef(x.indexrelid), ' USING ', 2) = 'gist (((geom)::geometry))')\n order by p.relname", to: "false)\n order by p.relname" },
