@@ -25,5 +25,14 @@ export const API_READER_0345: readonly string[] = [
   "weather_warnings_en_live",
 ].map((t) => `public.${t}`);
 
-/** Every relation outside contract that api_reader reads: 0336's and 0345's. */
-export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345].sort((a, b) => a.localeCompare(b));
+/** The base tables 0347 grants api_reader, behind the answers of the MCP change list viafrei-api carries. */
+export const API_READER_0347: readonly string[] = [
+  "autobahn_jam_hours", "bfrk_stops", "bw_detours", "charging_site_twin_claims", "charging_site_twin_pairs", "charging_status_runs",
+  "connect_transit_delays", "db_station_boards", "db_station_numbers", "delfi_siri_et_calls", "feed_runs", "fuel_price_latest",
+  "gtfs_route_kreise", "gtfs_stale_trips", "hh_roadworks", "los_sites", "los_state", "motorway_summary", "mvv_bus_load",
+  "opendata_roadworks", "osm_boundary_de", "parking_forecast_profiles", "road_event_locations", "road_event_twins",
+  "station_accessibility", "station_metro_osm", "stop_access_odbl", "traffic_count_latest", "traffic_count_profiles", "traffic_count_sites",
+].map((t) => `public.${t}`);
+
+/** Every relation outside contract that api_reader reads: 0336's, 0345's and 0347's. */
+export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345, ...API_READER_0347].sort((a, b) => a.localeCompare(b));
