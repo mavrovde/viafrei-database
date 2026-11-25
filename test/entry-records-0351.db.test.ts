@@ -121,6 +121,28 @@ describe.skipIf(url === undefined)("0351 each record's entry facts, stored at wr
     ]);
   });
 
+  it("road_events_entry_records_backfill skips a row a writer holds, and fills it once the writer is done", async () => {
+    await plant("l1", PAYLOAD);
+    await plant("l2", PAYLOAD);
+    await t.pool.query("update road_events set entry_records = null where publication_id in ('l1', 'l2')");
+    const writer = await t.pool.connect();
+    try {
+      await writer.query("begin");
+      await writer.query("select 1 from road_events where publication_id = 'l1' for update");
+      // A second session: the pool's other connection, while the writer's transaction holds l1.
+      await t.pool.query("set lock_timeout = '2s'");
+      const filled = (await q<{ n: number }>("select public.road_events_entry_records_backfill(1000) n"))[0]!.n;
+      expect(filled).toBeGreaterThanOrEqual(1);
+      expect(await records("l1")).toBeNull();
+      expect(await records("l2")).toHaveLength(2);
+      await writer.query("commit");
+    } finally {
+      writer.release();
+    }
+    expect(await q("select public.road_events_entry_records_backfill(1000) n")).toEqual([{ n: 1 }]);
+    expect(await records("l1")).toHaveLength(2);
+  });
+
   it("road_events_live and road_events_current end with entry_records, with their grants", async () => {
     const cols = async (rel: string): Promise<string[]> =>
       (await q<{ a: string }>("select attname a from pg_attribute where attrelid = $1::regclass and attnum > 0 and not attisdropped order by attnum", [rel])).map((r) => r.a);
