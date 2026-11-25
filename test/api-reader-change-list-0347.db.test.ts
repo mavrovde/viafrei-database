@@ -1,8 +1,8 @@
 /**
- * 0347: api_reader reads the thirty-two base tables behind the answers of the MCP
+ * 0347: api_reader reads the thirty-four base tables behind the answers of the MCP
  * change list viafrei-api carries, each by name.
  *
- *  - SELECT on each of the thirty-two public relations, each present; nothing
+ *  - SELECT on each of the thirty-four public relations, each present; nothing
  *    more on them;
  *  - api_reader reads every one as itself;
  *  - the owner-rights *_live views over them stay unreadable to it, and so do
@@ -39,6 +39,7 @@ const FORBIDDEN: readonly string[] = [
   "public.delfi_siri_et_calls_live",
   "public.fuel_price_latest_live",
   "public.hh_roadworks_live",
+  "public.los_lane_now_live",
   "public.los_now_live",
   "public.motorway_summary_live",
   "public.mvv_bus_load_live",
@@ -69,9 +70,9 @@ describe.skipIf(url === undefined)("0347 api_reader change-list grants", () => {
     return r.rows.map((x) => x.s).sort((a, b) => a.localeCompare(b));
   };
 
-  it("names thirty-two relations, every one present and none named twice", async () => {
-    expect(API_READER_0347).toHaveLength(32);
-    expect(new Set(API_READER_0347).size).toBe(32);
+  it("names thirty-four relations, every one present and none named twice", async () => {
+    expect(API_READER_0347).toHaveLength(34);
+    expect(new Set(API_READER_0347).size).toBe(34);
     const r = await t.pool.query<{ n: string }>("select x.n from unnest($1::text[]) x(n) where to_regclass(x.n) is null", [API_READER_0347]);
     expect(r.rows).toEqual([]);
   });

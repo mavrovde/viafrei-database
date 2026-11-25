@@ -127,6 +127,8 @@ api_reader	relation	public.lorry_hb_live	SELECT
 api_reader	relation	public.lorry_ivm_live	SELECT
 api_reader	relation	public.lorry_long_network_live	SELECT
 api_reader	relation	public.lorry_sevas_live	SELECT
+api_reader	relation	public.los_lane_sites	SELECT
+api_reader	relation	public.los_lane_state	SELECT
 api_reader	relation	public.los_sites	SELECT
 api_reader	relation	public.los_state	SELECT
 api_reader	relation	public.message_coverage_sources	SELECT

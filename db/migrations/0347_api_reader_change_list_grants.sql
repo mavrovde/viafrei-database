@@ -7,7 +7,8 @@
 -- punctuality and SIRI ET ticks, the timetable's stale trips and line areas,
 -- the stop access and bus-load rows of departures, the parking forecast,
 -- the road works, detours, event twins and locations, jam hours and motorway
--- summaries, the traffic counts and measured levels of service, the feed run
+-- summaries, the traffic counts and measured levels of service (per site
+-- and per lane), the feed run
 -- log (since when a feed is read), and the charging twin and status-run rows.
 -- Each was read so far by viafrei_mcp or viafrei_digest, directly or through
 -- an owner-rights *_live view, and not by api_reader. This release grants
@@ -35,7 +36,7 @@
 --     public.charging_site_twin_claims, public.charging_site_twin_pairs, public.charging_status_runs,
 --     public.connect_transit_delays, public.db_station_boards, public.db_station_numbers,
 --     public.delfi_siri_et_calls, public.feed_runs, public.fuel_price_latest, public.gtfs_route_kreise,
---     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_sites, public.los_state,
+--     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_lane_sites, public.los_lane_state, public.los_sites, public.los_state,
 --     public.motorway_summary, public.mvv_bus_load, public.opendata_roadworks, public.osm_boundary_de,
 --     public.parking_forecast_profiles, public.road_event_locations, public.road_event_twins,
 --     public.station_accessibility, public.station_metro_osm, public.station_slugs, public.stop_access_odbl,
@@ -61,6 +62,8 @@ grant select on public.gtfs_route_kreise to api_reader;
 grant select on public.gtfs_stale_trips to api_reader;
 grant select on public.hh_roadworks to api_reader;
 grant select on public.ingest_runs to api_reader;
+grant select on public.los_lane_sites to api_reader;
+grant select on public.los_lane_state to api_reader;
 grant select on public.los_sites to api_reader;
 grant select on public.los_state to api_reader;
 grant select on public.motorway_summary to api_reader;
