@@ -78,7 +78,7 @@ describe.skipIf(url === undefined)("autobahn and road derived columns (0330)", (
       rows<{ a: string }>(t.pool, `select attname as a from pg_attribute where attrelid = $1::regclass and attnum > 0 and not attisdropped order by attnum`, [rel]).then((r) => r.map((x) => x.a));
     const live = await cols("public.road_events_live");
     expect(live).toEqual(await cols("public.road_events"));
-    expect(live.slice(-2)).toEqual(["entry_static", "land_code"]);
+    expect(live.slice(-3)).toEqual(["entry_static", "land_code", "entry_records"]);
     const g = await one<{ d: boolean; m: boolean; c: string | null }>(t.pool, `select has_table_privilege('viafrei_digest', 'public.road_events_live', 'select') as d,
       has_table_privilege('viafrei_mcp', 'public.road_events_live', 'select') as m, to_regclass('public.road_events_current')::text as c`);
     expect(g).toEqual({ d: true, m: true, c: "road_events_current" });

@@ -300,6 +300,15 @@ public.bfrk_stops	bfrk_stops_step_free	CHECK (((step_free IS NULL) OR (step_free
 public.bw_detours	bw_detours_autobahn_shape	CHECK ((autobahn ~ '^A[0-9]{1,3}$'::text))	{"autobahn":""}
 public.bw_detours	bw_detours_sheet_row_body	CHECK ((sheet_row >= 2))	{"sheet_row":"1"}
 public.bw_detours	bw_detours_source_registered	CHECK ((source_feed = 'bw_bedarfsumleitungen'::text))	{"source_feed":""}
+public.charging_feed_register	charging_feed_register_feed_key_check	CHECK ((btrim(feed_key) <> ''::text))	{"feed_key":""}
+public.charging_feed_register	charging_feed_register_frozen_after_s_check	CHECK ((frozen_after_s > 0))	{"frozen_after_s":"-1"}
+public.charging_feed_register	charging_feed_register_role_check	CHECK ((role = ANY (ARRAY['site'::text, 'status'::text])))	{"role":""}
+public.charging_feed_register	charging_feed_register_site_check	CHECK ((((role = 'site'::text) = (site_rank IS NOT NULL)) AND ((role = 'site'::text) OR ((twin_radius_m IS NULL) AND (answers_until IS NULL)))))	{"role":"site"}
+public.charging_feed_register	charging_feed_register_source_id_check	CHECK ((btrim(source_id) <> ''::text))	{"source_id":""}
+public.charging_feed_register	charging_feed_register_stale_after_s_check	CHECK ((stale_after_s > 0))	{"stale_after_s":"-1"}
+public.charging_feed_register	charging_feed_register_statement_max_age_s_check	CHECK ((statement_max_age_s > 0))	{"statement_max_age_s":"-1"}
+public.charging_feed_register	charging_feed_register_status_check	CHECK ((((role = 'status'::text) = ((stale_after_s IS NOT NULL) AND (statement_max_age_s IS NOT NULL))) AND ((role = 'status'::text) OR ((frozen_after_s IS NULL) AND (points_from IS NULL)))))	{"role":"status"}
+public.charging_feed_register	charging_feed_register_twin_radius_m_check	CHECK ((twin_radius_m > 0))	{"twin_radius_m":"-1"}
 public.charging_sites	charging_sites_point_count	CHECK ((COALESCE(point_count, 0) >= 0))	{"point_count":"-1"}
 public.charging_sites	charging_sites_postcode_five_digits	CHECK ((postcode ~ '^[0-9]{5}$'::text))	{"postcode":""}
 public.charging_status_runs	charging_status_runs_ticks_check	CHECK ((ticks > 0))	{"ticks":"-1"}
