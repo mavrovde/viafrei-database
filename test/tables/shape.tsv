@@ -3568,6 +3568,7 @@ public.road_events	index	road_events_entry_static_unfilled	CREATE INDEX road_eve
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)
 public.road_events	index	road_events_open_feed	CREATE INDEX road_events_open_feed ON public.road_events USING btree (feed_key) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
+public.road_events	index	road_events_open_geom	CREATE INDEX road_events_open_geom ON public.road_events USING gist (geom) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_open_land	CREATE INDEX road_events_open_land ON public.road_events USING btree (land_code) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_pkey	CREATE UNIQUE INDEX road_events_pkey ON public.road_events USING btree (id)
 public.road_events	index	road_events_ref_key	CREATE INDEX road_events_ref_key ON public.road_events USING btree (public.road_ref_key(road_number), feed_key) WHERE (road_number IS NOT NULL)
