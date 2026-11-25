@@ -35,6 +35,29 @@ export function schemaSettingStatements(): string[] {
   return out;
 }
 
+const ALL_DATABASES_STATEMENT = /^DO \$\$ BEGIN IF EXISTS \(SELECT FROM pg_catalog\.pg_roles WHERE rolname = '([a-z_]+)'\) THEN EXECUTE 'ALTER ROLE \1 SET ([a-z_]+) TO ''([^']*)'''; END IF; END \$\$;$/;
+
+/** A role's settings in every database (`ALTER ROLE <role> SET`, no IN DATABASE) of a text; such a line in another shape throws, so none is skipped. */
+export function allDatabaseSettings(sql: string): Setting[] {
+  return sql
+    .split("\n")
+    .filter((l) => !l.trimStart().startsWith("--") && /\bALTER ROLE\b.*\bSET\b/i.test(l) && !/\bIN DATABASE\b/i.test(l))
+    .map((l) => {
+      const m = ALL_DATABASES_STATEMENT.exec(l);
+      if (m === null) throw new Error(`a role setting in every database in a shape this reader does not know: ${l.slice(0, 120)}`);
+      return { role: m[1] ?? "", name: (m[2] ?? "").toLowerCase(), value: m[3] ?? "" };
+    });
+}
+
+/** The baseline's and every migration's settings in every database, in file order. */
+export function schemaAllDatabaseSettings(): Setting[] {
+  const out = allDatabaseSettings(readFileSync(join(REPO, "db", "baseline", "0293_baseline.sql"), "utf8"));
+  for (const f of readdirSync(join(REPO, "db", "migrations")).filter((n) => /^\d{4}_.*\.sql$/.test(n)).sort()) {
+    out.push(...allDatabaseSettings(readFileSync(join(REPO, "db", "migrations", f), "utf8")));
+  }
+  return out;
+}
+
 const DATABASE_STATEMENT = /^DO \$\$ BEGIN EXECUTE format\('ALTER DATABASE %I SET ([a-z_]+) TO (.+)', current_database\(\)\); END \$\$;$/;
 
 /** The database-wide settings of a text (`ALTER DATABASE %I SET …`), as `name=value` the way pg_db_role_setting holds them. */
