@@ -77,6 +77,7 @@ api_reader	relation	public.autobahn_roads	SELECT
 api_reader	relation	public.autobahn_sweeps	SELECT
 api_reader	relation	public.bfrk_stops	SELECT
 api_reader	relation	public.bw_detours	SELECT
+api_reader	relation	public.charging_feed_register	SELECT
 api_reader	relation	public.charging_point_status	SELECT
 api_reader	relation	public.charging_points	SELECT
 api_reader	relation	public.charging_site_twin_claims	SELECT
@@ -97,8 +98,11 @@ api_reader	relation	public.delfi_siri_et_calls_latest	SELECT
 api_reader	relation	public.delfi_siri_et_stop_pairs	SELECT
 api_reader	relation	public.driving_rule_facts	SELECT
 api_reader	relation	public.driving_rule_topics	SELECT
+api_reader	relation	public.energy_page_slugs	SELECT
 api_reader	relation	public.feed_checks	SELECT
+api_reader	relation	public.feed_run_extents	SELECT
 api_reader	relation	public.feed_runs	SELECT
+api_reader	relation	public.feed_versions	SELECT
 api_reader	relation	public.feeds	SELECT
 api_reader	relation	public.fuel_price_latest	SELECT
 api_reader	relation	public.fuel_prices	SELECT

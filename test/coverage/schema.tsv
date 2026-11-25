@@ -4077,3 +4077,25 @@ table	public.charging_site_twin_claims	test/charging-stored-references.db.test.t
 view	public.traffic_count_sites_live	test/plan-estimates-0332.db.test.ts > traffic_count_sites_live is the open sites' id, section and position, nothing more
 grant	viafrei_digest@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
 grant	viafrei_digest@public.traffic_count_sites_live	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours
+check	public.charging_feed_register.charging_feed_register_feed_key_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_frozen_after_s_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_role_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_site_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_source_id_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_stale_after_s_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_statement_max_age_s_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_status_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_twin_radius_m_check	test/checks.db.test.ts > every check of schema public refuses its plant with its own name
+check	public.charging_feed_register.charging_feed_register_site_check	test/charging-feed-register-0350.db.test.ts > the role checks refuse a row of the wrong shape by name
+check	public.charging_feed_register.charging_feed_register_status_check	test/charging-feed-register-0350.db.test.ts > the role checks refuse a row of the wrong shape by name
+grant	api_reader@public.charging_feed_register	test/charging-feed-register-0350.db.test.ts > api_reader reads it, energy_page_slugs, feed_run_extents and feed_versions, as itself, and writes none
+grant	api_reader@public.charging_feed_register	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.feed_run_extents	test/charging-feed-register-0350.db.test.ts > api_reader reads it, energy_page_slugs, feed_run_extents and feed_versions, as itself, and writes none
+grant	api_reader@public.feed_run_extents	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.feed_versions	test/charging-feed-register-0350.db.test.ts > api_reader reads it, energy_page_slugs, feed_run_extents and feed_versions, as itself, and writes none
+grant	api_reader@public.feed_versions	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+table	public.charging_feed_register	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
+table	public.charging_feed_register	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
+table	public.charging_feed_register	test/charging-feed-register-0350.db.test.ts > seeds 34 ranked site feeds and 31 status feeds
+grant	api_reader@public.energy_page_slugs	test/charging-feed-register-0350.db.test.ts > api_reader reads it, energy_page_slugs, feed_run_extents and feed_versions, as itself, and writes none
+grant	api_reader@public.energy_page_slugs	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held

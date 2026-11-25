@@ -1401,6 +1401,19 @@ public.bw_detours	constraint	bw_detours_version_row	u UNIQUE (version_date, shee
 public.bw_detours	index	bw_detours_autobahn_open	CREATE INDEX bw_detours_autobahn_open ON public.bw_detours USING btree (autobahn) WHERE (closed_at IS NULL)
 public.bw_detours	index	bw_detours_pkey	CREATE UNIQUE INDEX bw_detours_pkey ON public.bw_detours USING btree (id)
 public.bw_detours	index	bw_detours_version_row	CREATE UNIQUE INDEX bw_detours_version_row ON public.bw_detours USING btree (version_date, sheet_row)
+public.charging_feed_register	column	feed_key	text not null
+public.charging_feed_register	column	source_id	text not null
+public.charging_feed_register	column	role	text not null
+public.charging_feed_register	column	site_rank	smallint
+public.charging_feed_register	column	twin_radius_m	smallint
+public.charging_feed_register	column	stale_after_s	integer
+public.charging_feed_register	column	statement_max_age_s	integer
+public.charging_feed_register	column	frozen_after_s	integer
+public.charging_feed_register	column	points_from	text
+public.charging_feed_register	column	answers_until	timestamp with time zone
+public.charging_feed_register	constraint	charging_feed_register_pkey	p PRIMARY KEY (feed_key)
+public.charging_feed_register	constraint	charging_feed_register_points_from_fkey	f FOREIGN KEY (points_from) REFERENCES public.charging_feed_register(feed_key)
+public.charging_feed_register	index	charging_feed_register_pkey	CREATE UNIQUE INDEX charging_feed_register_pkey ON public.charging_feed_register USING btree (feed_key)
 public.charging_point_status	column	observed_at	timestamp with time zone not null
 public.charging_point_status	column	feed_ts	timestamp with time zone
 public.charging_point_status	column	last_updated	timestamp with time zone
