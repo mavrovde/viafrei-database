@@ -3943,6 +3943,8 @@ grant	api_reader@public.los_lane_sites	test/api-reader-change-list-0347.db.test.
 grant	api_reader@public.los_lane_sites	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.los_lane_state	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.los_lane_state	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.road_context_features	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
+grant	api_reader@public.road_context_features	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.stop_access_odbl	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.stop_access_odbl	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.stop_times	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself

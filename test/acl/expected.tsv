@@ -147,6 +147,7 @@ api_reader	relation	public.parking_forecast_profiles	SELECT
 api_reader	relation	public.parking_occupancy	SELECT
 api_reader	relation	public.parking_occupancy_odbl	SELECT
 api_reader	relation	public.parking_occupancy_sid	SELECT
+api_reader	relation	public.road_context_features	SELECT
 api_reader	relation	public.road_event_locations	SELECT
 api_reader	relation	public.road_event_ticks	SELECT
 api_reader	relation	public.road_event_twins	SELECT

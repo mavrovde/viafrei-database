@@ -8,7 +8,8 @@
 -- the stop access and bus-load rows of departures, the parking forecast,
 -- the road works, detours, event twins and locations, jam hours and motorway
 -- summaries, the traffic counts and measured levels of service (per site
--- and per lane), the feed run
+-- and per lane), the city's coach places and on-street bays (road context
+-- features), the feed run
 -- log (since when a feed is read), and the charging twin and status-run rows.
 -- Each was read so far by viafrei_mcp or viafrei_digest, directly or through
 -- an owner-rights *_live view, and not by api_reader. This release grants
@@ -38,7 +39,7 @@
 --     public.delfi_siri_et_calls, public.feed_runs, public.fuel_price_latest, public.gtfs_route_kreise,
 --     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_lane_sites, public.los_lane_state, public.los_sites, public.los_state,
 --     public.motorway_summary, public.mvv_bus_load, public.opendata_roadworks, public.osm_boundary_de,
---     public.parking_forecast_profiles, public.road_event_locations, public.road_event_twins,
+--     public.parking_forecast_profiles, public.road_context_features, public.road_event_locations, public.road_event_twins,
 --     public.station_accessibility, public.station_metro_osm, public.station_slugs, public.stop_access_odbl,
 --     public.traffic_count_latest, public.traffic_count_profiles, public.traffic_count_sites
 --     from api_reader;
@@ -71,6 +72,7 @@ grant select on public.mvv_bus_load to api_reader;
 grant select on public.opendata_roadworks to api_reader;
 grant select on public.osm_boundary_de to api_reader;
 grant select on public.parking_forecast_profiles to api_reader;
+grant select on public.road_context_features to api_reader;
 grant select on public.road_event_locations to api_reader;
 grant select on public.road_event_twins to api_reader;
 grant select on public.station_accessibility to api_reader;

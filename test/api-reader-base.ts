@@ -30,7 +30,7 @@ export const API_READER_0347: readonly string[] = [
   "autobahn_jam_hours", "bfrk_stops", "bw_detours", "charging_site_twin_claims", "charging_site_twin_pairs", "charging_status_runs",
   "connect_transit_delays", "db_station_boards", "db_station_numbers", "delfi_siri_et_calls", "feed_runs", "fuel_price_latest",
   "gtfs_route_kreise", "gtfs_stale_trips", "hh_roadworks", "ingest_runs", "los_lane_sites", "los_lane_state", "los_sites", "los_state", "motorway_summary", "mvv_bus_load",
-  "opendata_roadworks", "osm_boundary_de", "parking_forecast_profiles", "road_event_locations", "road_event_twins",
+  "opendata_roadworks", "osm_boundary_de", "parking_forecast_profiles", "road_context_features", "road_event_locations", "road_event_twins",
   "station_accessibility", "station_metro_osm", "station_slugs", "stop_access_odbl", "traffic_count_latest", "traffic_count_profiles", "traffic_count_sites",
 ].map((t) => `public.${t}`);
 
