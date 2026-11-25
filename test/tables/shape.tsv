@@ -3572,11 +3572,13 @@ public.road_events	column	valid_windows	tstzmultirange
 public.road_events	column	suspended	boolean
 public.road_events	column	entry_static	jsonb
 public.road_events	column	land_code	text
+public.road_events	column	entry_records	jsonb
 public.road_events	constraint	road_events_pkey	p PRIMARY KEY (id)
 public.road_events	constraint	road_events_source_id_publication_id_key	u UNIQUE (source_id, publication_id)
 public.road_events	index	road_events_contract_event_id	CREATE INDEX road_events_contract_event_id ON public.road_events USING btree ((((('datex:'::text || source_id) || ':'::text) || publication_id))) WHERE (deleted_at IS NULL)
 public.road_events	index	road_events_contract_location	CREATE INDEX road_events_contract_location ON public.road_events USING gist ((((public.st_pointonsurface(geom))::public.geometry(Point,4326))::public.geography)) WHERE ((closed_at IS NULL) AND (deleted_at IS NULL))
 public.road_events	index	road_events_deleted	CREATE INDEX road_events_deleted ON public.road_events USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
+public.road_events	index	road_events_entry_records_unfilled	CREATE INDEX road_events_entry_records_unfilled ON public.road_events USING btree (id) WHERE (entry_records IS NULL)
 public.road_events	index	road_events_entry_static_unfilled	CREATE INDEX road_events_entry_static_unfilled ON public.road_events USING btree (id) WHERE (entry_static IS NULL)
 public.road_events	index	road_events_geom_gist	CREATE INDEX road_events_geom_gist ON public.road_events USING gist (geom) WHERE (geom IS NOT NULL)
 public.road_events	index	road_events_open	CREATE INDEX road_events_open ON public.road_events USING btree (road_number, overall_start DESC) WHERE (closed_at IS NULL)

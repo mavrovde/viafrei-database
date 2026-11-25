@@ -213,7 +213,7 @@ describe.skipIf(url === undefined)("0338 the Land of a road event, stored at wri
     const base = await cols("public.road_events");
     expect(await cols("public.road_events_live")).toEqual(base);
     expect(await cols("public.road_events_current")).toEqual(base);
-    expect(base.slice(-2)).toEqual(["entry_static", "land_code"]);
+    expect(base.slice(-3)).toEqual(["entry_static", "land_code", "entry_records"]);
     expect(await q(`select has_table_privilege('viafrei_digest', 'public.road_events_live', 'select') d, has_table_privilege('viafrei_mcp', 'public.road_events_live', 'select') m`)).toEqual([{ d: true, m: true }]);
     expect(await q("select land_code from road_events_live where publication_id = 'r3'")).toEqual([{ land_code: "05" }]);
   });
@@ -221,6 +221,9 @@ describe.skipIf(url === undefined)("0338 the Land of a road event, stored at wri
   it("run again keeps everything, outside a transaction; an INVALID index of its name is built again", async () => {
     const oid = async (): Promise<number> => (await q<{ o: number }>("select 'public.road_events_open_land'::regclass::oid o"))[0]!.o;
     const first = await oid();
+    // 0351 appends entry_records to both views, and create or replace cannot shorten a view: a replay of 0338 at
+    // head first takes them away, as 0351's rollback does (the database is this suite's own).
+    await t.pool.query("drop view public.road_events_live cascade");
     await reapply(t, service(), FILE);
     expect(await oid()).toBe(first);
     expect(await q("select indisvalid v from pg_index where indexrelid = 'public.charging_points_contract_count'::regclass")).toEqual([{ v: true }]);

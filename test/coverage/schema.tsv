@@ -4099,3 +4099,8 @@ table	public.charging_feed_register	test/tables.db.test.ts > every table of sche
 table	public.charging_feed_register	test/charging-feed-register-0350.db.test.ts > seeds 34 ranked site feeds and 31 status feeds
 grant	api_reader@public.energy_page_slugs	test/charging-feed-register-0350.db.test.ts > api_reader reads it, energy_page_slugs, feed_run_extents and feed_versions, as itself, and writes none
 grant	api_reader@public.energy_page_slugs	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+function	public.road_event_entry_records(p_payload jsonb)	test/entry-records-0351.db.test.ts > road_event_entry_records is the readers' per-record select, record for record, and an empty array without records
+function	public.road_events_entry_records_backfill(p_batch integer)	test/entry-records-0351.db.test.ts > road_events_entry_records_backfill fills at most its batch, oldest first, then answers 0
+function	public.road_events_fill_entry_static()	test/entry-records-0351.db.test.ts > road_events_fill_entry_static fills it on insert and follows an update of payload; another update leaves it
+view	public.road_events_live	test/entry-records-0351.db.test.ts > road_events_live and road_events_current end with entry_records, with their grants
+view	public.road_events_current	test/entry-records-0351.db.test.ts > road_events_live and road_events_current end with entry_records, with their grants
