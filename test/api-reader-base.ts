@@ -31,7 +31,7 @@ export const API_READER_0347: readonly string[] = [
   "connect_transit_delays", "db_station_boards", "db_station_numbers", "delfi_siri_et_calls", "feed_runs", "fuel_price_latest",
   "gtfs_route_kreise", "gtfs_stale_trips", "hh_roadworks", "ingest_runs", "los_sites", "los_state", "motorway_summary", "mvv_bus_load",
   "opendata_roadworks", "osm_boundary_de", "parking_forecast_profiles", "road_event_locations", "road_event_twins",
-  "station_accessibility", "station_metro_osm", "stop_access_odbl", "traffic_count_latest", "traffic_count_profiles", "traffic_count_sites",
+  "station_accessibility", "station_metro_osm", "station_slugs", "stop_access_odbl", "traffic_count_latest", "traffic_count_profiles", "traffic_count_sites",
 ].map((t) => `public.${t}`);
 
 /** Every relation outside contract that api_reader reads: 0336's, 0345's and 0347's. */

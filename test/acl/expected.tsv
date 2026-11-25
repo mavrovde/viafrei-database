@@ -162,6 +162,7 @@ api_reader	relation	public.station_equipment	SELECT
 api_reader	relation	public.station_equipment_state	SELECT
 api_reader	relation	public.station_index_live	SELECT
 api_reader	relation	public.station_metro_osm	SELECT
+api_reader	relation	public.station_slugs	SELECT
 api_reader	relation	public.stop_access_odbl	SELECT
 api_reader	relation	public.stop_times	SELECT
 api_reader	relation	public.stops	SELECT

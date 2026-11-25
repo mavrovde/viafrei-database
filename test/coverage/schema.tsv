@@ -3937,6 +3937,8 @@ grant	api_reader@public.station_index_live	test/api-reader-base-tables-0336.db.t
 grant	api_reader@public.station_index_live	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.station_metro_osm	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.station_metro_osm	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
+grant	api_reader@public.station_slugs	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
+grant	api_reader@public.station_slugs	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.stop_access_odbl	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.stop_access_odbl	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.stop_times	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself

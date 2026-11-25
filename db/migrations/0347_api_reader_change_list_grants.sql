@@ -38,7 +38,7 @@
 --     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_sites, public.los_state,
 --     public.motorway_summary, public.mvv_bus_load, public.opendata_roadworks, public.osm_boundary_de,
 --     public.parking_forecast_profiles, public.road_event_locations, public.road_event_twins,
---     public.station_accessibility, public.station_metro_osm, public.stop_access_odbl,
+--     public.station_accessibility, public.station_metro_osm, public.station_slugs, public.stop_access_odbl,
 --     public.traffic_count_latest, public.traffic_count_profiles, public.traffic_count_sites
 --     from api_reader;
 --   delete from schema_migrations where version = 347;
@@ -72,6 +72,7 @@ grant select on public.road_event_locations to api_reader;
 grant select on public.road_event_twins to api_reader;
 grant select on public.station_accessibility to api_reader;
 grant select on public.station_metro_osm to api_reader;
+grant select on public.station_slugs to api_reader;
 grant select on public.stop_access_odbl to api_reader;
 grant select on public.traffic_count_latest to api_reader;
 grant select on public.traffic_count_profiles to api_reader;
