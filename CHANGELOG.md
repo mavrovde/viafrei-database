@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.8.0](https://github.com/mavrovde/viafrei-database/compare/v0.7.0...v0.8.0) (2026-11-25)
+
+
+### Added
+
+* migrations 0352-0353, production's hand changes of 2026-11-21 (vbb feed_ts index, digest random_page_cost) ([#120](https://github.com/mavrovde/viafrei-database/issues/120)) ([31833ac](https://github.com/mavrovde/viafrei-database/commit/31833ac97fadac8dea0a10dcc2737a38f66c70b9))
+
 ## [0.7.0](https://github.com/mavrovde/viafrei-database/compare/v0.6.1...v0.7.0) (2026-11-25)
 
 
