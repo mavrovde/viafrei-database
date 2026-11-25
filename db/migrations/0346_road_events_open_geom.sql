@@ -27,7 +27,7 @@
 set max_parallel_maintenance_workers = 0;
 set maintenance_work_mem = '64MB';
 
-set lock_timeout = '5s';
+set lock_timeout = '30s';
 select 'drop index concurrently ' || x.indexrelid::regclass::text
   from pg_index x
  where x.indexrelid = to_regclass('public.road_events_open_geom') and not x.indisvalid
@@ -35,6 +35,8 @@ select 'drop index concurrently ' || x.indexrelid::regclass::text
 create index concurrently if not exists road_events_open_geom on public.road_events using gist (geom)
   where closed_at is null and deleted_at is null;
 reset lock_timeout;
+reset maintenance_work_mem;
+reset max_parallel_maintenance_workers;
 
 do $$
 begin
