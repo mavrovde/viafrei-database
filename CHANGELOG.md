@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.7.0](https://github.com/mavrovde/viafrei-database/compare/v0.6.1...v0.7.0) (2026-11-25)
+
+
+### Added
+
+* migrations 0347-0351 (api_reader grants, car-park notes, charging register, road-event entry records) ([#118](https://github.com/mavrovde/viafrei-database/issues/118)) ([8b87052](https://github.com/mavrovde/viafrei-database/commit/8b87052c710a3d9e32eb51b230f9a9cee54677be))
+
 ## [0.6.1](https://github.com/mavrovde/viafrei-database/compare/v0.6.0...v0.6.1) (2026-11-25)
 
 
