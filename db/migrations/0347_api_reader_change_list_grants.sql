@@ -9,12 +9,20 @@
 -- the road works, detours, event twins and locations, jam hours and motorway
 -- summaries, the traffic counts and measured levels of service (per site
 -- and per lane), the city's coach places and on-street bays (road context
--- features), the feed run
--- log (since when a feed is read), and the charging twin and status-run rows.
--- Each was read so far by viafrei_mcp or viafrei_digest, directly or through
--- an owner-rights *_live view, and not by api_reader. This release grants
--- each by name, SELECT on the relation, never "all tables in schema", as 0336
--- and 0345.
+-- features), the run ledgers (since when a feed is read, the timetable's
+-- reach), and the charging twin and status-run rows. Each was read so far by
+-- viafrei_mcp or viafrei_digest, directly or through an owner-rights *_live
+-- view, and not by api_reader. This release grants each by name, SELECT on the
+-- relation, never "all tables in schema", as 0336 and 0345.
+--
+-- The two run ledgers are granted by column, as 0348 grants the catalogue:
+-- only the columns the API's statements read. A run's error text, raw path,
+-- body hash and worker fields can carry provider URLs and internal paths, and
+-- no API statement reads them. feed_runs: the charging freshness read takes
+-- the run's id, feed, status, start and finish, items seen, exchange protocol,
+-- jump flag and its validator (etag, last-modified), the road status read the
+-- finish; ingest_runs: the timetable's reach takes the newest loaded static
+-- run's provider, status, start and the written window from its note.
 --
 -- The *_live views over these tables are not granted: the API runs the
 -- statements on the base tables, and applies the filters the views apply
@@ -36,13 +44,15 @@
 --   revoke select on public.autobahn_jam_hours, public.bfrk_stops, public.bw_detours,
 --     public.charging_site_twin_claims, public.charging_site_twin_pairs, public.charging_status_runs,
 --     public.connect_transit_delays, public.db_station_boards, public.db_station_numbers,
---     public.delfi_siri_et_calls, public.feed_runs, public.fuel_price_latest, public.gtfs_route_kreise,
---     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_lane_sites, public.los_lane_state, public.los_sites, public.los_state,
+--     public.delfi_siri_et_calls, public.fuel_price_latest, public.gtfs_route_kreise,
+--     public.gtfs_stale_trips, public.hh_roadworks, public.los_lane_sites, public.los_lane_state, public.los_sites, public.los_state,
 --     public.motorway_summary, public.mvv_bus_load, public.opendata_roadworks, public.osm_boundary_de,
 --     public.parking_forecast_profiles, public.road_context_features, public.road_event_locations, public.road_event_twins,
 --     public.station_accessibility, public.station_metro_osm, public.station_slugs, public.stop_access_odbl,
 --     public.traffic_count_latest, public.traffic_count_profiles, public.traffic_count_sites
 --     from api_reader;
+--   revoke select (id, feed_key, status, started_at, finished_at, items_seen, exchange_protocol, jumped, etag, last_modified) on public.feed_runs from api_reader;
+--   revoke select (provider, status, started_at, note) on public.ingest_runs from api_reader;
 --   delete from schema_migrations where version = 347;
 
 set local lock_timeout = '5s';
@@ -57,12 +67,12 @@ grant select on public.connect_transit_delays to api_reader;
 grant select on public.db_station_boards to api_reader;
 grant select on public.db_station_numbers to api_reader;
 grant select on public.delfi_siri_et_calls to api_reader;
-grant select on public.feed_runs to api_reader;
+grant select (id, feed_key, status, started_at, finished_at, items_seen, exchange_protocol, jumped, etag, last_modified) on public.feed_runs to api_reader;
 grant select on public.fuel_price_latest to api_reader;
 grant select on public.gtfs_route_kreise to api_reader;
 grant select on public.gtfs_stale_trips to api_reader;
 grant select on public.hh_roadworks to api_reader;
-grant select on public.ingest_runs to api_reader;
+grant select (provider, status, started_at, note) on public.ingest_runs to api_reader;
 grant select on public.los_lane_sites to api_reader;
 grant select on public.los_lane_state to api_reader;
 grant select on public.los_sites to api_reader;

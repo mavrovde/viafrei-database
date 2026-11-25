@@ -1,9 +1,13 @@
 /**
- * 0347: api_reader reads the thirty-five base tables behind the answers of the MCP
- * change list viafrei-api carries, each by name.
+ * 0347: api_reader reads the thirty-three base tables behind the answers of the MCP
+ * change list viafrei-api carries, each by name, and the columns of the two run
+ * ledgers the API's statements read.
  *
- *  - SELECT on each of the thirty-five public relations, each present; nothing
+ *  - SELECT on each of the thirty-three public relations, each present; nothing
  *    more on them;
+ *  - on feed_runs and ingest_runs no table privilege, SELECT on exactly the
+ *    named columns and on no other (a run's error, raw path and worker fields
+ *    stay unreadable);
  *  - api_reader reads every one as itself;
  *  - the owner-rights *_live views over them stay unreadable to it, and so do
  *    the partitions of the two day-partitioned tick tables;
@@ -15,7 +19,7 @@
  */
 import type pg from "pg";
 import { describe, expect, it } from "vitest";
-import { API_READER_0347 } from "./api-reader-base.js";
+import { API_READER_0347, API_READER_0347_COLUMNS } from "./api-reader-base.js";
 import { refusal } from "./domain-db.js";
 import { migratedSuite } from "./no-transaction-index.js";
 
@@ -52,6 +56,10 @@ const FORBIDDEN: readonly string[] = [
 ];
 const PARTITIONED = ["public.delfi_siri_et_calls", "public.connect_transit_delays"];
 const EXPECTED = API_READER_0347.map((n) => `${n} SELECT`).sort((a, b) => a.localeCompare(b));
+const LEDGERS = Object.keys(API_READER_0347_COLUMNS);
+const LEDGER_COLUMNS = Object.entries(API_READER_0347_COLUMNS)
+  .flatMap(([n, cols]) => cols.map((c) => `${n.replace(/^public\./, "")}.${c}`))
+  .sort((a, b) => a.localeCompare(b));
 
 describe.skipIf(url === undefined)("0347 api_reader change-list grants", () => {
   const { t, service } = migratedSuite(url ?? "postgresql://x@127.0.0.1/x", "changelist0347");
@@ -71,15 +79,49 @@ describe.skipIf(url === undefined)("0347 api_reader change-list grants", () => {
     return r.rows.map((x) => x.s).sort((a, b) => a.localeCompare(b));
   };
 
-  it("names thirty-five relations, every one present and none named twice", async () => {
-    expect(API_READER_0347).toHaveLength(35);
-    expect(new Set(API_READER_0347).size).toBe(35);
+  it("names thirty-three relations, every one present and none named twice", async () => {
+    expect(API_READER_0347).toHaveLength(33);
+    expect(new Set(API_READER_0347).size).toBe(33);
     const r = await t.pool.query<{ n: string }>("select x.n from unnest($1::text[]) x(n) where to_regclass(x.n) is null", [API_READER_0347]);
     expect(r.rows).toEqual([]);
   });
 
   it("api_reader holds SELECT on each relation, and nothing more on them", async () => {
     expect(await held()).toEqual(EXPECTED);
+  });
+
+  /** Each column of the two run ledgers api_reader may SELECT, as `relation.column`, sorted. */
+  const heldColumns = async (): Promise<string[]> => {
+    const r = await t.pool.query<{ s: string }>(
+      `select c.oid::regclass::text || '.' || a.attname as s from pg_class c join pg_attribute a on a.attrelid = c.oid
+        where c.oid = any($1::regclass[]) and a.attnum > 0 and not a.attisdropped and has_column_privilege('api_reader', c.oid, a.attnum, 'SELECT')`,
+      [LEDGERS],
+    );
+    return r.rows.map((x) => x.s).sort((a, b) => a.localeCompare(b));
+  };
+
+  it("api_reader holds no table privilege on the two run ledgers, and SELECT on exactly the columns the API reads", async () => {
+    const table = await t.pool.query<{ s: string }>(
+      "select x.n || ' ' || p as s from unnest($1::text[]) x(n) cross join unnest($2::text[]) p where has_table_privilege('api_reader', x.n, p)",
+      [LEDGERS, PRIVS],
+    );
+    expect(table.rows).toEqual([]);
+    expect(await heldColumns()).toEqual(LEDGER_COLUMNS);
+    const other = await t.pool.query<{ s: string }>(
+      `select c.oid::regclass::text || '.' || a.attname || ' ' || p as s from pg_class c join pg_attribute a on a.attrelid = c.oid
+        cross join unnest(array['INSERT', 'UPDATE', 'REFERENCES']) p
+        where c.oid = any($1::regclass[]) and a.attnum > 0 and not a.attisdropped and has_column_privilege('api_reader', c.oid, a.attnum, p)`,
+      [LEDGERS],
+    );
+    expect(other.rows).toEqual([]);
+  });
+
+  it("api_reader reads the granted columns of the run ledgers as itself, and is refused a run's error", async () => {
+    for (const [n, cols] of Object.entries(API_READER_0347_COLUMNS)) {
+      await as((c) => c.query(`select ${cols.join(", ")} from ${n} limit 0`));
+      expect(await refusal(as((c) => c.query(`select error from ${n} limit 0`))), n).toMatchObject({ code: "42501" });
+      expect(await refusal(as((c) => c.query(`select * from ${n} limit 0`))), n).toMatchObject({ code: "42501" });
+    }
   });
 
   it("api_reader reads every one of them, as itself", async () => {
@@ -112,8 +154,10 @@ describe.skipIf(url === undefined)("0347 api_reader change-list grants", () => {
     const acl = async (): Promise<{ n: string; a: string | null }[]> =>
       (
         await t.pool.query<{ n: string; a: string | null }>(
-          "select x.n, (select relacl::text from pg_class where oid = x.n::regclass) as a from unnest($1::text[]) x(n) order by 1",
-          [API_READER_0347],
+          `select x.n, (select relacl::text from pg_class where oid = x.n::regclass) || ' ' ||
+                  coalesce((select string_agg(a.attname || '=' || a.attacl::text, ',' order by a.attnum) from pg_attribute a where a.attrelid = x.n::regclass and a.attacl is not null), '') as a
+             from unnest($1::text[]) x(n) order by 1`,
+          [[...API_READER_0347, ...LEDGERS]],
         )
       ).rows;
     const before = await acl();
@@ -123,5 +167,6 @@ describe.skipIf(url === undefined)("0347 api_reader change-list grants", () => {
     expect(run.lines.filter((l) => l.startsWith("applying")).map((l) => l.split(" ")[1])).toEqual([FILE]);
     expect(await acl()).toEqual(before);
     expect(await held()).toEqual(EXPECTED);
+    expect(await heldColumns()).toEqual(LEDGER_COLUMNS);
   });
 });

@@ -3809,8 +3809,6 @@ grant	api_reader@public.driving_rule_topics	test/api-reader-base-tables-0336.db.
 grant	api_reader@public.driving_rule_topics	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.feed_checks	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.feed_checks	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
-grant	api_reader@public.feed_runs	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
-grant	api_reader@public.feed_runs	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.feeds	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.feeds	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.fuel_price_latest	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
@@ -3843,8 +3841,6 @@ grant	api_reader@public.hh_cameras	test/api-reader-base-tables-0336.db.test.ts >
 grant	api_reader@public.hh_cameras	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.hh_roadworks	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.hh_roadworks	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
-grant	api_reader@public.ingest_runs	test/api-reader-change-list-0347.db.test.ts > api_reader reads every one of them, as itself
-grant	api_reader@public.ingest_runs	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.hydrogen_stations	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself
 grant	api_reader@public.hydrogen_stations	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
 grant	api_reader@public.lez_feed_places	test/api-reader-base-tables-0336.db.test.ts > api_reader reads every one of them, as itself

@@ -25,14 +25,23 @@ export const API_READER_0345: readonly string[] = [
   "weather_warnings_en_live",
 ].map((t) => `public.${t}`);
 
-/** The base tables 0347 grants api_reader, behind the answers of the MCP change list viafrei-api carries. */
+/** The base tables 0347 grants api_reader SELECT on, behind the answers of the MCP change list viafrei-api carries. */
 export const API_READER_0347: readonly string[] = [
   "autobahn_jam_hours", "bfrk_stops", "bw_detours", "charging_site_twin_claims", "charging_site_twin_pairs", "charging_status_runs",
-  "connect_transit_delays", "db_station_boards", "db_station_numbers", "delfi_siri_et_calls", "feed_runs", "fuel_price_latest",
-  "gtfs_route_kreise", "gtfs_stale_trips", "hh_roadworks", "ingest_runs", "los_lane_sites", "los_lane_state", "los_sites", "los_state", "motorway_summary", "mvv_bus_load",
+  "connect_transit_delays", "db_station_boards", "db_station_numbers", "delfi_siri_et_calls", "fuel_price_latest",
+  "gtfs_route_kreise", "gtfs_stale_trips", "hh_roadworks", "los_lane_sites", "los_lane_state", "los_sites", "los_state", "motorway_summary", "mvv_bus_load",
   "opendata_roadworks", "osm_boundary_de", "parking_forecast_profiles", "road_context_features", "road_event_locations", "road_event_twins",
   "station_accessibility", "station_metro_osm", "station_slugs", "stop_access_odbl", "traffic_count_latest", "traffic_count_profiles", "traffic_count_sites",
 ].map((t) => `public.${t}`);
 
-/** Every relation outside contract that api_reader reads: 0336's, 0345's and 0347's. */
-export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345, ...API_READER_0347].sort((a, b) => a.localeCompare(b));
+/** The run ledgers 0347 grants api_reader by column: only the columns the API's statements read, never a run's error, raw path or worker fields. */
+export const API_READER_0347_COLUMNS: Readonly<Record<string, readonly string[]>> = {
+  "public.feed_runs": ["id", "feed_key", "status", "started_at", "finished_at", "items_seen", "exchange_protocol", "jumped", "etag", "last_modified"],
+  "public.ingest_runs": ["provider", "status", "started_at", "note"],
+};
+
+/** The relations 0350 grants api_reader: the charging feed register, the energy page slugs, and the run extents and versions the charging freshness read takes. */
+export const API_READER_0350: readonly string[] = ["charging_feed_register", "energy_page_slugs", "feed_run_extents", "feed_versions"].map((t) => `public.${t}`);
+
+/** Every relation outside contract that api_reader reads: 0336's, 0345's, 0347's and 0350's. */
+export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345, ...API_READER_0347, ...API_READER_0350].sort((a, b) => a.localeCompare(b));

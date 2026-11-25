@@ -16,6 +16,20 @@ api_access	relation	live.refresh_askers	INSERT,SELECT
 api_access	relation	live.refresh_requests	INSERT,SELECT
 api_access	schema	access	USAGE
 api_access	schema	live	USAGE
+api_reader	column	public.feed_runs.etag	SELECT
+api_reader	column	public.feed_runs.exchange_protocol	SELECT
+api_reader	column	public.feed_runs.feed_key	SELECT
+api_reader	column	public.feed_runs.finished_at	SELECT
+api_reader	column	public.feed_runs.id	SELECT
+api_reader	column	public.feed_runs.items_seen	SELECT
+api_reader	column	public.feed_runs.jumped	SELECT
+api_reader	column	public.feed_runs.last_modified	SELECT
+api_reader	column	public.feed_runs.started_at	SELECT
+api_reader	column	public.feed_runs.status	SELECT
+api_reader	column	public.ingest_runs.note	SELECT
+api_reader	column	public.ingest_runs.provider	SELECT
+api_reader	column	public.ingest_runs.started_at	SELECT
+api_reader	column	public.ingest_runs.status	SELECT
 api_reader	function	public.contract_stop_place_of(ref text)	EXECUTE
 api_reader	function	public.weather_warning_english(german_id bigint)	EXECUTE
 api_reader	relation	contract.address	SELECT
@@ -101,7 +115,6 @@ api_reader	relation	public.driving_rule_topics	SELECT
 api_reader	relation	public.energy_page_slugs	SELECT
 api_reader	relation	public.feed_checks	SELECT
 api_reader	relation	public.feed_run_extents	SELECT
-api_reader	relation	public.feed_runs	SELECT
 api_reader	relation	public.feed_versions	SELECT
 api_reader	relation	public.feeds	SELECT
 api_reader	relation	public.fuel_price_latest	SELECT
@@ -120,7 +133,6 @@ api_reader	relation	public.gtfs_untimed_trips	SELECT
 api_reader	relation	public.hh_cameras	SELECT
 api_reader	relation	public.hh_roadworks	SELECT
 api_reader	relation	public.hydrogen_stations	SELECT
-api_reader	relation	public.ingest_runs	SELECT
 api_reader	relation	public.lez_feed_places	SELECT
 api_reader	relation	public.lez_list_entries	SELECT
 api_reader	relation	public.lez_zone_overlaps	SELECT
