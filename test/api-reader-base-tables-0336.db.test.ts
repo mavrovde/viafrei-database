@@ -26,7 +26,7 @@ if (url === undefined && required) {
 }
 
 
-/** Relations api_reader must still not read: the access store, the tables under its owner-rights views, the ledger. */
+/** Relations api_reader must still not read: the access store, the tables under its owner-rights views, the ledger. (gtfs_untimed_trips, under transit_punctuality_area_live, is granted by 0345; station_slugs, under station_index_live, by 0347.) */
 const FORBIDDEN: readonly string[] = [
   "access.api_key",
   "access.audit",
@@ -45,8 +45,6 @@ const FORBIDDEN: readonly string[] = [
   "control.feed_state",
   "control.refusals",
   "public.lez_zones",
-  "public.station_slugs",
-  "public.gtfs_untimed_trips",
   "public.schema_migrations",
 ];
 
@@ -98,7 +96,7 @@ describe.skipIf(url === undefined)("0336 api_reader base tables", () => {
     expect(failed).toEqual([]);
   });
 
-  it("holds SELECT and nothing more on them, and USAGE on exactly contract, control, domains and public", async () => {
+  it("holds SELECT and nothing more on them, and USAGE on exactly contract, control, domains, ingestor (0348) and public", async () => {
     const r = await db.pool.query<{ n: string; p: string }>(
       `select x.n, p from unnest($1::text[]) x(n) cross join unnest(array['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
         where has_table_privilege('api_reader', x.n, p)`,
@@ -109,7 +107,8 @@ describe.skipIf(url === undefined)("0336 api_reader base tables", () => {
       `select nspname || ' ' || p as s from pg_namespace cross join unnest(array['USAGE', 'CREATE']) p
         where nspname not like 'pg\\_%' and nspname <> 'information_schema' and has_schema_privilege('api_reader', oid, p) order by 1`,
     );
-    expect(sch.rows.map((x) => x.s)).toEqual(["contract USAGE", "control USAGE", "domains USAGE", "public USAGE"]);
+    // ingestor USAGE is 0348's (the catalogue's row versions), never CREATE.
+    expect(sch.rows.map((x) => x.s)).toEqual(["contract USAGE", "control USAGE", "domains USAGE", "ingestor USAGE", "public USAGE"]);
   });
 
   it("api_reader still cannot read the access store, the tables under its views or the ledger", async () => {
