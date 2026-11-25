@@ -116,6 +116,7 @@ api_reader	relation	public.gtfs_untimed_trips	SELECT
 api_reader	relation	public.hh_cameras	SELECT
 api_reader	relation	public.hh_roadworks	SELECT
 api_reader	relation	public.hydrogen_stations	SELECT
+api_reader	relation	public.ingest_runs	SELECT
 api_reader	relation	public.lez_feed_places	SELECT
 api_reader	relation	public.lez_list_entries	SELECT
 api_reader	relation	public.lez_zone_overlaps	SELECT

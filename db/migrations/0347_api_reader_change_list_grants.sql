@@ -35,7 +35,7 @@
 --     public.charging_site_twin_claims, public.charging_site_twin_pairs, public.charging_status_runs,
 --     public.connect_transit_delays, public.db_station_boards, public.db_station_numbers,
 --     public.delfi_siri_et_calls, public.feed_runs, public.fuel_price_latest, public.gtfs_route_kreise,
---     public.gtfs_stale_trips, public.hh_roadworks, public.los_sites, public.los_state,
+--     public.gtfs_stale_trips, public.hh_roadworks, public.ingest_runs, public.los_sites, public.los_state,
 --     public.motorway_summary, public.mvv_bus_load, public.opendata_roadworks, public.osm_boundary_de,
 --     public.parking_forecast_profiles, public.road_event_locations, public.road_event_twins,
 --     public.station_accessibility, public.station_metro_osm, public.stop_access_odbl,
@@ -60,6 +60,7 @@ grant select on public.fuel_price_latest to api_reader;
 grant select on public.gtfs_route_kreise to api_reader;
 grant select on public.gtfs_stale_trips to api_reader;
 grant select on public.hh_roadworks to api_reader;
+grant select on public.ingest_runs to api_reader;
 grant select on public.los_sites to api_reader;
 grant select on public.los_state to api_reader;
 grant select on public.motorway_summary to api_reader;
