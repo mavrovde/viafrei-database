@@ -4100,22 +4100,26 @@ function	public.road_events_entry_records_backfill(p_batch integer)	test/entry-r
 function	public.road_events_fill_entry_static()	test/entry-records-0351.db.test.ts > road_events_fill_entry_static fills it on insert and follows an update of payload; another update leaves it
 view	public.road_events_live	test/entry-records-0351.db.test.ts > road_events_live and road_events_current end with entry_records, with their grants
 view	public.road_events_current	test/entry-records-0351.db.test.ts > road_events_live and road_events_current end with entry_records, with their grants
-table	public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row, an older one never does, and each feed keeps its own row
+table	public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row with every column of it, an older one never does, and each feed keeps its own row
 table	public.charging_point_status_newest	test/tables.db.test.ts > every column, constraint and index of every table of ours is a row of the shape table
 table	public.charging_point_status_newest	test/tables.db.test.ts > every row of the shape table is held, and the table names every table of ours
 table	public.charging_point_status_newest	test/tables.db.test.ts > every table of schema public refuses each null, duplicate key and dangling reference by name
-function	public.charging_point_status_newest_note()	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row, an older one never does, and each feed keeps its own row
+function	public.charging_point_status_newest_note()	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row with every column of it, an older one never does, and each feed keeps its own row
 function	public.charging_point_status_newest_note()	test/charging-status-newest-0354.db.test.ts > a tick written straight into a day partition made after 0354 fires the trigger
-trigger	public.charging_point_status.charging_point_status_newest_note	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row, an older one never does, and each feed keeps its own row
+trigger	public.charging_point_status.charging_point_status_newest_note	test/charging-status-newest-0354.db.test.ts > a newer tick replaces the point's row with every column of it, an older one never does, and each feed keeps its own row
 trigger	public.charging_point_status.charging_point_status_newest_note	test/charging-status-newest-0354.db.test.ts > a tick written straight into a day partition made after 0354 fires the trigger
 function	public.charging_point_status_newest_restate()	test/charging-status-newest-0354.db.test.ts > an update of the held tick restates the row; a delete of it takes the newest tick left, none left no row
 trigger	public.charging_point_status.charging_point_status_newest_restate	test/charging-status-newest-0354.db.test.ts > an update of the held tick restates the row; a delete of it takes the newest tick left, none left no row
 view	public.charging_point_status_newest_live	test/views-filter.db.test.ts > public.charging_point_status_newest_live: returns the row it is for and none it leaves out
-grant	api_reader@public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table
+grant	api_reader@public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table; the table has fillfactor 80
 grant	api_reader@public.charging_point_status_newest	test/roles-grants.db.test.ts > api_reader: every privilege it holds is a row, every row is held
-grant	viafrei_mcp@public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table
+grant	viafrei_mcp@public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table; the table has fillfactor 80
 grant	viafrei_mcp@public.charging_point_status_newest	test/roles-grants.db.test.ts > viafrei_mcp: every privilege it holds is a row, every row is held
 grant	viafrei_mcp@public.charging_point_status_newest	test/roles-grants.db.test.ts > viafrei_mcp: every relation, column, schema and function of ours
-grant	viafrei_digest@public.charging_point_status_newest_live	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table
+grant	viafrei_digest@public.charging_point_status_newest_live	test/charging-status-newest-0354.db.test.ts > api_reader and viafrei_mcp read the table; viafrei_digest reads the view and not the table; the table has fillfactor 80
 grant	viafrei_digest@public.charging_point_status_newest_live	test/roles-grants.db.test.ts > viafrei_digest: every privilege it holds is a row, every row is held
 grant	viafrei_digest@public.charging_point_status_newest_live	test/roles-grants.db.test.ts > viafrei_digest: every relation, column, schema and function of ours
+function	public.charging_point_status_newest_restate()	test/charging-status-newest-0354.db.test.ts > an update of another tick to an instant older than the held one leaves the held row as it is
+trigger	public.charging_point_status.charging_point_status_newest_restate	test/charging-status-newest-0354.db.test.ts > an update of another tick to an instant older than the held one leaves the held row as it is
+table	public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > 0354 and 0355 applied again from their rollbacks fill the newest tick of each point and feed, every column of it
+table	public.charging_point_status_newest	test/charging-status-newest-0354.db.test.ts > 0355's catch-up takes the ticks written between the files: newer wins over an older row, an equal or newer row is kept, a tick past the margin is left
