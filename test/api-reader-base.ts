@@ -43,5 +43,8 @@ export const API_READER_0347_COLUMNS: Readonly<Record<string, readonly string[]>
 /** The relations 0350 grants api_reader: the charging feed register, the energy page slugs, and the run extents and versions the charging freshness read takes. */
 export const API_READER_0350: readonly string[] = ["charging_feed_register", "energy_page_slugs", "feed_run_extents", "feed_versions"].map((t) => `public.${t}`);
 
-/** Every relation outside contract that api_reader reads: 0336's, 0345's, 0347's and 0350's. */
-export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345, ...API_READER_0347, ...API_READER_0350].sort((a, b) => a.localeCompare(b));
+/** The relation 0354 grants api_reader: the newest tick of each charging point and feed, which the charging read near a point probes once a point. */
+export const API_READER_0354: readonly string[] = ["charging_point_status_newest"].map((t) => `public.${t}`);
+
+/** Every relation outside contract that api_reader reads: 0336's, 0345's, 0347's, 0350's and 0354's. */
+export const API_READER_RELATIONS: readonly string[] = [...API_READER_BASE, ...API_READER_0345, ...API_READER_0347, ...API_READER_0350, ...API_READER_0354].sort((a, b) => a.localeCompare(b));

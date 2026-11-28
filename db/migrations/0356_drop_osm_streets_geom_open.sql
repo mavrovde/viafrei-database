@@ -1,0 +1,41 @@
+-- no-transaction: drops one index with drop index concurrently, which
+-- PostgreSQL refuses inside a transaction block. Idempotent: the drop is
+-- if exists, so a database that no longer holds the index is left as it is.
+--
+-- osm_streets_geom_open, gist (geom) where closed_at is null, on
+-- public.osm_streets: no read uses it. Production, read 2026-11-28: 0 scans in
+-- pg_stat_user_indexes since the statistics reset of 2026-11-14, 143 MB.
+--
+-- What it served. 0231_osm_streets.sql (now inside the 0293 baseline) made it
+-- for the street map's smallest zoom band, whose statement then read
+-- osm_streets.geom directly, "geom && <frame>" under "closed_at is null", the
+-- index's predicate. Since 0232 (osm_street_tiles, 1 km cells of geom) that
+-- band reads the materialized view instead, and since 0244
+-- (osm_street_tiles_lo) every wider band reads its own view too: the street
+-- map's band list names a view for every band, so its direct table statement
+-- is never built. A refresh of either view groups every open way of the table
+-- (osm_street_tiles_refresh), a sequential read that takes no index.
+--
+-- The other reads of the table, searched before this file (the main
+-- application with its MCP server, viafrei-api, the ingestors): none reads
+-- geom by a box. The street loader upserts on (osm_type, osm_id), its unique
+-- index, and closes a Land's or the source's ways not carried by the load on
+-- (land, last_seen_at) under closed_at is null, osm_streets_open_land; the
+-- wider bands' geom_lo indexes (osm_streets_lo_secondary, osm_streets_lo_trunk)
+-- are kept.
+--
+-- A concurrent drop takes SHARE UPDATE EXCLUSIVE and waits for the
+-- transactions that use the index, then ACCESS EXCLUSIVE on the index alone
+-- for a moment: no writer of the table is blocked.
+--
+-- rollback:
+--   create index concurrently if not exists osm_streets_geom_open on public.osm_streets using gist (geom) where (closed_at is null);
+--   delete from schema_migrations where version = 356;
+
+-- lock_timeout bounds the drop's wait for its locks; a drop that waits longer
+-- fails with 55P03 and migrate retries the file, the drop being if exists. Set
+-- for this file's session and reset at its end, as no transaction holds a set
+-- local here.
+set lock_timeout = '5s';
+drop index concurrently if exists public.osm_streets_geom_open;
+reset lock_timeout;

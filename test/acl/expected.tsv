@@ -93,6 +93,7 @@ api_reader	relation	public.bfrk_stops	SELECT
 api_reader	relation	public.bw_detours	SELECT
 api_reader	relation	public.charging_feed_register	SELECT
 api_reader	relation	public.charging_point_status	SELECT
+api_reader	relation	public.charging_point_status_newest	SELECT
 api_reader	relation	public.charging_points	SELECT
 api_reader	relation	public.charging_site_twin_claims	SELECT
 api_reader	relation	public.charging_site_twin_pairs	SELECT
@@ -218,6 +219,7 @@ viafrei_digest	relation	public.bfrk_stops_live	SELECT
 viafrei_digest	relation	public.bw_detours_live	SELECT
 viafrei_digest	relation	public.charging_feed_runs_live	SELECT
 viafrei_digest	relation	public.charging_point_status_live	SELECT
+viafrei_digest	relation	public.charging_point_status_newest_live	SELECT
 viafrei_digest	relation	public.charging_points_live	SELECT
 viafrei_digest	relation	public.charging_site_twin_claims	SELECT
 viafrei_digest	relation	public.charging_site_twin_pairs	SELECT
@@ -615,6 +617,7 @@ viafrei_mcp	relation	public.bfrk_stops	SELECT
 viafrei_mcp	relation	public.bfrk_stops_live	SELECT
 viafrei_mcp	relation	public.bw_detours_live	SELECT
 viafrei_mcp	relation	public.charging_point_status	SELECT
+viafrei_mcp	relation	public.charging_point_status_newest	SELECT
 viafrei_mcp	relation	public.charging_points_live	SELECT
 viafrei_mcp	relation	public.charging_site_twin_claims	SELECT
 viafrei_mcp	relation	public.charging_site_twin_pairs	SELECT

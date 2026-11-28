@@ -81,11 +81,11 @@ const col = async (c: pg.PoolClient, sql: string, params: unknown[] = []): Promi
 
 describe("0064: the DATEX II confidentiality marking", () => {
   const TABLES = [
-    "charging_point_status", "charging_points", "charging_sites", "delfi_service_alerts", "los_lane_sites", "los_lane_state", "los_sites", "los_state", "los_ticks",
+    "charging_point_status", "charging_point_status_newest", "charging_points", "charging_sites", "delfi_service_alerts", "los_lane_sites", "los_lane_state", "los_sites", "los_state", "los_ticks",
     "parking_facilities", "parking_facilities_bysa", "parking_facilities_odbl", "parking_facilities_sid", "parking_occupancy", "parking_occupancy_odbl", "parking_occupancy_sid", "road_events",
   ];
   const LIVE = [
-    "charging_point_status_live", "charging_points_live", "charging_sites_live", "parking_facilities_bysa_live", "parking_facilities_live", "parking_facilities_odbl_live",
+    "charging_point_status_live", "charging_point_status_newest_live", "charging_points_live", "charging_sites_live", "parking_facilities_bysa_live", "parking_facilities_live", "parking_facilities_odbl_live",
     "parking_facilities_sid_live", "parking_occupancy_live", "parking_occupancy_odbl_live", "parking_occupancy_sid_live", "road_events_live",
   ];
   const carrying = (kinds: string): string =>

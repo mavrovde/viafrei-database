@@ -151,6 +151,7 @@ describe.skipIf(url === undefined)("the filter views", () => {
   it("public.parking_occupancy_sid_live: returns the row it is for and none it leaves out", () => check("public.parking_occupancy_sid_live"));
   it("public.parking_occupancy_odbl_live: returns the row it is for and none it leaves out", () => check("public.parking_occupancy_odbl_live"));
   it("public.charging_point_status_live: returns the row it is for and none it leaves out", () => check("public.charging_point_status_live"));
+  it("public.charging_point_status_newest_live: returns the row it is for and none it leaves out", () => check("public.charging_point_status_newest_live"));
   it("public.motorway_summary_live: returns the row it is for and none it leaves out", () => check("public.motorway_summary_live"));
   it("public.parking_facilities_sid_live: returns the row it is for and none it leaves out", () => check("public.parking_facilities_sid_live"));
   it("public.gbfs_stations_live: returns the row it is for and none it leaves out", () => check("public.gbfs_stations_live"));
