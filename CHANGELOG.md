@@ -11,6 +11,13 @@ own format (a version heading linking the comparison, entries linking their
 commits) under the Keep a Changelog section names; a released section is not
 edited by hand.
 
+## [0.8.1](https://github.com/mavrovde/viafrei-database/compare/v0.8.0...v0.8.1) (2026-11-28)
+
+
+### Changed
+
+* the newest status of each charging point and feed (0354-0355), the unused osm_streets_geom_open dropped (0356) ([#124](https://github.com/mavrovde/viafrei-database/issues/124)) ([ef87774](https://github.com/mavrovde/viafrei-database/commit/ef87774a5c7a82efeebe36c5448d04d26e9718ef))
+
 ## [0.8.0](https://github.com/mavrovde/viafrei-database/compare/v0.7.0...v0.8.0) (2026-11-25)
 
 
