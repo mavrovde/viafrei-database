@@ -1432,6 +1432,19 @@ public.charging_point_status	column	confidentiality	text
 public.charging_point_status	constraint	charging_point_status_pkey	p PRIMARY KEY (evse_id, observed_at)
 public.charging_point_status	index	charging_point_status_brin	CREATE INDEX charging_point_status_brin ON ONLY public.charging_point_status USING brin (observed_at)
 public.charging_point_status	index	charging_point_status_pkey	CREATE UNIQUE INDEX charging_point_status_pkey ON ONLY public.charging_point_status USING btree (evse_id, observed_at)
+public.charging_point_status_newest	column	evse_id	text not null
+public.charging_point_status_newest	column	observed_at	timestamp with time zone not null
+public.charging_point_status_newest	column	feed_ts	timestamp with time zone
+public.charging_point_status_newest	column	last_updated	timestamp with time zone
+public.charging_point_status_newest	column	source_feed	text not null
+public.charging_point_status_newest	column	status	text
+public.charging_point_status_newest	column	operation_status	text
+public.charging_point_status_newest	column	opening_status	text
+public.charging_point_status_newest	column	exchange_protocol	text
+public.charging_point_status_newest	column	confidentiality	text
+public.charging_point_status_newest	column	source_run_id	bigint
+public.charging_point_status_newest	constraint	charging_point_status_newest_pkey	p PRIMARY KEY (evse_id, source_feed)
+public.charging_point_status_newest	index	charging_point_status_newest_pkey	CREATE UNIQUE INDEX charging_point_status_newest_pkey ON public.charging_point_status_newest USING btree (evse_id, source_feed)
 public.charging_points	column	source_feed	text not null
 public.charging_points	column	point_key	text not null
 public.charging_points	column	evse_id	text
@@ -3143,7 +3156,6 @@ public.osm_streets	column	last_seen_at	timestamp with time zone not null
 public.osm_streets	column	closed_at	timestamp with time zone
 public.osm_streets	constraint	osm_streets_osm_type_osm_id_key	u UNIQUE (osm_type, osm_id)
 public.osm_streets	constraint	osm_streets_pkey	p PRIMARY KEY (id)
-public.osm_streets	index	osm_streets_geom_open	CREATE INDEX osm_streets_geom_open ON public.osm_streets USING gist (geom) WHERE (closed_at IS NULL)
 public.osm_streets	index	osm_streets_lo_secondary	CREATE INDEX osm_streets_lo_secondary ON public.osm_streets USING gist (geom_lo) WHERE ((closed_at IS NULL) AND (cls <= 4))
 public.osm_streets	index	osm_streets_lo_trunk	CREATE INDEX osm_streets_lo_trunk ON public.osm_streets USING gist (geom_lo) WHERE ((closed_at IS NULL) AND (cls <= 2))
 public.osm_streets	index	osm_streets_open_land	CREATE INDEX osm_streets_open_land ON public.osm_streets USING btree (land, last_seen_at) WHERE (closed_at IS NULL)

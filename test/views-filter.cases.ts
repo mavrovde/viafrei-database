@@ -198,6 +198,7 @@ export const VIEW_CASES: readonly ViewCase[] = [
   { view: "public.parking_occupancy_sid_live", table: "public.parking_occupancy_sid", tag: "facility_id", out: [] },
   { view: "public.parking_occupancy_odbl_live", table: "public.parking_occupancy_odbl", tag: "facility_id", out: [] },
   { view: "public.charging_point_status_live", table: "public.charging_point_status", tag: "evse_id", out: [] },
+  { view: "public.charging_point_status_newest_live", table: "public.charging_point_status_newest", tag: "evse_id", out: [] },
   { view: "public.motorway_summary_live", table: "public.motorway_summary", out: [] },
   { view: "public.parking_facilities_sid_live", table: "public.parking_facilities_sid", out: [] },
   {

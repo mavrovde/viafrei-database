@@ -74,6 +74,10 @@ const M0306 = join(ROOT, "db", "migrations", "0306_feed_state_fold_counts_every_
 const REDEFINED_BY_0306 = ["CREATE FUNCTION control.feed_state_after_change()", "CREATE FUNCTION control.recompute_feed_state("];
 /** The baseline views 0330 defines again (their mutants are planted in 0330, below). */
 const REDEFINED_BY_0330: readonly string[] = ["public.road_events_live"];
+/** The filter views a migration after the baseline creates: their mutants are planted in that migration's text. */
+const CREATED_AFTER_BASELINE: Readonly<Record<string, string>> = {
+  "public.charging_point_status_newest_live": join(ROOT, "db", "migrations", "0354_charging_point_status_newest.sql"),
+};
 const liveFile = (from: string): string => {
   const base = readFileSync(BASELINE, "utf8");
   const at = base.indexOf(from);
@@ -259,10 +263,10 @@ const text: SchemaMutant[] = [
 
 const VIEWS = ["test/views-filter.db.test.ts"];
 
-/** The view's CREATE VIEW block in the baseline, up to its closing semicolon. */
+/** The view's CREATE VIEW block in the baseline (or the migration that creates it), up to its closing semicolon. */
 function viewBlock(sql: string, view: string): string {
   const start = sql.indexOf(`\nCREATE VIEW ${view} AS\n`);
-  if (start < 0) throw new Error(`no CREATE VIEW ${view} in the baseline`);
+  if (start < 0) throw new Error(`no CREATE VIEW ${view} in ${CREATED_AFTER_BASELINE[view] ?? "the baseline"}`);
   const end = sql.indexOf(";\n", start);
   return sql.slice(start + 1, end + 1);
 }
@@ -271,7 +275,8 @@ function viewBlock(sql: string, view: string): string {
 const views: SchemaMutant[] = (() => {
   const sql = readFileSync(BASELINE, "utf8");
   return VIEW_CASES.filter((k) => !REDEFINED_BY_0330.includes(k.view)).flatMap((k) => {
-    const block = viewBlock(sql, k.view);
+    const file = CREATED_AFTER_BASELINE[k.view] ?? BASELINE;
+    const block = viewBlock(file === BASELINE ? sql : readFileSync(file, "utf8"), k.view);
     const where = block.lastIndexOf("\n  WHERE ");
     const negated =
       where < 0
@@ -281,9 +286,9 @@ const views: SchemaMutant[] = (() => {
       if (block.split(d).length !== 2) throw new Error(`${k.view}: the drop ${d} is not once in its block`);
       return { name: `views: ${k.view} without ${d}`, from: block, to: block.replace(d, d.endsWith(")") && !d.startsWith("(") ? "true)" : d.endsWith(" AND") ? "true AND" : "true") };
     });
-    return [negated, ...drops];
+    return [negated, ...drops].map((m) => ({ ...m, file }));
   });
-})().map((m) => ({ ...m, file: BASELINE, tests: VIEWS }));
+})().map((m) => ({ ...m, tests: VIEWS }));
 
 /**
  * 0330 defines autobahn_validity_overlaps again (one pass over the description) and road_events_live again (with
